@@ -234,10 +234,27 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             # Actualizar estilos de filtros
             self.update_filter_styles()
             
+            # Forzar actualización de todos los widgets hijos
+            self.update_styles_recursive(self)
+            
             # Refrescar UI para aplicar cambios
             self.refresh_ui()
+            
         except Exception as e:
             print(f"Error aplicando tema: {e}")
+    
+    def update_styles_recursive(self, widget):
+        """Actualizar estilos recursivamente para todos los widgets hijos"""
+        try:
+            # Aplicar tema al widget actual
+            self.themes_manager.apply_theme_to_widget(widget)
+            
+            # Recorrer todos los hijos
+            for child in widget.findChildren(QWidget):
+                self.update_styles_recursive(child)
+                
+        except Exception as e:
+            print(f"Error actualizando estilos: {e}")
     
     def center_window(self):
         screen = QApplication.primaryScreen().geometry()
@@ -266,6 +283,11 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.drag_position = None
         
     def refresh_ui(self):
+        #print("=== DEBUG CLIPS ===")
+        #for clip in self.clips:
+        #    print(f"Content: {clip['content'][:50]}... | Type: {clip['type']}")
+        #print("===================")
+
         # Limpiar layout
         while self.content_layout.count() > 1:
             item = self.content_layout.takeAt(0)
@@ -278,18 +300,25 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         pinned = [c for c in self.clips if c['pinned']]
         unpinned = [c for c in self.clips if not c['pinned']]
         
-        # Filtrar por tipo y búsqueda
+        # Filtrar por tipo y búsqueda - CORREGIDO
         def matches(clip):
-            tipo = self.detect_type(clip['content'])
-            if self.current_filter == "url":
-                return tipo == "url" and (not search_text or search_text in clip['content'].lower())
-            if self.current_filter == "text":
-                return tipo == "text" and (not search_text or search_text in clip['content'].lower())
-            if self.current_filter != "all" and clip['type'] != self.current_filter:
-                return False
+            # Si hay texto de búsqueda, filtrar por contenido primero
             if search_text and search_text not in clip['content'].lower():
                 return False
-            return True
+            
+            # Luego filtrar por tipo
+            if self.current_filter == "all":
+                return True
+            elif self.current_filter == "text":
+                return clip['type'] == "text"
+            elif self.current_filter == "image":
+                return clip['type'] == "image"
+            elif self.current_filter == "url":
+                return clip['type'] == "url"
+            elif self.current_filter == "emoji":
+                return clip['type'] == "emoji"
+            else:
+                return True
         
         pinned = [c for c in pinned if matches(c)]
         unpinned = [c for c in unpinned if matches(c)]
@@ -302,7 +331,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         # Mostrar recientes
         if unpinned:
             for clip in unpinned:
-                self.add_clip_widget(clip)
+                self.add_clip_widget(clip)   
     
     def add_clip_widget(self, clip):
         container = QWidget()

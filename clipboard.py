@@ -119,7 +119,7 @@ class ClipboardManager:
             mime_data = clipboard.mimeData()
             
             current = None
-            clip_type = "text"
+            clip_type = "text"  # Por defecto
             
             if mime_data.hasImage():
                 img = clipboard.image()
@@ -167,9 +167,11 @@ class ClipboardManager:
                             print(f"Error al cargar imagen desde archivo: {e}")
                     else:
                         current = qurl.toString()
-                        clip_type = "url"
+                        clip_type = "url"  # Específicamente URL
             elif mime_data.hasText():
                 current = mime_data.text()
+                # Detectar el tipo correcto
+                clip_type = self.detect_type(current)
             
             if self.inserting_emoji or (self.last_emoji_inserted and current == self.last_emoji_inserted):
                 self.inserting_emoji = False
@@ -181,8 +183,8 @@ class ClipboardManager:
                     return
                 if clip_type != "image":
                     self.last_clipboard = current
-                if clip_type != "image":
-                    self.add_clip(current, clip_type)
+                # Pasar el tipo específico detectado
+                self.add_clip(current, clip_type)
         except Exception as e:
             print(f"Error al detectar portapapeles: {e}")
 
@@ -195,7 +197,7 @@ class ClipboardManager:
                 return
 
             current = unique_id
-            clip_type = "image"
+            clip_type = "image"  # Específicamente imagen
             self.clipboard_images[unique_id] = img
             self.last_clipboard = str(image_hash)
             
@@ -210,6 +212,7 @@ class ClipboardManager:
             except Exception as e:
                 print(f"Error al convertir thumb en main thread: {e}")
 
+            # Pasar el tipo específico
             self.add_clip(current, clip_type)
         except Exception as e:
             print(f"Error en on_image_processed: {e}")
@@ -219,10 +222,18 @@ class ClipboardManager:
         if not content or len(content) > 5000:
             return
             
-        for clip in self.clips[:5]:
-            if clip['content'] == content and not clip['pinned']:
-                return
-                
+        # Para imágenes, el content es un ID único, no el contenido real
+        if clip_type == "image":
+            # Verificar si ya existe esta imagen en los clips
+            for clip in self.clips[:5]:
+                if clip['content'] == content and clip['type'] == 'image' and not clip['pinned']:
+                    return
+        else:
+            # Para texto/URLs, verificar duplicados normales
+            for clip in self.clips[:5]:
+                if clip['content'] == content and not clip['pinned']:
+                    return
+            
         if clip_type is None:
             clip_type = self.detect_type(content)
             

@@ -4,9 +4,6 @@ from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QIcon
 import subprocess
 
-# ELIMINAR esta línea:
-# from themes import apply_theme
-
 from input_simulator import InputSimulator
 
 class FilterManager:
@@ -78,23 +75,9 @@ class FilterManager:
         row, col = 0, 0
         for emoji in emojis:
             btn = QPushButton(emoji)
+            btn.setObjectName("emoji_button")
             btn.setFixedSize(50, 50)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            # ELIMINAR: apply_theme(btn, 'emoji_button')
-            btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #2C1229;
-                    border: none;
-                    border-radius: 8px;
-                    font-size: 28px;
-                }
-                QPushButton:hover {
-                    background-color: #4C2B4C;
-                }
-                QPushButton:pressed {
-                    background-color: #ff6b35;
-                }
-            """)
             btn.clicked.connect(lambda checked, e=emoji: self.insert_emoji(e))
             grid.addWidget(btn, row, col)
             col += 1

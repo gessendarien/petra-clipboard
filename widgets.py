@@ -7,14 +7,10 @@ import re
 import html
 from pathlib import Path
 
-# ELIMINAR esta línea:
-# from themes import apply_theme
-
 class ShortcutEdit(QLineEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setReadOnly(False)
-        self.setStyleSheet("padding: 8px; border: 1px solid #ccc; border-radius: 4px;")
 
     def keyPressEvent(self, event):
         if event.key() in (Qt.Key.Key_Backspace, Qt.Key.Key_Delete):
@@ -109,18 +105,8 @@ class ClipItem(QFrame):
         self.setup_ui()
         
     def setup_ui(self):
-        # ELIMINAR: apply_theme(self, 'clip_item')
-        # En su lugar, usar estilos por defecto que serán sobrescritos por el tema
-        self.setStyleSheet("""
-            ClipItem {
-                background-color: #3C1B3C;
-                border-radius: 10px;
-                margin: 0px;
-            }
-            ClipItem:hover {
-                background-color: #4A273A;
-            }
-        """)
+        # Usar solo estilos del tema - eliminar estilos fijos
+        self.setObjectName("clip_item")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMinimumHeight(70)
         self.setMaximumHeight(70)
@@ -227,27 +213,24 @@ class ClipItem(QFrame):
             escaped = html.escape(self.content)
             html_text = url_re.sub(lambda m: _linkify(m), escaped)
             text_label = QLabel(html_text)
+            text_label.setObjectName("clip_text_link")
             text_label.setTextFormat(Qt.TextFormat.RichText)
             text_label.setOpenExternalLinks(True)
             text_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
             text_label.setWordWrap(False)
-            # ELIMINAR: apply_theme(text_label, 'clip_text_link')
-            text_label.setStyleSheet("color: #ffffff; font-size: 14px; font-weight: 500; background-color: transparent;")
         else:
             text_label = QLabel(self.truncate_text(self.content, 43))
+            text_label.setObjectName("clip_text_normal")
             text_label.setWordWrap(False)
             text_label.setTextFormat(Qt.TextFormat.PlainText)
             text_label.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
-            # ELIMINAR: apply_theme(text_label, 'clip_text_normal')
-            text_label.setStyleSheet("color: #ffffff; font-size: 14px; font-weight: 500; background-color: transparent;")
             
         return text_label
     
     def create_time_label(self):
         time_text = self.format_timestamp()
         time_label = QLabel(time_text)
-        # ELIMINAR: apply_theme(time_label, 'clip_time')
-        time_label.setStyleSheet("color: #8b7a9b; font-size: 11px; background-color: transparent;")
+        time_label.setObjectName("clip_time")
         return time_label
     
     def setup_action_buttons(self, layout):
@@ -258,24 +241,9 @@ class ClipItem(QFrame):
         
         # Botón pin
         self.pin_action_btn = QPushButton("")
+        self.pin_action_btn.setObjectName("pin_action_button")
         self.pin_action_btn.setFixedSize(32, 32)
         self.pin_action_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        # ELIMINAR: apply_theme(self.pin_action_btn, 'pin_action_button')
-        self.pin_action_btn.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                border-radius: 6px;
-                color: white;
-                font-size: 16px;
-                border: none;
-            }
-            QPushButton:hover {
-                background-color: #ff6b35;
-            }
-            QPushButton:pressed {
-                background-color: #ff6b35;
-            }
-        """)
         
         icons_dir = Path(__file__).parent / 'icons'
         pin_path = icons_dir / 'pin.png'
@@ -299,23 +267,11 @@ class ClipItem(QFrame):
         self.pin_action_btn.installEventFilter(self)
         self.pin_action_btn.clicked.connect(self.pin_toggled.emit)
         
-        # Botón borrar
+        # Botón borrar - SIN ESTILOS FIJOS
         self.delete_action_btn = QPushButton("✕")
+        self.delete_action_btn.setObjectName("delete_action_button")
         self.delete_action_btn.setFixedSize(32, 32)
         self.delete_action_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        # ELIMINAR: apply_theme(self.delete_action_btn, 'delete_action_button')
-        self.delete_action_btn.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(76, 43, 76, 0.8);
-                border-radius: 6px;
-                color: white;
-                font-size: 18px;
-                border: none;
-            }
-            QPushButton:hover {
-                background-color: #ff4444;
-            }
-        """)
         self.delete_action_btn.clicked.connect(self.delete_requested.emit)
         
         actions_layout.addWidget(self.delete_action_btn)
@@ -373,27 +329,11 @@ class ClipItem(QFrame):
     
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            # ELIMINAR: apply_theme(self, 'clip_item_pressed')
-            self.setStyleSheet("""
-                ClipItem {
-                    background-color: #5d4a6d;
-                    border-radius: 10px;
-                }
-            """)
+            self.setStyleSheet("background-color: #5d4a6d; border-radius: 10px;")
     
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            # ELIMINAR: apply_theme(self, 'clip_item')
-            self.setStyleSheet("""
-                ClipItem {
-                    background-color: #3C1B3C;
-                    border-radius: 10px;
-                    margin: 0px;
-                }
-                ClipItem:hover {
-                    background-color: #4A273A;
-                }
-            """)
+            # El tema se re-aplicará automáticamente
             try:
                 if getattr(self, 'pinned', False):
                     self.actions_widget.show()
