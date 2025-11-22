@@ -91,11 +91,14 @@ class ConfigManager:
             try:
                 with open(self.pinned_file, 'r') as f:
                     pinned = json.load(f)
+                    # Asegurarse de que self.clips existe
+                    if not hasattr(self, 'clips'):
+                        self.clips = []
                     for item in pinned:
                         item['timestamp'] = datetime.fromisoformat(item['timestamp'])
                         self.clips.append(item)
-            except:
-                pass
+            except Exception as e:
+                print(f"Error loading pinned: {e}")
 
     def open_settings(self):
         dlg = SettingsDialog(self)

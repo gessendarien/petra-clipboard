@@ -21,12 +21,16 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         ConfigManager.__init__(self)
         GlobalShortcutManager.__init__(self)
         
+        # Inicializar atributos necesarios
+        self.clips = []  # Añadir esta línea
+        self.window_pinned = False  # Añadir esta línea
+        
         # Manager de temas
         self.themes_manager = ThemesManager()
         
         self.setup_ui()
         self.load_pinned()
-        self.clear_all_unpinned()
+        # self.clear_all_unpinned()  # Comentar esta línea temporalmente
         self.initialize_clipboard_state()
         self.setup_clipboard_monitor()
         self.setup_global_shortcut()
@@ -78,11 +82,13 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.setup_icon_button(settings_btn, 'config.png', "⚙️")
         settings_btn.clicked.connect(self.open_settings)
         
-        # Botón borrar todo
+        # Botón borrar todo - ProgressButton
         self.clear_btn = ProgressButton("")
         self.clear_btn.setObjectName("clear_button")
         self.clear_btn.setFixedSize(38, 38)
         self.setup_icon_button(self.clear_btn, 'delete.png', "🗑️")
+        
+        # Conectar señales - IMPORTANTE: usar pressed/released, no clicked
         self.clear_btn.pressed.connect(self.start_clear_animation)
         self.clear_btn.released.connect(self.cancel_clear_animation)
         
@@ -230,6 +236,13 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             # Aplicar tema a la ventana principal
             self.themes_manager.set_theme(self.theme)
             self.themes_manager.apply_theme_to_widget(self)
+            
+            # Actualizar el color del borde animado del botón eliminar
+            theme_colors = self.themes_manager.get_theme_colors()
+            if hasattr(self, 'clear_btn') and self.clear_btn:
+                # Usar el color específico para el borde o el color accent como fallback
+                border_color = theme_colors.get('clear_button_border', theme_colors.get('accent', '#ff6b35'))
+                self.clear_btn.setBorderColor(border_color)
             
             # Actualizar estilos de filtros
             self.update_filter_styles()

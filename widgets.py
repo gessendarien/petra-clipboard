@@ -68,18 +68,37 @@ class ProgressButton(QPushButton):
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
         self.progress = 0
+        self.border_color = "#ff6b35"
+        self.is_actively_pressed = False  # Solo True cuando está siendo presionado físicamente
+    
+    def setBorderColor(self, color):
+        self.border_color = color
+        self.update()
     
     def setProgress(self, value):
         self.progress = value
         self.update()
     
+    def mousePressEvent(self, event):
+        self.is_actively_pressed = True
+        self.setProgress(0)  # Reset al empezar
+        super().mousePressEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        self.is_actively_pressed = False
+        self.setProgress(0)  # Reset completo al soltar
+        super().mouseReleaseEvent(event)
+    
     def paintEvent(self, event):
+        # Primero pintar el botón normal
         super().paintEvent(event)
-        if self.progress > 0:
+        
+        # Solo pintar el borde animado si está ACTIVAMENTE presionado y hay progreso
+        if self.is_actively_pressed and self.progress > 0:
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             
-            pen = QPen(QColor("#ff6b35"))
+            pen = QPen(QColor(self.border_color))
             pen.setWidth(3)
             painter.setPen(pen)
             

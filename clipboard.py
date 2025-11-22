@@ -350,14 +350,14 @@ class ClipboardManager:
                 pass
 
     def start_clear_animation(self):
+        """Solo iniciar el timer, el botón ya se marcó como presionado"""
         self.clear_progress = 0
         self.clear_timer.start(15)
 
     def cancel_clear_animation(self):
+        """Solo detener el timer, el botón ya se reseteó"""
         self.clear_timer.stop()
         self.clear_progress = 0
-        if hasattr(self, 'clear_btn'):
-            self.clear_btn.setProgress(0)
 
     def update_clear_progress(self):
         self.clear_progress += 1
@@ -368,11 +368,13 @@ class ClipboardManager:
         if self.clear_progress >= 100:
             self.clear_timer.stop()
             self.clear_all_unpinned()
-            self.cancel_clear_animation()
-
+            # Resetear el botón después de completar
+            if hasattr(self, 'clear_btn'):
+                self.clear_btn.setProgress(0)
     def clear_all_unpinned(self):
         """Borrar todos los elementos que no estén pinned"""
         self.clips = [c for c in self.clips if c['pinned']]
         pinned_images = [c['content'] for c in self.clips if c['type'] == 'image']
         self.clipboard_images = {k: v for k, v in self.clipboard_images.items() if k in pinned_images}
-        self.refresh_ui()
+        if hasattr(self, 'refresh_ui'):
+            self.refresh_ui()

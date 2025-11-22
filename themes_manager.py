@@ -19,6 +19,7 @@ class ThemesManager:
                     # Items del clipboard
                     'clip_bg': '#3C1B3C',
                     'clip_hover': '#4A273A',
+                    'clip_click': '#E95420',
                     
                     # Header y ventana
                     'window_main': '#3C1B3C',
@@ -28,7 +29,7 @@ class ThemesManager:
                     'search_input_focus': '#ff6b35',
                     
                     # Filtros
-                    'filters_background': '#3C1B3C',  # ROSA INTENSO PARA PRUEBA
+                    'filters_background': '#3C1B3C',
                     'filter_selected': '#E95420',
                     'filter_hover': '#5C3B5C',
                     'filter_click': '#77216F',
@@ -66,7 +67,8 @@ class ThemesManager:
                     'icon_bg': '#4C2B4C',
                     
                     # Estados de botones header
-                    'header_buttons_click': '#77216F'
+                    'header_buttons_click': '#77216F',
+                    'clear_button_border': '#ff6b35'
                 }
             },
             'mint': {
@@ -76,13 +78,14 @@ class ThemesManager:
                     'secondary': '#2D6A45',
                     'background': '#2A2A2A',
                     'header': '#1A1A1A',
-                    'accent': '#87CF3E',
+                    'accent': '#77A847',
                     'text_primary': '#ffffff',
                     'text_secondary': '#aaaaaa',
                     'button_bg': '#3A3A3A',
                     'button_hover': '#4A4A4A',
                     'clip_bg': '#2A2A2A',
                     'clip_hover': '#3A3A3A',
+                    'clip_click': '#2D6A45',
                     'window_main': '#2A2A2A',
                     'header_buttons': '#1A1A1A',
                     'search_input_focus': '#87CF3E',
@@ -108,10 +111,54 @@ class ThemesManager:
                     'scrollbar_bg': '#3A3A3A',
                     'scrollbar_handle': '#4A4A4A',
                     'icon_bg': '#3A3A3A',
-                    'header_buttons_click': '#2D6A45'
+                    'header_buttons_click': '#2D6A45',
+                    'clear_button_border': '#87CF3E'
                 }
             },
-            # ... (otros temas con el mismo patrón)
+            'dark': {
+                'name': 'Dark',
+                'colors': {
+                    'primary': '#BB86FC',
+                    'secondary': '#03DAC6',
+                    'background': '#121212',
+                    'header': '#1E1E1E',
+                    'accent': '#CF6679',
+                    'text_primary': '#FFFFFF',
+                    'text_secondary': '#AAAAAA',
+                    'button_bg': '#2C2C2C',
+                    'button_hover': '#3C3C3C',
+                    'clip_bg': '#1E1E1E',
+                    'clip_hover': '#2C2C2C',
+                    'clip_click': '#BB86FC',
+                    'window_main': '#121212',
+                    'header_buttons': '#1E1E1E',
+                    'search_input_focus': '#BB86FC',
+                    'filters_background': '#121212',
+                    'filter_selected': '#BB86FC',
+                    'filter_hover': '#D0A8FF',
+                    'filter_click': '#9A67EA',
+                    'copied_card': '#1E1E1E',
+                    'card_text': '#FFFFFF',
+                    'element_hover': '#2C2C2C',
+                    'element_click': '#9A67EA',
+                    'emoji_table': '#2C2C2C',
+                    'delete_button': '#CF6679',
+                    'pin_button': '#03DAC6',
+                    'delete_hover': '#FF5252',
+                    'pin_hover': '#3C3C3C',
+                    'link_color': '#BB86FC',
+                    'settings_window': '#121212',
+                    'settings_text': '#FFFFFF',
+                    'input_border': '#BB86FC',
+                    'save_button': '#BB86FC',
+                    'close_button': '#03DAC6',
+                    'scrollbar_bg': '#2C2C2C',
+                    'scrollbar_handle': '#3C3C3C',
+                    'icon_bg': '#2C2C2C',
+                    'header_buttons_click': '#9A67EA',
+                    'clear_button_border': '#CF6679'
+                }
+            }
         }
         
         self.current_theme = 'ubuntu'
@@ -179,6 +226,7 @@ class ThemesManager:
                 background-color: {colors['header_buttons_click']};
             }}
             
+            /* Botón borrar todo - SIN BORDE ESTÁTICO */
             QPushButton#clear_button {{
                 background-color: {colors['button_bg']};
                 border-radius: 19px;
@@ -188,6 +236,7 @@ class ThemesManager:
             }}
             QPushButton#clear_button:hover {{
                 background-color: {colors['button_hover']};
+                border: none;
             }}
             
             QPushButton#close_button {{
@@ -298,6 +347,10 @@ class ThemesManager:
                 background-color: {colors['clip_hover']};
             }}
             
+            ClipItem:pressed {{
+                background-color: {colors['clip_click']};
+            }}
+
             /* Texto de items */
             QLabel#clip_text_normal {{
                 color: {colors['card_text']};
@@ -343,6 +396,9 @@ class ThemesManager:
             QPushButton#delete_action_button:hover {{
                 background-color: {colors['delete_hover']};
             }}
+
+            QPushButton#pin_action_button:pressed {{ background-color: {colors['pin_button']}; }} 
+            QPushButton#delete_action_button:pressed {{ background-color: {colors['accent']}; }}
             
             /* ========== EMOJIS ========== */
             QPushButton#emoji_button {{
