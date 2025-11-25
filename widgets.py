@@ -69,7 +69,7 @@ class ProgressButton(QPushButton):
         super().__init__(text, parent)
         self.progress = 0
         self.border_color = "#ff6b35"
-        self.is_actively_pressed = False  # Solo True cuando está siendo presionado físicamente
+        self.is_actively_pressed = False
     
     def setBorderColor(self, color):
         self.border_color = color
@@ -81,19 +81,17 @@ class ProgressButton(QPushButton):
     
     def mousePressEvent(self, event):
         self.is_actively_pressed = True
-        self.setProgress(0)  # Reset al empezar
+        self.setProgress(0)
         super().mousePressEvent(event)
     
     def mouseReleaseEvent(self, event):
         self.is_actively_pressed = False
-        self.setProgress(0)  # Reset completo al soltar
+        self.setProgress(0)
         super().mouseReleaseEvent(event)
     
     def paintEvent(self, event):
-        # Primero pintar el botón normal
         super().paintEvent(event)
         
-        # Solo pintar el borde animado si está ACTIVAMENTE presionado y hay progreso
         if self.is_actively_pressed and self.progress > 0:
             painter = QPainter(self)
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -124,7 +122,6 @@ class ClipItem(QFrame):
         self.setup_ui()
         
     def setup_ui(self):
-        # Usar solo estilos del tema - eliminar estilos fijos
         self.setObjectName("clip_item")
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMinimumHeight(70)
@@ -135,21 +132,47 @@ class ClipItem(QFrame):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
         
-        # Icono
         icon_label = QLabel()
         icon_label.setFixedSize(40, 40)
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_text, bg_color = self.get_icon_style()
         
-        if self.item_type == "image" and self.main_window and self.content in self.main_window.clipboard_images:
-            self.setup_image_thumbnail(icon_label)
-        else:
-            self.set_default_icon_style(icon_label, icon_text, bg_color)
+        icon_loaded = False
+        try:
+            icons_dir = Path(__file__).parent / 'icons'
+            icon_files = {
+                "text": "texts.png",
+                "url": "links.png", 
+                "image": "images.png",
+                "emoji": "emojis.png",
+                "color": "colors.png"
+            }
+            icon_file = icon_files.get(self.item_type)
+            if icon_file:
+                icon_path = icons_dir / icon_file
+                if icon_path.exists():
+                    pixmap = QPixmap(str(icon_path))
+                    if not pixmap.isNull():
+                        icon_label.setPixmap(pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                        icon_label.setStyleSheet("background-color: transparent;")
+                        icon_loaded = True
+        except Exception:
+            pass
+
+        if not icon_loaded:
+            if self.item_type == "color":
+                bg_color = self.content if self.content.startswith("#") else "#3d2a4d"
+                icon_label.setStyleSheet(f"""
+                    background-color: {bg_color};
+                    border-radius: 6px;
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                """)
+            else:
+                icon_label.setStyleSheet("""
+                    background-color: transparent;
+                    border-radius: 6px;
+                    border: none;
+                """)
         
-        if not icon_label.pixmap():
-            icon_label.setText(icon_text)
-        
-        # Contenido
         content_layout = QVBoxLayout()
         content_layout.setSpacing(2)
         content_layout.setContentsMargins(0, 0, 0, 0)
@@ -164,7 +187,6 @@ class ClipItem(QFrame):
         layout.addLayout(content_layout)
         layout.addStretch()
         
-        # Botones de acción
         self.setup_action_buttons(layout)
         
         self.setLayout(layout)
@@ -201,16 +223,16 @@ class ClipItem(QFrame):
                     
                     self.main_window._thumbnail_cache[cache_key] = rounded
                 else:
-                    self.set_default_icon_style(icon_label, *self.get_icon_style())
+                    self.set_default_icon_style(icon_label)
                     rounded = None
             
             if rounded:
                 icon_label.setPixmap(rounded)
                 icon_label.setStyleSheet("background-color: transparent;")
             else:
-                self.set_default_icon_style(icon_label, *self.get_icon_style())
+                self.set_default_icon_style(icon_label)
         except Exception as e:
-            self.set_default_icon_style(icon_label, *self.get_icon_style())
+            self.set_default_icon_style(icon_label)
     
     def create_text_label(self):
         url_re = re.compile(r'((?:https?://|ftp://|www\.|\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?))', re.IGNORECASE)
@@ -258,7 +280,6 @@ class ClipItem(QFrame):
         actions_layout.setContentsMargins(0, 0, 0, 0)
         actions_layout.setSpacing(4)
         
-        # Botón pin
         self.pin_action_btn = QPushButton("")
         self.pin_action_btn.setObjectName("pin_action_button")
         self.pin_action_btn.setFixedSize(32, 32)
@@ -274,20 +295,15 @@ class ClipItem(QFrame):
             if self._pin_icon:
                 self.pin_action_btn.setIcon(self._pin_icon)
                 self.pin_action_btn.setIconSize(QSize(18, 18))
-            else:
-                self.pin_action_btn.setText("📌")
         else:
             if self._pin_icon:
                 self.pin_action_btn.setIcon(self._pin_icon)
                 self.pin_action_btn.setIconSize(QSize(18, 18))
-            else:
-                self.pin_action_btn.setText("📌")
                 
         self.pin_action_btn.installEventFilter(self)
         self.pin_action_btn.clicked.connect(self.pin_toggled.emit)
         
-        # Botón borrar - SIN ESTILOS FIJOS
-        self.delete_action_btn = QPushButton("✕")
+        self.delete_action_btn = QPushButton("")
         self.delete_action_btn.setObjectName("delete_action_button")
         self.delete_action_btn.setFixedSize(32, 32)
         self.delete_action_btn.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -309,27 +325,26 @@ class ClipItem(QFrame):
         if self.item_type == "color":
             return ("", self.content if self.content.startswith("#") else "#3d2a4d")
         elif self.item_type == "url":
-            return ("🔗", "transparent")
+            return ("", "transparent")
         elif self.item_type == "image":
-            return ("🖼", "transparent")
+            return ("", "transparent")
         elif self.item_type == "emoji":
-            return ("😀", "transparent")
+            return ("", "transparent")
         else:
-            return ("📄", "transparent")
+            return ("", "transparent")
     
-    def set_default_icon_style(self, icon_label, icon_text, bg_color):
-        if self.item_type == "color" and bg_color != "transparent":
+    def set_default_icon_style(self, icon_label):
+        if self.item_type == "color":
+            bg_color = self.content if self.content.startswith("#") else "#3d2a4d"
             icon_label.setStyleSheet(f"""
                 background-color: {bg_color};
                 border-radius: 6px;
                 border: 1px solid rgba(255, 255, 255, 0.2);
             """)
         else:
-            icon_label.setStyleSheet(f"""
+            icon_label.setStyleSheet("""
                 background-color: transparent;
                 border-radius: 6px;
-                color: #8b7a9b;
-                font-size: 18px;
                 border: none;
             """)
     
@@ -352,7 +367,6 @@ class ClipItem(QFrame):
     
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            # El tema se re-aplicará automáticamente
             try:
                 if getattr(self, 'pinned', False):
                     self.actions_widget.show()
@@ -382,19 +396,11 @@ class ClipItem(QFrame):
                         if getattr(self, '_unpin_icon', None):
                             self.pin_action_btn.setIcon(self._unpin_icon)
                             self.pin_action_btn.setIconSize(QSize(18, 18))
-                            self.pin_action_btn.setText("")
-                            self.pin_action_btn.update()
-                        else:
-                            self.pin_action_btn.setText("✖")
                             self.pin_action_btn.update()
                     elif event.type() == QEvent.Type.Leave:
                         if getattr(self, '_pin_icon', None):
                             self.pin_action_btn.setIcon(self._pin_icon)
                             self.pin_action_btn.setIconSize(QSize(18, 18))
-                            self.pin_action_btn.setText("")
-                            self.pin_action_btn.update()
-                        else:
-                            self.pin_action_btn.setText("📌")
                             self.pin_action_btn.update()
         except Exception:
             pass

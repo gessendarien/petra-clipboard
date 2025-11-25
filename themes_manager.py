@@ -1,167 +1,151 @@
 class ThemesManager:
     def __init__(self):
         self.available_themes = {
-            'ubuntu': {
-                'name': 'Ubuntu',
-                'colors': {
-                    'primary': '#E95420',
-                    'secondary': '#77216F',
-                    'background': '#3C1B3C',
-                    'header': '#2C1229',
-                    'accent': '#ff6b35',
-                    'text_primary': '#ffffff',
-                    'text_secondary': '#8b7a9b',
-                    
-                    # Botones principales
-                    'button_bg': '#4C2B4C',
-                    'button_hover': '#5C3B5C',
-                    
-                    # Items del clipboard
-                    'clip_bg': '#3C1B3C',
-                    'clip_hover': '#4A273A',
-                    'clip_click': '#E95420',
-                    
-                    # Header y ventana
-                    'window_main': '#3C1B3C',
-                    'header_buttons': '#2C1229',
-                    
-                    # Búsqueda
-                    'search_input_focus': '#ff6b35',
-                    
-                    # Filtros
-                    'filters_background': '#3C1B3C',
-                    'filter_selected': '#E95420',
-                    'filter_hover': '#5C3B5C',
-                    'filter_click': '#77216F',
-                    
-                    # Tarjetas
-                    'copied_card': '#3C1B3C',
-                    'card_text': '#ffffff',
-                    
-                    # Elementos varios
-                    'element_hover': '#4A273A',
-                    'element_click': '#77216F',
-                    'emoji_table': '#4A273A',
-                    
-                    # Botones de acción
-                    'delete_button': '#E95420',
-                    'pin_button': '#77216F',
-                    'delete_hover': '#ff4444',
-                    'pin_hover': '#5C3B5C',
-                    
-                    # Enlaces
-                    'link_color': '#E95420',
-                    
-                    # Configuración
-                    'settings_window': '#3C1B3C',
-                    'settings_text': '#ffffff',
-                    'input_border': '#E95420',
-                    'save_button': '#E95420',
-                    'close_button': '#77216F',
-                    
-                    # Scrollbars
-                    'scrollbar_bg': '#4C2B4C',
-                    'scrollbar_handle': '#5C3B5C',
-                    
-                    # Iconos
-                    'icon_bg': '#4C2B4C',
-                    
-                    # Estados de botones header
-                    'header_buttons_click': '#77216F',
-                    'clear_button_border': '#ff6b35'
-                }
-            },
-            'mint': {
-                'name': 'Mint',
-                'colors': {
-                    'primary': '#87CF3E',
-                    'secondary': '#2D6A45',
-                    'background': '#2A2A2A',
-                    'header': '#1A1A1A',
-                    'accent': '#77A847',
-                    'text_primary': '#ffffff',
-                    'text_secondary': '#aaaaaa',
-                    'button_bg': '#3A3A3A',
-                    'button_hover': '#4A4A4A',
-                    'clip_bg': '#2A2A2A',
-                    'clip_hover': '#3A3A3A',
-                    'clip_click': '#2D6A45',
-                    'window_main': '#2A2A2A',
-                    'header_buttons': '#1A1A1A',
-                    'search_input_focus': '#87CF3E',
-                    'filters_background': '#2A2A2A',
-                    'filter_selected': '#87CF3E',
-                    'filter_hover': '#A4D65E',
-                    'filter_click': '#2D6A45',
-                    'copied_card': '#2A2A2A',
-                    'card_text': '#ffffff',
-                    'element_hover': '#3A3A3A',
-                    'element_click': '#2D6A45',
-                    'emoji_table': '#3A3A3A',
-                    'delete_button': '#87CF3E',
-                    'pin_button': '#2D6A45',
-                    'delete_hover': '#ff4444',
-                    'pin_hover': '#4A4A4A',
-                    'link_color': '#87CF3E',
-                    'settings_window': '#2A2A2A',
-                    'settings_text': '#ffffff',
-                    'input_border': '#87CF3E',
-                    'save_button': '#87CF3E',
-                    'close_button': '#2D6A45',
-                    'scrollbar_bg': '#3A3A3A',
-                    'scrollbar_handle': '#4A4A4A',
-                    'icon_bg': '#3A3A3A',
-                    'header_buttons_click': '#2D6A45',
-                    'clear_button_border': '#87CF3E'
-                }
-            },
             'dark': {
                 'name': 'Dark',
                 'colors': {
+                    # Colores principales
                     'primary': '#BB86FC',
-                    'secondary': '#03DAC6',
+                    'secondary': '#03DAC6', 
+                    'accent': '#CF6679',
+                    
+                    # Fondos principales
                     'background': '#121212',
                     'header': '#1E1E1E',
-                    'accent': '#CF6679',
+                    'window_main': '#0A0A0A',  # Fondo más oscuro para ventana
+                    
+                    # Textos
                     'text_primary': '#FFFFFF',
                     'text_secondary': '#AAAAAA',
+                    'card_text': '#E0E0E0',  # Texto ligeramente diferente para cards
+                    
+                    # Botones
                     'button_bg': '#2C2C2C',
                     'button_hover': '#3C3C3C',
-                    'clip_bg': '#1E1E1E',
-                    'clip_hover': '#2C2C2C',
+                    'header_buttons': '#252525',  # Botones del header diferentes
+                    
+                    # Items del clipboard
+                    'clip_bg': '#1A1A1A',
+                    'clip_hover': '#2A2A2A', 
                     'clip_click': '#BB86FC',
-                    'window_main': '#121212',
-                    'header_buttons': '#1E1E1E',
+                    'copied_card': '#1E1E1E',  # Card cuando está seleccionada
+                    
+                    # Búsqueda
                     'search_input_focus': '#BB86FC',
-                    'filters_background': '#121212',
+                    
+                    # Filtros
+                    'filters_background': '#181818',  # Fondo específico para área de filtros
                     'filter_selected': '#BB86FC',
                     'filter_hover': '#D0A8FF',
                     'filter_click': '#9A67EA',
-                    'copied_card': '#1E1E1E',
-                    'card_text': '#FFFFFF',
-                    'element_hover': '#2C2C2C',
-                    'element_click': '#9A67EA',
-                    'emoji_table': '#2C2C2C',
+                    
+                    # Elementos varios
+                    'element_hover': '#343434',  # Hover genérico
+                    'element_click': '#8A5CEA',  # Click genérico
+                    'emoji_table': '#2D2D2D',  # Fondo de tabla de emojis
+                    
+                    # Botones de acción
                     'delete_button': '#CF6679',
                     'pin_button': '#03DAC6',
                     'delete_hover': '#FF5252',
-                    'pin_hover': '#3C3C3C',
+                    'pin_hover': '#04C5B0',
+                    
+                    # Enlaces
                     'link_color': '#BB86FC',
-                    'settings_window': '#121212',
-                    'settings_text': '#FFFFFF',
+                    
+                    # Configuración
+                    'settings_window': '#151515',
+                    'settings_text': '#F0F0F0',
                     'input_border': '#BB86FC',
                     'save_button': '#BB86FC',
                     'close_button': '#03DAC6',
-                    'scrollbar_bg': '#2C2C2C',
-                    'scrollbar_handle': '#3C3C3C',
-                    'icon_bg': '#2C2C2C',
+                    
+                    # Scrollbars
+                    'scrollbar_bg': '#252525',
+                    'scrollbar_handle': '#3A3A3A',
+                    
+                    # Iconos
+                    'icon_bg': '#2A2A2A',
+                    
+                    # Estados especiales
                     'header_buttons_click': '#9A67EA',
                     'clear_button_border': '#CF6679'
+                }
+            },
+            'light': {
+                'name': 'Light Soft',
+                'colors': {
+                    # Colores principales
+                    'primary': '#3778B0',
+                    'secondary': '#4A9C8E',
+                    'accent': '#D87A8A',
+                    
+                    # Fondos principales
+                    'background': '#DFE0E1',
+                    'header': '#E9ECEF',
+                    'window_main': '#FFFFFF',  # Fondo blanco para ventana
+                    
+                    # Textos
+                    'text_primary': '#2D3748',
+                    'text_secondary': '#718096',
+                    'card_text': '#2A2A2A',  # Texto más oscuro para cards
+                    
+                    # Botones
+                    'button_bg': '#FFFFFF',
+                    'button_hover': '#EDF2F7',
+                    'header_buttons': '#F8FAFC',  # Botones del header diferentes
+                    
+                    # Items del clipboard
+                    'clip_bg': '#FFFFFF',
+                    'clip_hover': '#F7FAFC',
+                    'clip_click': '#1D90C1',
+                    'copied_card': '#F0F4F8',  # Card cuando está seleccionada
+                    
+                    # Búsqueda
+                    'search_input_focus': '#53A3C6',
+                    
+                    # Filtros
+                    'filters_background': '#F0F4F8',  # Fondo específico para área de filtros
+                    'filter_selected': '#3E60A0',
+                    'filter_hover': '#365080',
+                    'filter_click': '#4B5E81',
+                    
+                    # Elementos varios
+                    'element_hover': '#E2E8F0',  # Hover genérico
+                    'element_click': '#359DBA',  # Click genérico
+                    'emoji_table': '#EDF2F7',  # Fondo de tabla de emojis
+                    
+                    # Botones de acción
+                    'delete_button': '#D87A8A',
+                    'pin_button': '#4A9C8E',
+                    'delete_hover': '#E53E3E',
+                    'pin_hover': '#3A8C7E',
+                    
+                    # Enlaces
+                    'link_color': '#7E6BC9',
+                    
+                    # Configuración
+                    'settings_window': '#D20808',
+                    'settings_text': '#2D3748',
+                    'input_border': '#7E6BC9',
+                    'save_button': '#4D9AD8',
+                    'close_button': '#4A9C8E',
+                    
+                    # Scrollbars
+                    'scrollbar_bg': '#072041',
+                    'scrollbar_handle': '#3D90E9',
+                    
+                    # Iconos
+                    'icon_bg': '#F7FAFC',
+                    
+                    # Estados especiales
+                    'header_buttons_click': '#4D9AD8',
+                    'clear_button_border': '#CD3A52'
                 }
             }
         }
         
-        self.current_theme = 'ubuntu'
+        self.current_theme = 'dark'
     
     def get_theme_names(self):
         """Obtener lista de nombres de temas para el ComboBox"""
@@ -176,26 +160,26 @@ class ThemesManager:
     
     def get_current_theme(self):
         """Obtener tema actual"""
-        return self.available_themes.get(self.current_theme, self.available_themes['ubuntu'])
+        return self.available_themes.get(self.current_theme, self.available_themes['dark'])
     
     def get_theme_colors(self, theme_id=None):
         """Obtener colores de un tema específico"""
         if theme_id is None:
             theme_id = self.current_theme
-        return self.available_themes.get(theme_id, self.available_themes['ubuntu'])['colors']
+        return self.available_themes.get(theme_id, self.available_themes['dark'])['colors']
     
     def get_theme_stylesheet(self, theme_id=None):
         """Generar hoja de estilos CSS para un tema específico"""
         if theme_id is None:
             theme_id = self.current_theme
             
-        theme = self.available_themes.get(theme_id, self.available_themes['ubuntu'])
+        theme = self.available_themes.get(theme_id, self.available_themes['dark'])
         colors = theme['colors']
         
         return f"""
             /* ========== VENTANA PRINCIPAL ========== */
             QMainWindow {{
-                background-color: {colors['background']};
+                background-color: {colors['window_main']};
                 border-radius: 12px;
             }}
             
@@ -213,7 +197,7 @@ class ThemesManager:
             
             /* Botones del header */
             QPushButton#settings_button {{
-                background-color: {colors['button_bg']};
+                background-color: {colors['header_buttons']};
                 border-radius: 8px;
                 color: {colors['text_primary']};
                 font-size: 18px;
@@ -226,9 +210,9 @@ class ThemesManager:
                 background-color: {colors['header_buttons_click']};
             }}
             
-            /* Botón borrar todo - SIN BORDE ESTÁTICO */
+            /* Botón borrar todo */
             QPushButton#clear_button {{
-                background-color: {colors['button_bg']};
+                background-color: {colors['header_buttons']};
                 border-radius: 19px;
                 color: {colors['text_primary']};
                 font-size: 18px;
@@ -240,7 +224,7 @@ class ThemesManager:
             }}
             
             QPushButton#close_button {{
-                background-color: {colors['button_bg']};
+                background-color: {colors['header_buttons']};
                 border-radius: 8px;
                 color: {colors['text_primary']};
                 font-size: 20px;
@@ -255,7 +239,7 @@ class ThemesManager:
             }}
             
             QPushButton#pin_button {{
-                background-color: {colors['button_bg']};
+                background-color: {colors['header_buttons']};
                 border-radius: 19px;
                 color: {colors['text_primary']};
                 font-size: 18px;
@@ -270,7 +254,7 @@ class ThemesManager:
             
             /* ========== BARRA DE BÚSQUEDA ========== */
             QLineEdit#search_bar {{
-                background-color: {colors['header']};
+                background-color: {colors['filters_background']};
                 color: {colors['text_primary']};
                 border: none;
                 border-radius: 10px;
@@ -278,7 +262,7 @@ class ThemesManager:
                 font-size: 14px;
             }}
             QLineEdit#search_bar:focus {{
-                background-color: {colors['header']};
+                background-color: {colors['filters_background']};
                 border: 2px solid {colors['search_input_focus']};
             }}
             
@@ -329,7 +313,7 @@ class ThemesManager:
             }}
             
             QScrollBar::handle:vertical:hover {{
-                background: {colors['button_hover']};
+                background: {colors['element_hover']};
             }}
             
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
@@ -349,6 +333,11 @@ class ThemesManager:
             
             ClipItem:pressed {{
                 background-color: {colors['clip_click']};
+            }}
+            
+            /* Card cuando está copiada/seleccionada */
+            ClipItem[copied="true"] {{
+                background-color: {colors['copied_card']};
             }}
 
             /* Texto de items */
@@ -397,8 +386,13 @@ class ThemesManager:
                 background-color: {colors['delete_hover']};
             }}
 
-            QPushButton#pin_action_button:pressed {{ background-color: {colors['pin_button']}; }} 
-            QPushButton#delete_action_button:pressed {{ background-color: {colors['accent']}; }}
+            QPushButton#pin_action_button:pressed {{ 
+                background-color: {colors['element_click']}; 
+            }}
+            
+            QPushButton#delete_action_button:pressed {{
+                background-color: {colors['element_click']};
+            }}
             
             /* ========== EMOJIS ========== */
             QPushButton#emoji_button {{
@@ -413,7 +407,7 @@ class ThemesManager:
             }}
             
             QPushButton#emoji_button:pressed {{
-                background-color: {colors['accent']};
+                background-color: {colors['element_click']};
             }}
             
             /* ========== CONFIGURACIÓN ========== */
@@ -467,7 +461,7 @@ class ThemesManager:
             
             /* ========== ELEMENTOS DE FORMULARIO ========== */
             QLineEdit, QSpinBox, QComboBox {{
-                background-color: {colors['header']};
+                background-color: {colors['icon_bg']};
                 color: {colors['text_primary']};
                 border: 1px solid {colors['input_border']};
                 border-radius: 4px;
@@ -476,6 +470,19 @@ class ThemesManager:
             
             QLineEdit:focus, QSpinBox:focus, QComboBox:focus {{
                 border: 2px solid {colors['input_border']};
+            }}
+            
+            /* ========== BOTÓN CLEAR CON BORDE ANIMADO ========== */
+            ProgressButton {{
+                background-color: {colors['header_buttons']};
+                border-radius: 19px;
+                color: {colors['text_primary']};
+                font-size: 18px;
+                border: none;
+            }}
+            
+            ProgressButton:hover {{
+                background-color: {colors['button_hover']};
             }}
         """
     
