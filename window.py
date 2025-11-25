@@ -417,19 +417,40 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.last_emoji_inserted = None
 
     def show_window(self):
+        """Mostrar ventana centrada y enfocada"""
         try:
-            proc = subprocess.run(['xdotool', 'getactivewindow'], capture_output=True, text=True, timeout=0.2)
-            wid = proc.stdout.strip() if proc and proc.stdout else None
-            if wid:
-                self.last_active_window = wid
+            # Guardar ventana activa actual
+            if self.display_server == 'x11' and self.detector.is_tool_available('xdotool'):
+                proc = subprocess.run(['xdotool', 'getactivewindow'], 
+                                    capture_output=True, text=True, timeout=0.2)
+                if proc.returncode == 0 and proc.stdout.strip():
+                    self.last_active_window = proc.stdout.strip()
         except Exception:
             self.last_active_window = None
 
+        # Mostrar y centrar ventana
         self.center_window()
         self.show()
         self.activateWindow()
         self.raise_()
         self.search_bar.setFocus()
+        
+        # Crear archivo de estado de visibilidad
+        try:
+            visibility_file = Path("/tmp/petra_visible")
+            visibility_file.touch()
+        except:
+            pass
+
+    def hide(self):
+        """Ocultar ventana y limpiar estado"""
+        super().hide()
+        try:
+            visibility_file = Path("/tmp/petra_visible")
+            if visibility_file.exists():
+                visibility_file.unlink()
+        except:
+            pass
 
     def toggle_window_pin(self):
         try:

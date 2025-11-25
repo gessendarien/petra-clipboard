@@ -16,8 +16,8 @@ class ConfigManager:
         self.config = {}
         self.show_clear_btn = True
         self.show_pin_btn = False
-        self.shortcut = 'Super + v'
-        self.theme = 'ubuntu'  # Nuevo: tema por defecto
+        self.shortcut = 'Control + Shift + v'
+        self.theme = 'dark'
         
         self.load_config()
 
@@ -25,10 +25,10 @@ class ConfigManager:
         default = {
             'language': 'es',
             'max_images': 10,
-            'shortcut': 'Super + v',
+            'shortcut': 'Control + Shift + v',
             'show_clear_btn': True,
             'show_pin_btn': False,
-            'theme': 'ubuntu'  # Nuevo: tema en configuración
+            'theme': 'dark'
         }
         
         try:
@@ -45,16 +45,17 @@ class ConfigManager:
 
             self.language = self.config.get('language', default['language'])
             self.max_images = int(self.config.get('max_images', default['max_images']))
-            self.shortcut = self.config.get('shortcut', default.get('shortcut', 'Super + v'))
+            self.shortcut = self.config.get('shortcut', default['shortcut'])
             self.show_clear_btn = bool(self.config.get('show_clear_btn', True))
             self.show_pin_btn = bool(self.config.get('show_pin_btn', False))
-            self.theme = self.config.get('theme', default.get('theme', 'ubuntu'))  # Nuevo
+            self.theme = self.config.get('theme', default.get('theme', 'dark'))
         except Exception:
             self.config = default
             self.language = default['language']
             self.max_images = default['max_images']
+            self.shortcut = default['shortcut']
             self.show_clear_btn = True
-            self.theme = 'ubuntu'
+            self.theme = 'dark'
 
     def save_config(self):
         try:
@@ -63,10 +64,10 @@ class ConfigManager:
                 
             self.config['language'] = getattr(self, 'language', 'es')
             self.config['max_images'] = getattr(self, 'max_images', 10)
-            self.config['shortcut'] = getattr(self, 'shortcut', 'Super + v')
+            self.config['shortcut'] = getattr(self, 'shortcut', 'Control + Shift + v')
             self.config['show_clear_btn'] = getattr(self, 'show_clear_btn', True)
             self.config['show_pin_btn'] = getattr(self, 'show_pin_btn', False)
-            self.config['theme'] = getattr(self, 'theme', 'ubuntu')  # Nuevo
+            self.config['theme'] = getattr(self, 'theme', 'dark')
             
             with open(self.config_file, 'w') as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)
@@ -91,7 +92,6 @@ class ConfigManager:
             try:
                 with open(self.pinned_file, 'r') as f:
                     pinned = json.load(f)
-                    # Asegurarse de que self.clips existe
                     if not hasattr(self, 'clips'):
                         self.clips = []
                     for item in pinned:

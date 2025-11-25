@@ -132,46 +132,52 @@ class ClipItem(QFrame):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
         
+        # Icono
         icon_label = QLabel()
         icon_label.setFixedSize(40, 40)
         icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        icon_loaded = False
-        try:
-            icons_dir = Path(__file__).parent / 'icons'
-            icon_files = {
-                "text": "texts.png",
-                "url": "links.png", 
-                "image": "images.png",
-                "emoji": "emojis.png",
-                "color": "colors.png"
-            }
-            icon_file = icon_files.get(self.item_type)
-            if icon_file:
-                icon_path = icons_dir / icon_file
-                if icon_path.exists():
-                    pixmap = QPixmap(str(icon_path))
-                    if not pixmap.isNull():
-                        icon_label.setPixmap(pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-                        icon_label.setStyleSheet("background-color: transparent;")
-                        icon_loaded = True
-        except Exception:
-            pass
+        # PARA IMÁGENES: mostrar preview en miniatura
+        if self.item_type == "image" and self.main_window and self.content in self.main_window.clipboard_images:
+            self.setup_image_thumbnail(icon_label)
+        else:
+            # Para otros tipos, usar ícono normal
+            icon_loaded = False
+            try:
+                icons_dir = Path(__file__).parent / 'icons'
+                icon_files = {
+                    "text": "texts.png",
+                    "url": "links.png", 
+                    "image": "images.png",
+                    "emoji": "emojis.png",
+                    "color": "colors.png"
+                }
+                icon_file = icon_files.get(self.item_type)
+                if icon_file:
+                    icon_path = icons_dir / icon_file
+                    if icon_path.exists():
+                        pixmap = QPixmap(str(icon_path))
+                        if not pixmap.isNull():
+                            icon_label.setPixmap(pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                            icon_label.setStyleSheet("background-color: transparent;")
+                            icon_loaded = True
+            except Exception:
+                pass
 
-        if not icon_loaded:
-            if self.item_type == "color":
-                bg_color = self.content if self.content.startswith("#") else "#3d2a4d"
-                icon_label.setStyleSheet(f"""
-                    background-color: {bg_color};
-                    border-radius: 6px;
-                    border: 1px solid rgba(255, 255, 255, 0.2);
-                """)
-            else:
-                icon_label.setStyleSheet("""
-                    background-color: transparent;
-                    border-radius: 6px;
-                    border: none;
-                """)
+            if not icon_loaded:
+                if self.item_type == "color":
+                    bg_color = self.content if self.content.startswith("#") else "#3d2a4d"
+                    icon_label.setStyleSheet(f"""
+                        background-color: {bg_color};
+                        border-radius: 6px;
+                        border: 1px solid rgba(255, 255, 255, 0.2);
+                    """)
+                else:
+                    icon_label.setStyleSheet("""
+                        background-color: transparent;
+                        border-radius: 6px;
+                        border: none;
+                    """)
         
         content_layout = QVBoxLayout()
         content_layout.setSpacing(2)
@@ -303,7 +309,7 @@ class ClipItem(QFrame):
         self.pin_action_btn.installEventFilter(self)
         self.pin_action_btn.clicked.connect(self.pin_toggled.emit)
         
-        self.delete_action_btn = QPushButton("")
+        self.delete_action_btn = QPushButton("✕")
         self.delete_action_btn.setObjectName("delete_action_button")
         self.delete_action_btn.setFixedSize(32, 32)
         self.delete_action_btn.setCursor(Qt.CursorShape.PointingHandCursor)

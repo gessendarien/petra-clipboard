@@ -165,13 +165,13 @@ class SettingsDialog(QDialog):
                 parent = self.parent()
                 self.max_images_sb.setValue(int(getattr(parent, 'max_images', 10)))
                 
-                lang = getattr(parent, 'language', 'es')
+                lang = getattr(parent, 'language', 'en')
                 idx = self.lang_combo.findData(lang)
                 if idx >= 0:
                     self.lang_combo.setCurrentIndex(idx)
                     
                 # Nuevo: cargar tema
-                theme = getattr(parent, 'theme', 'ubuntu')
+                theme = getattr(parent, 'theme', 'dark')
                 theme_idx = self.theme_combo.findData(theme)
                 if theme_idx >= 0:
                     self.theme_combo.setCurrentIndex(theme_idx)
@@ -179,7 +179,7 @@ class SettingsDialog(QDialog):
                 self.show_clear_cb.setChecked(bool(getattr(parent, 'show_clear_btn', True)))
                 self.show_pin_cb.setChecked(bool(getattr(parent, 'show_pin_btn', False)))
                 
-                sc = getattr(parent, 'shortcut', None)
+                sc = getattr(parent, 'shortcut', 'Control + Shift + v')
                 if sc:
                     self.shortcut_edit.setText(str(sc))
         except Exception:
@@ -193,10 +193,10 @@ class SettingsDialog(QDialog):
                 'save': 'Guardar',
                 'close': 'Cerrar',
                 'language': 'Idioma:',
-                'theme': 'Tema:',  # Nuevo
+                'theme': 'Tema:',
                 'show_clear': "Mostrar botón 'Borrar todo' en la cabecera",
                 'show_pin': "Mostrar botón 'Fijar ventana' en la cabecera",
-                'shortcut': "Atajo (ej. Alt+v):"
+                'shortcut': "Atajo (ej. Control+Shift+v):"
             },
             'en': {
                 'title': 'Settings',
@@ -204,10 +204,10 @@ class SettingsDialog(QDialog):
                 'save': 'Save',
                 'close': 'Close',
                 'language': 'Language:',
-                'theme': 'Theme:',  # Nuevo
+                'theme': 'Theme:',
                 'show_clear': "Show 'Clear All' button in header",
                 'show_pin': "Show 'Pin window' button in header",
-                'shortcut': "Shortcut (e.g. Alt+v):"
+                'shortcut': "Shortcut (e.g. Control+Shift+v):"
             }
         }
 
@@ -215,7 +215,7 @@ class SettingsDialog(QDialog):
         """Aplicar el tema actual al diálogo"""
         try:
             if self.parent() is not None:
-                parent_theme = getattr(self.parent(), 'theme', 'ubuntu')
+                parent_theme = getattr(self.parent(), 'theme', 'dark')
                 self.themes_manager.apply_theme_to_widget(self, parent_theme)
         except Exception:
             pass
