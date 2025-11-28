@@ -123,10 +123,18 @@ class ClipItem(QFrame):
         
     def setup_ui(self):
         self.setObjectName("clip_item")
+        # Allow hover pseudo-state to work reliably and ensure stylesheet backgrounds are painted
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        # Ensure a default copied property exists (string 'false' so styles match)
+        self.setProperty('copied', 'false')
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMinimumHeight(70)
         self.setMaximumHeight(70)
         self.setMaximumWidth(485)
+        # enable hover events to work reliably even when mouse is over child widgets
+        self.setMouseTracking(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
         
         layout = QHBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
@@ -192,10 +200,107 @@ class ClipItem(QFrame):
         layout.addWidget(icon_label)
         layout.addLayout(content_layout)
         layout.addStretch()
-        
+
+        # background overlay for hover/copy visuals (starts hidden)
+        self._bg = QWidget(self)
+        self._bg.setObjectName('clip_item_bg')
+        self._bg.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self._bg.setGeometry(self.rect())
+        self._bg.lower()
+        self._bg.hide()
+
         self.setup_action_buttons(layout)
-        
+
         self.setLayout(layout)
+
+        # Install eventFilter on all child widgets so hover over children still updates parent
+        for child in self.findChildren(QWidget):
+            try:
+                if child is not self._bg and child is not self.actions_widget:
+                    child.installEventFilter(self)
+            except Exception:
+                pass
+
+    # hover/press state is handled by final event handlers and overlay background
+
+    def paintEvent(self, event):
+        # Draw background according to state so hover/fill is always visible
+        try:
+            colors = None
+            if self.main_window and hasattr(self.main_window, 'themes_manager'):
+                try:
+                    colors = self.main_window.themes_manager.get_theme_colors()
+                except Exception:
+                    colors = None
+
+            # fallback colors
+            def c(key, fallback):
+                if colors and key in colors:
+                    return colors[key]
+                return fallback
+
+            is_copied = (self.property('copied') == 'true')
+            is_hover = (self.property('hover') == 'true')
+            is_pressed = (self.property('pressed') == 'true')
+
+            if is_copied:
+                if is_pressed:
+                    # copied pressed -> reuse element_click so there are no dependencies
+                    bg = c('element_click', '#8A5CEA')
+                elif is_hover:
+                    # use the single hover source for consistency
+                    bg = c('clip_hover_bg', '#00D6D6')
+                else:
+                    # default copied state: show same fill as hover to make it visible
+                    bg = c('clip_hover_bg', '#00D6D6')
+            else:
+                if is_pressed:
+                    bg = c('element_click', '#8A5CEA')
+                elif is_hover:
+                    bg = c('clip_hover_bg', '#00D6D6')
+                else:
+                    bg = None
+
+            # paint rounded rect background (fill full area — no border used)
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            if bg:
+                # overlay should cover the full widget (no border inset)
+                inset = 0
+                inner = self.rect().adjusted(inset, inset, -inset, -inset)
+
+                # parse color or rgba
+                def parse_color_string(s):
+                    try:
+                        if s.startswith('rgba'):
+                            # rgba(r,g,b,a)
+                            parts = s[s.find('(')+1:s.find(')')].split(',')
+                            r = int(parts[0].strip())
+                            g = int(parts[1].strip())
+                            b = int(parts[2].strip())
+                            a = float(parts[3].strip())
+                            qc = QColor(r, g, b, int(a * 255))
+                            return qc
+                        else:
+                            qc = QColor(s)
+                            if not qc.isValid():
+                                return QColor('#000000')
+                            return qc
+                    except Exception:
+                        return QColor('#000000')
+
+                brush = parse_color_string(bg) if isinstance(bg, str) else QColor('#000000')
+                painter.setBrush(brush)
+                painter.setPen(Qt.PenStyle.NoPen)
+                radius = 10
+                path = QPainterPath()
+                path.addRoundedRect(inner, radius, radius)
+                painter.fillPath(path, brush)
+            painter.end()
+        except Exception:
+            pass
+
+        super().paintEvent(event)
     
     def setup_image_thumbnail(self, icon_label):
         try:
@@ -249,13 +354,21 @@ class ClipItem(QFrame):
         except Exception:
             pass
             
+        # Obtener el color del enlace del tema actual
+        link_color = '#BB86FC'  # default morado
+        if self.main_window and hasattr(self.main_window, 'themes_manager'):
+            try:
+                link_color = self.main_window.themes_manager.get_current_theme()['colors']['link_color']
+            except Exception:
+                pass
+            
         if render_as_link or url_re.search(self.content):
             def _linkify(match):
                 u = match.group(1)
                 href = u
                 if not re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*://', u):
                     href = 'http://' + u
-                return f'<a href="{html.escape(href)}">{html.escape(u)}</a>'
+                return f'<a href="{html.escape(href)}" style="color: {link_color}; text-decoration: none;">{html.escape(u)}</a>'
 
             escaped = html.escape(self.content)
             html_text = url_re.sub(lambda m: _linkify(m), escaped)
@@ -272,6 +385,10 @@ class ClipItem(QFrame):
             text_label.setTextFormat(Qt.TextFormat.PlainText)
             text_label.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
             
+        # Aplicar el tema al QLabel si el administrador de temas está disponible
+        if self.main_window and hasattr(self.main_window, 'themes_manager'):
+            self.main_window.themes_manager.apply_theme_to_widget(text_label)
+        
         return text_label
     
     def create_time_label(self):
@@ -367,13 +484,92 @@ class ClipItem(QFrame):
         else:
             return self.timestamp.strftime("%d/%m/%Y")
     
+    def _update_background(self):
+        """Update background overlay widget based on hover/pressed/copied state and theme colors."""
+        try:
+            colors = None
+            if self.main_window and hasattr(self.main_window, 'themes_manager'):
+                try:
+                    colors = self.main_window.themes_manager.get_theme_colors()
+                except Exception:
+                    colors = None
+
+            def getc(k, fallback=None):
+                return colors.get(k, fallback) if colors else fallback
+
+            is_copied = (self.property('copied') == 'true')
+            is_hover = (self.property('hover') == 'true')
+            is_pressed = (self.property('pressed') == 'true')
+
+            bg = None
+            if is_copied:
+                if is_pressed:
+                    # use element_click for the pressed variation
+                    bg = getc('element_click', '#8A5CEA')
+                elif is_hover:
+                    bg = getc('clip_hover_bg', '#00D6D6')
+                else:
+                    # show clip_hover_bg when an item is copied so it remains clearly visible
+                    bg = getc('clip_hover_bg', '#00D6D6')
+            else:
+                if is_pressed:
+                    bg = getc('element_click', '#8A5CEA')
+                elif is_hover:
+                    bg = getc('clip_hover_bg', '#00D6D6')
+                else:
+                    bg = None
+
+            if bg:
+                # overlay fills the whole widget
+                self._bg.setGeometry(self.rect())
+                self._bg.setStyleSheet(f"background-color: {bg}; border-radius: 8px;")
+                self._bg.show()
+            else:
+                # fall back to transparent so parent's background shows
+                self._bg.setStyleSheet("background-color: transparent; border-radius: 8px;")
+                self._bg.hide()
+        except Exception:
+            try:
+                self._bg.setStyleSheet("background-color: transparent; border-radius: 8px;")
+                self._bg.hide()
+            except Exception:
+                pass
+
+    def resizeEvent(self, event):
+        try:
+            if hasattr(self, '_bg') and self._bg:
+                self._bg.setGeometry(self.rect())
+        except Exception:
+            pass
+        super().resizeEvent(event)
+
+    def event(self, event):
+        # handle hover enter/leave consistently even if children get mouse events
+        try:
+            if event.type() == QEvent.Type.HoverEnter:
+                self.setProperty('hover', 'true')
+                self._update_background()
+            elif event.type() == QEvent.Type.HoverLeave:
+                self.setProperty('hover', 'false')
+                self._update_background()
+        except Exception:
+            pass
+        return super().event(event)
+
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self.setStyleSheet("background-color: #5d4a6d; border-radius: 10px;")
-    
+            try:
+                self.setProperty('pressed', 'true')
+                self._update_background()
+            except Exception:
+                pass
+        super().mousePressEvent(event)
+
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             try:
+                self.setProperty('pressed', 'false')
+                self._update_background()
                 if getattr(self, 'pinned', False):
                     self.actions_widget.show()
                 else:
@@ -381,17 +577,24 @@ class ClipItem(QFrame):
             except Exception:
                 pass
             self.clicked.emit(self.content)
-    
+
     def enterEvent(self, event):
-        self.actions_widget.show()
+        try:
+            self.setProperty('hover', 'true')
+            self._update_background()
+            self.actions_widget.show()
+        except Exception:
+            pass
         super().enterEvent(event)
-    
+
     def leaveEvent(self, event):
         try:
+            self.setProperty('hover', 'false')
+            self._update_background()
             if not getattr(self, 'pinned', False):
                 self.actions_widget.hide()
         except Exception:
-            self.actions_widget.hide()
+            pass
         super().leaveEvent(event)
 
     def eventFilter(self, obj, event):

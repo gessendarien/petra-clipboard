@@ -297,6 +297,22 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         container_layout.setSpacing(0)
         
         widget = ClipItem(clip['content'], clip['type'], clip['timestamp'], clip['pinned'], self)
+        # Apply persisted copied state (if any) so the widget reflects copied appearance after refresh
+        try:
+            if clip.get('copied'):
+                widget.setProperty('copied', 'true')
+            else:
+                widget.setProperty('copied', 'false')
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+            try:
+                # ensure overlay background matches persisted state
+                if hasattr(widget, '_update_background'):
+                    widget._update_background()
+            except Exception:
+                pass
+        except Exception:
+            pass
         widget.clicked.connect(self.copy_and_close)
         widget.double_clicked.connect(self.paste_and_close)
         widget.delete_requested.connect(lambda: self.delete_clip(clip))

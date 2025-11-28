@@ -305,13 +305,62 @@ class ClipboardManager:
                 clipboard.setText(content)
                 print(f"✓ Texto restaurado al portapapeles")
             
+            # Decide whether to hide after marking so the copied state can be applied first
+            should_hide = False
             try:
-                if not getattr(self, 'window_pinned', False):
-                    self.hide()
+                should_hide = not getattr(self, 'window_pinned', False)
             except Exception:
-                self.hide()
+                should_hide = True
 
+            # Marcar el widget como copiado para cambiar su apariencia.
+            # Clear existing copied flags and set the clicked one to the string "true"
             try:
+                # Clear previous 'copied' state from all ClipItem widgets first
+                for i in range(self.content_layout.count()):
+                    item = self.content_layout.itemAt(i)
+                    if item and item.widget():
+                        w = item.widget()
+                        # only clear widgets that are currently marked 'true'
+                        if w.property('copied') == 'true':
+                            w.setProperty('copied', 'false')
+                            w.style().unpolish(w)
+                            w.style().polish(w)
+                            try:
+                                if hasattr(w, '_update_background'):
+                                    w._update_background()
+                            except Exception:
+                                pass
+
+                # Set the clicked widget's copied property to the string 'true'
+                for i in range(self.content_layout.count()):
+                    item = self.content_layout.itemAt(i)
+                    if item and item.widget():
+                        widget = item.widget()
+                        if hasattr(widget, 'content') and widget.content == content:
+                            widget.setProperty('copied', 'true')
+                            widget.style().unpolish(widget)
+                            widget.style().polish(widget)
+                            try:
+                                if hasattr(widget, '_update_background'):
+                                    widget._update_background()
+                            except Exception:
+                                pass
+                            break
+            except Exception as e:
+                print(f"Error marcando widget como copiado: {e}")
+
+            # Persist copied state in the underlying clip data model so it survives UI refreshes
+            try:
+                for c in self.clips:
+                    c['copied'] = (c.get('content') == content)
+            except Exception:
+                pass
+
+            # hide after marking if appropriate (keeps marking visible for pinned windows)
+            try:
+                if should_hide:
+                    self.hide()
+
                 if getattr(self, 'window_pinned', False):
                     # Guardar ventana activa usando el nuevo método multi-backend
                     self.last_active_window = self.input_simulator.get_active_window()
