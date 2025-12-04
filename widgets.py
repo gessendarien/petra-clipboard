@@ -126,8 +126,10 @@ class ClipItem(QFrame):
         # Allow hover pseudo-state to work reliably and ensure stylesheet backgrounds are painted
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        # Ensure a default copied property exists (string 'false' so styles match)
+        # Ensure default dynamic states exist (strings so stylesheet matches)
         self.setProperty('copied', 'false')
+        self.setProperty('hover', 'false')
+        self.setProperty('pressed', 'false')
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMinimumHeight(70)
         self.setMaximumHeight(70)
@@ -243,6 +245,27 @@ class ClipItem(QFrame):
             is_hover = (self.property('hover') == 'true')
             is_pressed = (self.property('pressed') == 'true')
 
+            def _make_translucent_color_string(s, alpha=0.18):
+                """Return an rgba(...) string for color s with given alpha (0..1).
+                If s is already rgba(...) it will adjust the alpha."""
+                try:
+                    if isinstance(s, QColor):
+                        r = s.red(); g = s.green(); b = s.blue()
+                    else:
+                        if isinstance(s, str) and s.startswith('rgba'):
+                            # attempt parse and override alpha
+                            parts = s[s.find('(')+1:s.find(')')].split(',')
+                            r = int(parts[0].strip()); g = int(parts[1].strip()); b = int(parts[2].strip())
+                        else:
+                            qc = QColor(s)
+                            if not qc.isValid():
+                                qc = QColor('#000000')
+                            r = qc.red(); g = qc.green(); b = qc.blue()
+                    a = max(0, min(1, alpha))
+                    return f'rgba({r}, {g}, {b}, {a})'
+                except Exception:
+                    return f'rgba(0, 0, 0, {max(0, min(1, alpha))})'
+
             if is_copied:
                 if is_pressed:
                     # copied pressed -> reuse element_click so there are no dependencies
@@ -251,8 +274,11 @@ class ClipItem(QFrame):
                     # use the single hover source for consistency
                     bg = c('clip_hover_bg', '#00D6D6')
                 else:
-                    # default copied state: show same fill as hover to make it visible
-                    bg = c('clip_hover_bg', '#00D6D6')
+                    # default copied state: use a subtle translucent tint so it does not
+                    # look identical to hover (prevents the "persistent hover" feeling)
+                    base = c('clip_hover_bg', '#00D6D6')
+                    # produce a translucent rgba color for paint
+                    bg = _make_translucent_color_string(base, alpha=0.18)
             else:
                 if is_pressed:
                     bg = c('element_click', '#8A5CEA')
@@ -502,6 +528,22 @@ class ClipItem(QFrame):
             is_pressed = (self.property('pressed') == 'true')
 
             bg = None
+            def _make_translucent_qss(s, alpha=0.18):
+                # produce a CSS rgba string for stylesheet usage
+                try:
+                    if isinstance(s, str) and s.startswith('rgba'):
+                        # override alpha value
+                        parts = s[s.find('(')+1:s.find(')')].split(',')
+                        r = int(parts[0].strip()); g = int(parts[1].strip()); b = int(parts[2].strip())
+                    else:
+                        qc = QColor(s)
+                        if not qc.isValid():
+                            qc = QColor('#000000')
+                        r = qc.red(); g = qc.green(); b = qc.blue()
+                    return f'rgba({r}, {g}, {b}, {max(0, min(1, alpha))})'
+                except Exception:
+                    return f'rgba(0, 0, 0, {max(0, min(1, alpha))})'
+
             if is_copied:
                 if is_pressed:
                     # use element_click for the pressed variation
@@ -509,8 +551,9 @@ class ClipItem(QFrame):
                 elif is_hover:
                     bg = getc('clip_hover_bg', '#00D6D6')
                 else:
-                    # show clip_hover_bg when an item is copied so it remains clearly visible
-                    bg = getc('clip_hover_bg', '#00D6D6')
+                    # show a subtle translucent tint when item is copied but not hovered
+                    base = getc('clip_hover_bg', '#00D6D6')
+                    bg = _make_translucent_qss(base, alpha=0.18)
             else:
                 if is_pressed:
                     bg = getc('element_click', '#8A5CEA')
@@ -570,6 +613,12 @@ class ClipItem(QFrame):
             try:
                 self.setProperty('pressed', 'false')
                 self._update_background()
+
+                # Ensure hover state is updated after release
+                if not self.rect().contains(self.mapFromGlobal(QCursor.pos())):
+                    self.setProperty('hover', 'false')
+                    self._update_background()
+
                 if getattr(self, 'pinned', False):
                     self.actions_widget.show()
                 else:
@@ -577,24 +626,18 @@ class ClipItem(QFrame):
             except Exception:
                 pass
             self.clicked.emit(self.content)
+        super().mouseReleaseEvent(event)
 
     def enterEvent(self, event):
-        try:
-            self.setProperty('hover', 'true')
-            self._update_background()
-            self.actions_widget.show()
-        except Exception:
-            pass
+        """Handle mouse enter event to set hover state."""
+        self.setProperty('hover', 'true')
+        self._update_background()
         super().enterEvent(event)
 
     def leaveEvent(self, event):
-        try:
-            self.setProperty('hover', 'false')
-            self._update_background()
-            if not getattr(self, 'pinned', False):
-                self.actions_widget.hide()
-        except Exception:
-            pass
+        """Handle mouse leave event to unset hover state."""
+        self.setProperty('hover', 'false')
+        self._update_background()
         super().leaveEvent(event)
 
     def eventFilter(self, obj, event):
@@ -618,3 +661,46 @@ class ClipItem(QFrame):
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.double_clicked.emit(self.content)
+
+    def reset_states(self):
+        """Reset hover, copied, and pressed states to their default values."""
+        self.setProperty('hover', 'false')
+        self.setProperty('copied', 'false')
+        self.setProperty('pressed', 'false')
+        self._update_background()
+
+    def reset_all_states(self):
+        """Reset hover, copied, and pressed states for all ClipItem instances."""
+        for child in self.parent().findChildren(ClipItem):
+            child.reset_states()
+
+    def reset_states_on_context_change(self):
+        """Reset hover, copied, and pressed states when the context changes."""
+        self.setProperty('hover', 'false')
+        self.setProperty('copied', 'false')
+        self.setProperty('pressed', 'false')
+        self._update_background()
+
+    def on_context_change(self):
+        """Handle context changes (e.g., filter updates) and reset all states."""
+        for child in self.parent().findChildren(ClipItem):
+            child.reset_states_on_context_change()
+
+    def reset_states_on_filter_change(self):
+        """Reset hover, copied, and pressed states for all ClipItem instances when filters change."""
+        for child in self.parent().findChildren(ClipItem):
+            child.setProperty('hover', 'false')
+            child.setProperty('copied', 'false')
+            child.setProperty('pressed', 'false')
+            child._update_background()
+
+    def on_filter_change(self):
+        """Handle filter change and reset all states."""
+        self.reset_states_on_filter_change()
+        # ...existing code for handling filter change...
+
+    def closeEvent(self, event):
+        """Handle window close event and reset states for all ClipItem instances."""
+        for child in self.findChildren(ClipItem):
+            child.reset_states()
+        super().closeEvent(event)

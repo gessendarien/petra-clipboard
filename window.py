@@ -299,6 +299,10 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         widget = ClipItem(clip['content'], clip['type'], clip['timestamp'], clip['pinned'], self)
         # Apply persisted copied state (if any) so the widget reflects copied appearance after refresh
         try:
+            # Ensure transient states are cleared when creating the widget
+            widget.setProperty('pressed', 'false')
+            widget.setProperty('hover', 'false')
+
             if clip.get('copied'):
                 widget.setProperty('copied', 'true')
             else:
@@ -449,7 +453,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.show()
         self.activateWindow()
         self.raise_()
-        self.search_bar.setFocus()
+        # self.search_bar.setFocus()  # Removed autofocus from search bar
         
         # Crear archivo de estado de visibilidad
         try:
@@ -460,6 +464,23 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
 
     def hide(self):
         """Ocultar ventana y limpiar estado"""
+        # Before hiding, ensure all item states are reset so we don't leave
+        # 'pressed' or 'hover' properties set on lingering widgets.
+        try:
+            for w in self.findChildren(ClipItem):
+                try:
+                    w.reset_states()
+                except Exception:
+                    # fallback: explicitly unset properties
+                    try:
+                        w.setProperty('hover', 'false')
+                        w.setProperty('pressed', 'false')
+                        w._update_background()
+                    except Exception:
+                        pass
+        except Exception:
+            pass
+
         super().hide()
         try:
             visibility_file = Path("/tmp/petra_visible")

@@ -16,12 +16,12 @@ class ThemesManager:
                     'text_secondary': '#AAAAAA',
                     'card_text': '#E0E0E0',
                     
-                    # Items del clipboard
-                    # removed copied_* keys (unused) — use `clip_hover_bg` and `element_click` instead
-                    # Hover background used for all hover states (single source of truth)
-                    'clip_hover_bg': '#4B1549',
-                    # clip_hover_border removed — no border used for clip items
-                    'element_click': '#7D398E',
+                    # Items clipboard
+                    'clip_hover_bg': '#8559BA',
+                    'element_click': '#74559A',
+
+                    # Enlaces
+                    'link_color': '#BB86FC',
                     
                     # Búsqueda
                     'search_input_focus': '#BB86FC',
@@ -47,31 +47,29 @@ class ThemesManager:
                     'delete_hover': '#FF5252',
                     'pin_hover': '#04C5B0',
                     
-                    # Enlaces - CORREGIDO: usar color específico
-                    'link_color': '#BB86FC',
                     
-                    # Configuración - CORREGIDO
+                    # Configuración
                     'settings_window': '#FA0000',
-                    'settings_text': '#00FFCC',
-                    'input_border': '#41C200',
+                    'settings_text': '#EDEDED',
+                    'input_border': '#892E80',
                     
                     # Scrollbars
-                    'scrollbar_bg': '#A00B0B',
-                    'scrollbar_handle': '#0BDA27',
+                    'scrollbar_bg': '#242323',
+                    'scrollbar_handle': '#565656',
                     
                     # Selects config
-                    'icon_bg': '#53CC1F',
+                    'icon_bg': '#323232',
                     
                     # Estados especiales
                     'header_buttons_click': '#9A67EA',
-                    'clear_button_border': '#BB86FC'
+                    'clear_button_border': '#9A67EA'
                 }
             },
             'light': {
                 'name': 'Light Soft',
                 'colors': {
                     # Colores principales
-                    'primary': '#3778B0',
+                    'primary': '#4597DF',
                     
                     # Fondos principales
                     'background': '#DFE0E1',
@@ -98,9 +96,9 @@ class ThemesManager:
                     
                     # Filtros
                     'filters_background': '#F0F4F8',
-                    'filter_selected': '#3E60A0',
-                    'filter_hover': '#365080',
-                    'filter_click': '#4B5E81',
+                    'filter_selected': '#4597DF',
+                    'filter_hover': '#448ECF',
+                    'filter_click': '#4076A6',
                     
                     # Elementos varios
                     'element_hover': '#E2E8F0',
@@ -130,7 +128,7 @@ class ThemesManager:
                     
                     # Estados especiales
                     'header_buttons_click': '#4D9AD8',
-                    'clear_button_border': '#3778B0'
+                    'clear_button_border': '#F35642'
                 }
             }
         }
@@ -174,6 +172,30 @@ class ThemesManager:
         theme = self.available_themes.get(theme_id, self.available_themes['dark'])
         colors = theme['colors']
     
+        def _to_rgba(color_str, alpha=0.18):
+            try:
+                s = color_str.strip()
+                if s.startswith('rgba'):
+                    # replace existing alpha with our alpha
+                    inside = s[s.find('(')+1:s.find(')')]
+                    parts = [p.strip() for p in inside.split(',')]
+                    if len(parts) >= 3:
+                        r = int(parts[0]); g = int(parts[1]); b = int(parts[2])
+                        return f'rgba({r}, {g}, {b}, {max(0, min(1, alpha))})'
+                if s.startswith('#') and len(s) in (7, 4):
+                    # handle #RRGGBB or #RGB
+                    if len(s) == 7:
+                        r = int(s[1:3], 16); g = int(s[3:5], 16); b = int(s[5:7], 16)
+                    else:
+                        r = int(s[1]*2, 16); g = int(s[2]*2, 16); b = int(s[3]*2, 16)
+                    return f'rgba({r}, {g}, {b}, {max(0, min(1, alpha))})'
+            except Exception:
+                pass
+            # fallback
+            return f'rgba(0, 0, 0, {max(0, min(1, alpha))})'
+
+        copied_fill = _to_rgba(colors.get('clip_hover_bg', '#00D6D6'), alpha=0.18)
+
         return f"""
             QMainWindow {{
                 background-color: {colors['background']} !important;
@@ -346,7 +368,8 @@ class ThemesManager:
             /* copied state: use existing clip_hover_bg for fill so it remains visible
                and keep a strong primary border. The old copied_* keys were unused. */
             QFrame#clip_item[copied="true"] {{
-                background-color: {colors['clip_hover_bg']} !important;
+                /* copied-only: subtle translucent fill so it's visually distinct from hover */
+                background-color: {copied_fill} !important;
             }}
 
             QFrame#clip_item[copied="true"]:hover {{

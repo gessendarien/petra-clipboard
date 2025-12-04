@@ -338,6 +338,11 @@ class ClipboardManager:
                         widget = item.widget()
                         if hasattr(widget, 'content') and widget.content == content:
                             widget.setProperty('copied', 'true')
+                            # ensure pressed transient flag isn't left set
+                            try:
+                                widget.setProperty('pressed', 'false')
+                            except Exception:
+                                pass
                             widget.style().unpolish(widget)
                             widget.style().polish(widget)
                             try:
