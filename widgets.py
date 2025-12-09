@@ -322,6 +322,12 @@ class ClipItem(QFrame):
                 path = QPainterPath()
                 path.addRoundedRect(inner, radius, radius)
                 painter.fillPath(path, brush)
+
+            # keyboard selection no longer draws a border; selection uses the
+            # existing hover overlay (the 'hover' property) so visuals match
+            # mouse hover. The 'selected' property remains for semantic state
+            # but the painting is delegated to _update_background which handles
+            # hover/copy/pressed overlays.
             painter.end()
         except Exception:
             pass
@@ -440,9 +446,10 @@ class ClipItem(QFrame):
         self._pin_icon = QIcon(str(pin_path)) if pin_path.exists() else None
         self._unpin_icon = QIcon(str(unpin_path)) if unpin_path.exists() else None
         
+        # Set initial pin/unpin icon
         if self.pinned:
-            if self._pin_icon:
-                self.pin_action_btn.setIcon(self._pin_icon)
+            if self._unpin_icon:
+                self.pin_action_btn.setIcon(self._unpin_icon)
                 self.pin_action_btn.setIconSize(QSize(18, 18))
         else:
             if self._pin_icon:
@@ -452,23 +459,35 @@ class ClipItem(QFrame):
         self.pin_action_btn.installEventFilter(self)
         self.pin_action_btn.clicked.connect(self.pin_toggled.emit)
         
+        # Try to use the x.png icon for delete if available, fallback to a cross character
+        del_icon = icons_dir / 'x.png'
         self.delete_action_btn = QPushButton("✕")
+        if del_icon.exists():
+            try:
+                self.delete_action_btn.setIcon(QIcon(str(del_icon)))
+                self.delete_action_btn.setIconSize(QSize(18, 18))
+                self.delete_action_btn.setText("")
+            except Exception:
+                pass
         self.delete_action_btn.setObjectName("delete_action_button")
         self.delete_action_btn.setFixedSize(32, 32)
         self.delete_action_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.delete_action_btn.clicked.connect(self.delete_requested.emit)
         
-        actions_layout.addWidget(self.delete_action_btn)
+        # Place pin button inside compact actions widget (right-most)
         actions_layout.addWidget(self.pin_action_btn)
 
-        if self.pinned:
-            self.actions_widget.show()
-            self.delete_action_btn.hide()
-        else:
-            self.actions_widget.hide()
-            self.delete_action_btn.show()
-        
+        # Add delete button and the compact actions widget to the item layout
+        # in that order so the visual order is: [delete] [pin/unpin]
+        layout.addWidget(self.delete_action_btn)
         layout.addWidget(self.actions_widget)
+
+        # Ensure both controls are visible — pin shows pin/unpin state
+        try:
+            self.actions_widget.show()
+            self.delete_action_btn.show()
+        except Exception:
+            pass
     
     def get_icon_style(self):
         if self.item_type == "color":

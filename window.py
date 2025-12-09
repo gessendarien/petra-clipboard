@@ -1,9 +1,10 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLineEdit, QPushButton, QScrollArea, QLabel, 
                              QGridLayout, QSizePolicy, QApplication)
-from PyQt6.QtCore import Qt, QTimer, QThreadPool, QSize
+from PyQt6.QtCore import Qt, QTimer, QThreadPool, QSize, QEvent
 from PyQt6.QtGui import QIcon, QPixmap
 from pathlib import Path
+import os
 import subprocess
 
 from widgets import ProgressButton, ClipItem
@@ -25,6 +26,16 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.window_pinned = False
         
         self.themes_manager = ThemesManager()
+        # guard to avoid re-entrant key handling
+        self._handling_key = False
+        # persist currently selected clip content between UI refreshes
+        self._selected_content = None
+        # whether keyboard-based selection mode is active (disabled by default)
+        # selection visuals only appear after the user presses a key.
+        self._keyboard_selection_active = False
+        # track long-press emulation for keys that simulate header buttons
+        self._key_q_down = False
+        self._key_w_down = False
         
         self.setup_ui()
         self.load_pinned()
@@ -54,6 +65,15 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.setup_scroll_area(main_layout)
         
         self.center_window()
+
+        # Install a minimal global key listener so arrow keys (and later other
+        # shortcuts) are handled at the application level regardless of focus.
+        try:
+            app = QApplication.instance()
+            if app is not None:
+                app.installEventFilter(self)
+        except Exception:
+            pass
     
     def setup_header(self, main_layout):
         header = QWidget()
@@ -152,6 +172,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.content_layout.addStretch()
         
         scroll.setWidget(self.content_widget)
+        # keep a reference so we can call ensureWidgetVisible when navigating
+        self.scroll_area = scroll
         main_layout.addWidget(scroll)
     
     def setup_icon_button(self, button, icon_name):
@@ -288,6 +310,40 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         if unpinned:
             for clip in unpinned:
                 self.add_clip_widget(clip)   
+        # Ensure there is a selection among visible clips. If we had a
+        # previously selected clip (self._selected_content) try to restore it.
+        try:
+            visible = self.get_visible_clip_widgets()
+            # if none currently marked as selected, pick the first one
+            found = False
+            for w in visible:
+                try:
+                    if w.property('selected') == 'true':
+                        found = True
+                        break
+                except Exception:
+                    pass
+
+            if not found and visible:
+                # if we were tracking a previously selected content, restore it
+                if self._selected_content:
+                    for w in visible:
+                        try:
+                            if getattr(w, 'content', None) == self._selected_content:
+                                self._set_selected_clip_widget(w)
+                                found = True
+                                break
+                        except Exception:
+                            pass
+
+            # If there is still no selection, only auto-select the first
+            # visible item when keyboard-selection mode is active. When the
+            # window first appears keyboard-selection should be inactive so
+            # nothing is highlighted until the user presses a key.
+            if not found and visible and getattr(self, '_keyboard_selection_active', False):
+                self._set_selected_clip_widget(visible[0])
+        except Exception:
+            pass
     
     def add_clip_widget(self, clip):
         container = QWidget()
@@ -307,6 +363,22 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 widget.setProperty('copied', 'true')
             else:
                 widget.setProperty('copied', 'false')
+            # restore selected state if this content was the previously selected one
+            try:
+                if getattr(self, '_selected_content', None) and widget.content == self._selected_content:
+                    widget.setProperty('selected', 'true')
+                    try:
+                        widget.setProperty('hover', 'true')
+                    except Exception:
+                        pass
+                else:
+                    widget.setProperty('selected', 'false')
+                    try:
+                        widget.setProperty('hover', 'false')
+                    except Exception:
+                        pass
+            except Exception:
+                widget.setProperty('selected', 'false')
             widget.style().unpolish(widget)
             widget.style().polish(widget)
             try:
@@ -453,6 +525,32 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.show()
         self.activateWindow()
         self.raise_()
+        # Keyboard selection mode should be inactive when window first appears
+        # (no item highlighted). We'll clear visual selection hints here and
+        # only enable keyboard selection when a keypress is detected.
+        try:
+            self._keyboard_selection_active = False
+            for w in self.findChildren(ClipItem):
+                try:
+                    w.setProperty('selected', 'false')
+                    w.setProperty('hover', 'false')
+                    w.style().unpolish(w)
+                    w.style().polish(w)
+                    if hasattr(w, '_update_background'):
+                        w._update_background()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        # ensure the search input isn't focused when the window first opens
+        try:
+            if hasattr(self, 'search_bar'):
+                try:
+                    self.search_bar.clearFocus()
+                except Exception:
+                    pass
+        except Exception:
+            pass
         # self.search_bar.setFocus()  # Removed autofocus from search bar
         
         # Crear archivo de estado de visibilidad
@@ -478,6 +576,16 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                         w._update_background()
                     except Exception:
                         pass
+        except Exception:
+            pass
+
+        # make sure the search box doesn't retain focus when the window is hidden
+        try:
+            if hasattr(self, 'search_bar'):
+                try:
+                    self.search_bar.clearFocus()
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -526,3 +634,425 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             self.hide()
         else:
             self.show_window()
+
+    # --- Keyboard navigation helpers ---
+    def eventFilter(self, obj, event):
+        # Minimal global keyboard reader: handle arrow keys to navigate
+        try:
+            # safely avoid re-entrant handling
+            if getattr(self, '_handling_key', False):
+                return super().eventFilter(obj, event)
+
+            # Only process when visible AND when we are the active window. This
+            # avoids trying to act on widgets when Petra is hidden or another
+            # app/window is active (which previously caused segfaults).
+            try:
+                active = QApplication.activeWindow()
+            except Exception:
+                active = None
+
+            if not getattr(self, 'isVisible', None) or not self.isVisible() or active is not self:
+                return super().eventFilter(obj, event)
+            if event.type() == QEvent.Type.KeyPress:
+                # mark we're handling a key so we don't re-enter
+                try:
+                    self._handling_key = True
+                except Exception:
+                    pass
+                # Activate keyboard-selection mode on the first keypress (unless
+                # the user is typing into the search bar). After activation,
+                # selection visuals (hover) will appear.
+                try:
+                    focus = QApplication.focusWidget()
+                    if not (hasattr(self, 'search_bar') and focus is self.search_bar):
+                        if not getattr(self, '_keyboard_selection_active', False):
+                            self._keyboard_selection_active = True
+                            # if we have a previously tracked selected content, try to restore it
+                            try:
+                                visible = self.get_visible_clip_widgets()
+                                if visible:
+                                    if getattr(self, '_selected_content', None):
+                                        for w in visible:
+                                            try:
+                                                if getattr(w, 'content', None) == self._selected_content:
+                                                    self._set_selected_clip_widget(w)
+                                                    break
+                                            except Exception:
+                                                pass
+                                    else:
+                                        # no prior selection - pick first visible
+                                        self._set_selected_clip_widget(visible[0])
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+                k = event.key()
+                # Ignore auto-repeat events so a held key triggers press once
+                # and release once when released.
+                try:
+                    if hasattr(event, 'isAutoRepeat') and event.isAutoRepeat():
+                        is_repeat = True
+                    else:
+                        is_repeat = False
+                except Exception:
+                    is_repeat = False
+                if os.environ.get('PETRA_DEBUG_KEYS'):
+                    try:
+                        print(f"[petra-debug] eventFilter key={k} mods={event.modifiers()} visible={self.isVisible()} active={QApplication.activeWindow() is self}")
+                    except Exception:
+                        pass
+                mods = event.modifiers()
+                # emulate press-and-hold for Q -> pin button and W -> clear button
+                try:
+                    focus = QApplication.focusWidget()
+                    # only simulate header buttons when user is not typing into search
+                    if not (hasattr(self, 'search_bar') and focus is self.search_bar):
+                        # Q down -> press clear button (visual down) until key release
+                        # NOTE: 'Q' now performs the delete-all long-press behavior.
+                        if k == Qt.Key.Key_Q and not is_repeat:
+                            try:
+                                if not getattr(self, '_key_q_down', False):
+                                    self._key_q_down = True
+                                    if hasattr(self, 'clear_btn') and self.clear_btn:
+                                        # visually depress the clear button and start
+                                        # long-press delete animation (same behavior as mouse)
+                                        self.clear_btn.setDown(True)
+                                        try:
+                                            self.clear_btn.is_actively_pressed = True
+                                            self.clear_btn.setProgress(0)
+                                        except Exception:
+                                            pass
+                                        try:
+                                            self.start_clear_animation()
+                                        except Exception:
+                                            pass
+                                    # consume the event
+                                    return True
+                            except Exception:
+                                pass
+                        # W down -> press pin button (visual down) until key release
+                        # NOTE: 'W' now toggles pin on release (same as clicking pin)
+                        if k == Qt.Key.Key_W and not is_repeat:
+                            try:
+                                if not getattr(self, '_key_w_down', False):
+                                    self._key_w_down = True
+                                    if hasattr(self, 'pin_window_btn') and self.pin_window_btn:
+                                        # visually depress pin button
+                                        self.pin_window_btn.setDown(True)
+                                        # pin press: only show visual 'down' state; do not
+                                        # start any clear animation here (that belongs to Q)
+                                    # consume the event
+                                    return True
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+
+                # Ctrl+F -> focus search
+                if (mods & Qt.KeyboardModifier.ControlModifier) and k == Qt.Key.Key_F:
+                    try:
+                        if hasattr(self, 'search_bar'):
+                            self.search_bar.setFocus()
+                            return True
+                    except Exception:
+                        pass
+
+                # Enter/Return -> copy selected clip if any
+                if k == Qt.Key.Key_Return or k == Qt.Key.Key_Enter:
+                    try:
+                        # Prefer using tracked selected content (survives refreshes)
+                        sel = getattr(self, '_selected_content', None)
+                        from PyQt6.QtCore import QTimer as _QTimer
+
+                        def _safe_copy(c):
+                            try:
+                                self.copy_and_close(c)
+                            except Exception as e:
+                                print(f"ERROR: copy_and_close failed: {e}")
+
+                        if sel is not None:
+                            # locate visible widget with this content and schedule copy
+                            try:
+                                for w in self.get_visible_clip_widgets():
+                                    try:
+                                        if getattr(w, 'content', None) == sel:
+                                            if os.environ.get('PETRA_DEBUG_KEYS'):
+                                                print(f"[petra-debug] Enter triggered copy of selected content: {sel}")
+                                            _QTimer.singleShot(0, lambda c=sel: _safe_copy(c))
+                                            return True
+                                    except Exception:
+                                        pass
+                            except Exception:
+                                pass
+
+                        # fallback: scan widgets for selected property
+                        for w in self.get_visible_clip_widgets():
+                            try:
+                                if w.property('selected') == 'true':
+                                    content = getattr(w, 'content', None)
+                                    if content is not None:
+                                        if os.environ.get('PETRA_DEBUG_KEYS'):
+                                            print(f"[petra-debug] scheduling copy of content (len={len(str(content))})")
+                                        _QTimer.singleShot(0, lambda c=content: _safe_copy(c))
+                                        return True
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+
+                # Escape -> if search has focus, clear it, otherwise hide
+                if k == Qt.Key.Key_Escape:
+                    try:
+                        focus = QApplication.focusWidget()
+                        if hasattr(self, 'search_bar') and focus is self.search_bar:
+                            try:
+                                self.search_bar.clearFocus()
+                                return True
+                            except Exception:
+                                pass
+                        # not focusing search -> hide the window
+                        self.hide()
+                        return True
+                    except Exception:
+                        pass
+                if k == Qt.Key.Key_Left:
+                    # schedule the filter switch to avoid modifying UI mid-iteration
+                    from PyQt6.QtCore import QTimer as _QTimer
+                    _QTimer.singleShot(0, self.switch_filter_left)
+                    return True
+                if k == Qt.Key.Key_Right:
+                    from PyQt6.QtCore import QTimer as _QTimer
+                    _QTimer.singleShot(0, self.switch_filter_right)
+                    return True
+                if k == Qt.Key.Key_Up:
+                    from PyQt6.QtCore import QTimer as _QTimer
+                    _QTimer.singleShot(0, self.navigate_up)
+                    return True
+                if k == Qt.Key.Key_Down:
+                    from PyQt6.QtCore import QTimer as _QTimer
+                    _QTimer.singleShot(0, self.navigate_down)
+                    return True
+            # handle key releases (needed for Q/W hold semantics)
+            if event.type() == QEvent.Type.KeyRelease:
+                try:
+                    k = event.key()
+                    # ignore auto-repeat
+                    try:
+                        if hasattr(event, 'isAutoRepeat') and event.isAutoRepeat():
+                            is_repeat = True
+                        else:
+                            is_repeat = False
+                    except Exception:
+                        is_repeat = False
+
+                    focus = QApplication.focusWidget()
+                    # don't steal keys when typing in the search bar
+                    if hasattr(self, 'search_bar') and focus is self.search_bar:
+                        return super().eventFilter(obj, event)
+
+                    # Q release -> finalize pin button press (toggle on release)
+                    if k == Qt.Key.Key_Q and not is_repeat:
+                        try:
+                            if getattr(self, '_key_q_down', False):
+                                # Q acts as clear release -> stop animation / reset
+                                self._key_q_down = False
+                                if hasattr(self, 'clear_btn') and self.clear_btn:
+                                    try:
+                                        self.clear_btn.setDown(False)
+                                        self.cancel_clear_animation()
+                                        try:
+                                            self.clear_btn.is_actively_pressed = False
+                                            self.clear_btn.setProgress(0)
+                                        except Exception:
+                                            pass
+                                    except Exception:
+                                        pass
+                            return True
+                        except Exception:
+                            pass
+
+                    # W release -> cancel visual and stop/complete clear as appropriate
+                    if k == Qt.Key.Key_W and not is_repeat:
+                        try:
+                            if getattr(self, '_key_w_down', False):
+                                # W acts as pin release -> toggle on release
+                                self._key_w_down = False
+                                if hasattr(self, 'pin_window_btn') and self.pin_window_btn:
+                                    try:
+                                        self.pin_window_btn.setDown(False)
+                                        # toggling the pin on release
+                                        self.toggle_window_pin()
+                                    except Exception:
+                                        pass
+                            return True
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        finally:
+            try:
+                # brief handling flag for this event processing
+                self._handling_key = False
+            except Exception:
+                pass
+
+        return super().eventFilter(obj, event)
+
+    def get_visible_clip_widgets(self):
+        """Return a list of ClipItem widgets currently shown (pinned + unpinned)
+        according to current filter/search ordering (top to bottom)."""
+        widgets = []
+        try:
+            count = self.content_layout.count()
+            # content_layout ends with a stretch, so skip last item
+            last = max(0, count - 1)
+            for i in range(last):
+                item = self.content_layout.itemAt(i)
+                if not item:
+                    continue
+                container = item.widget()
+                if container is None:
+                    continue
+                # ClipItem was added inside the container
+                clip = container.findChild(ClipItem)
+                if clip:
+                    widgets.append(clip)
+        except Exception:
+            pass
+        return widgets
+
+    def _set_selected_clip_widget(self, clip_widget):
+        # clear previous
+        try:
+            for w in list(self.get_visible_clip_widgets()):
+                try:
+                    if w is clip_widget:
+                        w.setProperty('selected', 'true')
+                        # visually mark selected widget using the same hover overlay
+                        # so keyboard selection looks like a mouse hover
+                        try:
+                            w.setProperty('hover', 'true')
+                        except Exception:
+                            pass
+                        try:
+                            # persist selected content so selection survives UI refresh
+                            self._selected_content = getattr(w, 'content', None)
+                        except Exception:
+                            pass
+                    else:
+                        w.setProperty('selected', 'false')
+                        try:
+                            w.setProperty('hover', 'false')
+                        except Exception:
+                            pass
+                    w.style().unpolish(w)
+                    w.style().polish(w)
+                    try:
+                        if hasattr(w, '_update_background'):
+                            w._update_background()
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def navigate_up(self):
+        # avoid operating on widgets when window isn't visible
+        if not getattr(self, 'isVisible', None) or not self.isVisible():
+            return
+
+        try:
+            visible = list(self.get_visible_clip_widgets())
+        except Exception:
+            visible = []
+        if not visible:
+            return
+
+        # find current selected
+        current = None
+        for i, w in enumerate(visible):
+            if w.property('selected') == 'true':
+                current = i
+                break
+
+        if current is None:
+            # no selection -> choose last
+            new = len(visible) - 1
+        else:
+            new = (current - 1) if current > 0 else len(visible) - 1
+
+        target = visible[new]
+        # ensure visible and highlight
+        try:
+            container = target.parentWidget()
+            if hasattr(self, 'scroll_area') and self.scroll_area:
+                self.scroll_area.ensureWidgetVisible(container)
+        except Exception:
+            pass
+
+        self._set_selected_clip_widget(target)
+
+    def navigate_down(self):
+        # avoid operating on widgets when window isn't visible
+        if not getattr(self, 'isVisible', None) or not self.isVisible():
+            return
+
+        try:
+            visible = list(self.get_visible_clip_widgets())
+        except Exception:
+            visible = []
+        if not visible:
+            return
+
+        current = None
+        for i, w in enumerate(visible):
+            if w.property('selected') == 'true':
+                current = i
+                break
+
+        if current is None:
+            new = 0
+        else:
+            new = (current + 1) if current < len(visible) - 1 else 0
+
+        target = visible[new]
+        try:
+            container = target.parentWidget()
+            if hasattr(self, 'scroll_area') and self.scroll_area:
+                self.scroll_area.ensureWidgetVisible(container)
+        except Exception:
+            pass
+
+        self._set_selected_clip_widget(target)
+
+    def switch_filter_left(self):
+        try:
+            if not getattr(self, 'isVisible', None) or not self.isVisible():
+                return
+            filters = list(self.filter_buttons.keys())
+            current_index = filters.index(self.current_filter) if self.current_filter in filters else 0
+            new_index = (current_index - 1) % len(filters)
+            self.set_filter(filters[new_index])
+            # select first visible after filter change
+            visible = self.get_visible_clip_widgets()
+            if visible:
+                self._set_selected_clip_widget(visible[0])
+        except Exception:
+            pass
+
+    def switch_filter_right(self):
+        try:
+            if not getattr(self, 'isVisible', None) or not self.isVisible():
+                return
+            filters = list(self.filter_buttons.keys())
+            current_index = filters.index(self.current_filter) if self.current_filter in filters else 0
+            new_index = (current_index + 1) % len(filters)
+            self.set_filter(filters[new_index])
+            visible = self.get_visible_clip_widgets()
+            if visible:
+                self._set_selected_clip_widget(visible[0])
+        except Exception:
+            pass

@@ -1,9 +1,15 @@
 #!/usr/bin/env python3
 import sys
+import faulthandler
 from PyQt6.QtWidgets import QApplication
 from window import PetraClipboard
 
 def main():
+    # Enable faulthandler so Python prints stack traces on crashes (SIGSEGV)
+    try:
+        faulthandler.enable()
+    except Exception:
+        pass
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
     
