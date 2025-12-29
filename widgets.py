@@ -397,8 +397,17 @@ class ClipItem(QFrame):
                 link_color = self.main_window.themes_manager.get_current_theme()['colors']['link_color']
             except Exception:
                 pass
+        
+        # Para imágenes, extraer solo el nombre del archivo (sin el timestamp interno)
+        display_content = self.content
+        if self.item_type == "image":
+            # El content tiene formato: nombre_archivo.ext_YYYYMMDD_HHMMSS_ffffff
+            # Extraer solo la parte del nombre del archivo
+            parts = self.content.rsplit('_', 3)  # Separar por los últimos 3 underscores (timestamp)
+            if len(parts) >= 4:
+                display_content = parts[0]  # Solo el nombre del archivo con extensión
             
-        if render_as_link or url_re.search(self.content):
+        if render_as_link or url_re.search(display_content):
             def _linkify(match):
                 u = match.group(1)
                 href = u
@@ -406,7 +415,7 @@ class ClipItem(QFrame):
                     href = 'http://' + u
                 return f'<a href="{html.escape(href)}" style="color: {link_color}; text-decoration: none;">{html.escape(u)}</a>'
 
-            escaped = html.escape(self.content)
+            escaped = html.escape(display_content)
             html_text = url_re.sub(lambda m: _linkify(m), escaped)
             text_label = QLabel(html_text)
             text_label.setObjectName("clip_text_link")
@@ -415,7 +424,7 @@ class ClipItem(QFrame):
             text_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
             text_label.setWordWrap(False)
         else:
-            text_label = QLabel(self.truncate_text(self.content, 43))
+            text_label = QLabel(self.truncate_text(display_content, 43))
             text_label.setObjectName("clip_text_normal")
             text_label.setWordWrap(False)
             text_label.setTextFormat(Qt.TextFormat.PlainText)

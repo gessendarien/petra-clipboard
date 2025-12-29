@@ -12,7 +12,7 @@ class ImageTaskSignals(QObject):
     processed = pyqtSignal(str, object, str, str, object, object)
 
 class ImageTask(QRunnable):
-    def __init__(self, image, key, image_name="Imagen"):
+    def __init__(self, image, key, image_name="Imagen.png"):
         super().__init__()
         self.image = image
         self.key = key
@@ -159,7 +159,7 @@ class ClipboardManager:
                                 return
 
                             self.processing_keys.add(key)
-                            image_name = Path(local_path).stem or "Imagen"
+                            image_name = Path(local_path).name or "Imagen"
                             task = ImageTask(img, key, image_name=image_name)
                             task.signals.processed.connect(self.on_image_processed)
                             self.thread_pool.start(task)
