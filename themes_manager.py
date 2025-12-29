@@ -3,6 +3,7 @@ class ThemesManager:
         self.available_themes = {
             'dark': {
                 'name': 'Dark',
+                'icons_folder': 'dark',
                 'colors': {
                     # Colores principales
                     'primary': '#BB86FC',
@@ -66,7 +67,8 @@ class ThemesManager:
                 }
             },
             'light': {
-                'name': 'Light Soft',
+                'name': 'Light',
+                'icons_folder': 'light',
                 'colors': {
                     # Colores principales
                     'primary': '#4597DF',
@@ -155,6 +157,12 @@ class ThemesManager:
         if theme_id is None:
             theme_id = self.current_theme
         return self.available_themes.get(theme_id, self.available_themes['dark'])['colors']
+    
+    def get_icons_folder(self, theme_id=None):
+        """Obtener la carpeta de iconos del tema actual"""
+        if theme_id is None:
+            theme_id = self.current_theme
+        return self.available_themes.get(theme_id, self.available_themes['dark']).get('icons_folder', 'dark')
     
     def get_theme_stylesheet(self, theme_id=None):
         """Generar hoja de estilos CSS para un tema específico"""

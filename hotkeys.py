@@ -105,7 +105,8 @@ fi
 
     def update_pin_button_icon(self):
         try:
-            icons_dir = Path(__file__).parent / 'icons'
+            icons_folder = self.themes_manager.get_icons_folder() if hasattr(self, 'themes_manager') else 'dark'
+            icons_dir = Path(__file__).parent / 'icons' / icons_folder
             pin_path = icons_dir / 'pin.png'
             unpin_path = icons_dir / 'unpinned.png'
             pinned_path = icons_dir / 'pinned.png'

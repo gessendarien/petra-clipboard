@@ -154,7 +154,11 @@ class ClipItem(QFrame):
             # Para otros tipos, usar ícono normal
             icon_loaded = False
             try:
-                icons_dir = Path(__file__).parent / 'icons'
+                # Get icons folder from theme
+                icons_folder = 'dark'  # default
+                if self.main_window and hasattr(self.main_window, 'themes_manager'):
+                    icons_folder = self.main_window.themes_manager.get_icons_folder()
+                icons_dir = Path(__file__).parent / 'icons' / icons_folder
                 icon_files = {
                     "text": "texts.png",
                     "url": "links.png", 
@@ -440,7 +444,11 @@ class ClipItem(QFrame):
         self.pin_action_btn.setFixedSize(32, 32)
         self.pin_action_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         
-        icons_dir = Path(__file__).parent / 'icons'
+        # Get icons folder from theme
+        icons_folder = 'dark'  # default
+        if self.main_window and hasattr(self.main_window, 'themes_manager'):
+            icons_folder = self.main_window.themes_manager.get_icons_folder()
+        icons_dir = Path(__file__).parent / 'icons' / icons_folder
         pin_path = icons_dir / 'pin.png'
         unpin_path = icons_dir / 'unpin.png'
         self._pin_icon = QIcon(str(pin_path)) if pin_path.exists() else None
@@ -482,10 +490,14 @@ class ClipItem(QFrame):
         layout.addWidget(self.delete_action_btn)
         layout.addWidget(self.actions_widget)
 
-        # Ensure both controls are visible — pin shows pin/unpin state
+        # Initially hide action buttons; show on hover only.
+        # Exception: if item is already pinned, show the pin button.
         try:
-            self.actions_widget.show()
-            self.delete_action_btn.show()
+            self.delete_action_btn.hide()
+            if self.pinned:
+                self.actions_widget.show()
+            else:
+                self.actions_widget.hide()
         except Exception:
             pass
     
@@ -651,12 +663,26 @@ class ClipItem(QFrame):
         """Handle mouse enter event to set hover state."""
         self.setProperty('hover', 'true')
         self._update_background()
+        # Show action buttons on hover
+        try:
+            self.delete_action_btn.show()
+            self.actions_widget.show()
+        except Exception:
+            pass
         super().enterEvent(event)
 
     def leaveEvent(self, event):
         """Handle mouse leave event to unset hover state."""
         self.setProperty('hover', 'false')
         self._update_background()
+        # Hide action buttons when not hovering
+        # Exception: keep pin button visible if item is pinned
+        try:
+            self.delete_action_btn.hide()
+            if not self.pinned:
+                self.actions_widget.hide()
+        except Exception:
+            pass
         super().leaveEvent(event)
 
     def eventFilter(self, obj, event):

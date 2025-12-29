@@ -83,11 +83,11 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         header_layout.setContentsMargins(15, 0, 15, 0)
         header_layout.setSpacing(8)
         
-        settings_btn = QPushButton("")
-        settings_btn.setObjectName("settings_button")
-        settings_btn.setFixedSize(38, 38)
-        self.setup_icon_button(settings_btn, 'config.png')
-        settings_btn.clicked.connect(self.open_settings)
+        self.settings_btn = QPushButton("")
+        self.settings_btn.setObjectName("settings_button")
+        self.settings_btn.setFixedSize(38, 38)
+        self.setup_icon_button(self.settings_btn, 'config.png')
+        self.settings_btn.clicked.connect(self.open_settings)
         
         self.clear_btn = ProgressButton("")
         self.clear_btn.setObjectName("clear_button")
@@ -110,7 +110,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.setup_pin_button_icon()
         self.pin_window_btn.clicked.connect(self.toggle_window_pin)
         
-        header_layout.addWidget(settings_btn)
+        header_layout.addWidget(self.settings_btn)
         header_layout.addWidget(self.clear_btn)
         header_layout.addWidget(self.pin_window_btn)
         header_layout.addStretch()
@@ -178,7 +178,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     
     def setup_icon_button(self, button, icon_name):
         try:
-            icons_dir = Path(__file__).parent / 'icons'
+            icons_folder = self.themes_manager.get_icons_folder() if hasattr(self, 'themes_manager') else 'dark'
+            icons_dir = Path(__file__).parent / 'icons' / icons_folder
             if icon_name:
                 icon_path = icons_dir / icon_name
                 if icon_path.exists():
@@ -189,7 +190,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     
     def setup_pin_button_icon(self):
         try:
-            icons_dir = Path(__file__).parent / 'icons'
+            icons_folder = self.themes_manager.get_icons_folder() if hasattr(self, 'themes_manager') else 'dark'
+            icons_dir = Path(__file__).parent / 'icons' / icons_folder
             pin_path = icons_dir / 'pin.png'
             unpin_path = icons_dir / 'unpinned.png'
             pinned_path = icons_dir / 'pinned.png'
@@ -231,12 +233,57 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 border_color = theme_colors.get('clear_button_border', theme_colors.get('accent', '#ff6b35'))
                 self.clear_btn.setBorderColor(border_color)
             
+            # Update header icons according to theme
+            self.update_header_icons()
+            
             self.update_filter_styles()
             self.update_styles_recursive(self)
             self.refresh_ui()
             
         except Exception as e:
             print(f"Error aplicando tema: {e}")
+    
+    def update_header_icons(self):
+        """Update header button icons according to current theme"""
+        try:
+            icons_folder = self.themes_manager.get_icons_folder()
+            icons_dir = Path(__file__).parent / 'icons' / icons_folder
+            
+            # Update settings button icon
+            if hasattr(self, 'settings_btn') and self.settings_btn:
+                config_path = icons_dir / 'config.png'
+                if config_path.exists():
+                    self.settings_btn.setIcon(QIcon(str(config_path)))
+                    self.settings_btn.setIconSize(QSize(20, 20))
+            
+            # Update clear button icon
+            if hasattr(self, 'clear_btn') and self.clear_btn:
+                delete_path = icons_dir / 'delete.png'
+                if delete_path.exists():
+                    self.clear_btn.setIcon(QIcon(str(delete_path)))
+                    self.clear_btn.setIconSize(QSize(20, 20))
+            
+            # Update pin button icon
+            self.setup_pin_button_icon()
+            
+            # Update filter button icons
+            filter_icons = {
+                "all": "all.png",
+                "text": "texts.png",
+                "image": "images.png",
+                "url": "links.png",
+                "emoji": "emojis.png",
+            }
+            if hasattr(self, 'filter_buttons'):
+                for filter_id, btn in self.filter_buttons.items():
+                    icon_file = filter_icons.get(filter_id)
+                    if icon_file:
+                        icon_path = icons_dir / icon_file
+                        if icon_path.exists():
+                            btn.setIcon(QIcon(str(icon_path)))
+                            btn.setIconSize(QSize(20, 20))
+        except Exception:
+            pass
     
     def update_styles_recursive(self, widget):
         try:
@@ -406,6 +453,9 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     def toggle_pin(self, clip):
         clip['pinned'] = not clip['pinned']
         self.save_pinned()
+        # Clear selected content to avoid hover state being restored after refresh
+        self._selected_content = None
+        self._keyboard_selection_active = False
         self.refresh_ui()
 
     def set_filter(self, filter_id):
@@ -608,7 +658,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
 
     def update_pin_button_icon(self):
         try:
-            icons_dir = Path(__file__).parent / 'icons'
+            icons_folder = self.themes_manager.get_icons_folder() if hasattr(self, 'themes_manager') else 'dark'
+            icons_dir = Path(__file__).parent / 'icons' / icons_folder
             pin_path = icons_dir / 'pin.png'
             unpin_path = icons_dir / 'unpinned.png'
             pinned_path = icons_dir / 'pinned.png'
