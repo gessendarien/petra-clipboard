@@ -530,6 +530,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         # only enable keyboard selection when a keypress is detected.
         try:
             self._keyboard_selection_active = False
+            self._first_nav_after_activation = False
             for w in self.findChildren(ClipItem):
                 try:
                     w.setProperty('selected', 'false')
@@ -667,6 +668,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                     if not (hasattr(self, 'search_bar') and focus is self.search_bar):
                         if not getattr(self, '_keyboard_selection_active', False):
                             self._keyboard_selection_active = True
+                            # Mark that the next navigation is the first one after activation
+                            self._first_nav_after_activation = True
                             # if we have a previously tracked selected content, try to restore it
                             try:
                                 visible = self.get_visible_clip_widgets()
@@ -1005,6 +1008,14 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         except Exception:
             visible = []
         if not visible:
+            return
+
+        # If this is the first navigation after keyboard activation, the first
+        # item is already selected visually. Don't advance, just clear the flag.
+        if getattr(self, '_first_nav_after_activation', False):
+            self._first_nav_after_activation = False
+            # Ensure first item is selected and return without advancing
+            self._set_selected_clip_widget(visible[0])
             return
 
         current = None
