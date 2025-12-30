@@ -236,18 +236,12 @@ class ClipboardManager:
         # NO agregar emojis a la lista de clips - solo se insertan y van a recientes
         if clip_type == "emoji":
             return
-            
-        # Para imágenes, el content es un ID único, no el contenido real
-        if clip_type == "image":
-            # Verificar si ya existe esta imagen en los clips
-            for clip in self.clips[:5]:
-                if clip['content'] == content and clip['type'] == 'image' and not clip['pinned']:
-                    return
-        else:
-            # Para texto/URLs, verificar duplicados normales
-            for clip in self.clips[:5]:
-                if clip['content'] == content and not clip['pinned']:
-                    return
+        
+        # Verificar si ya existe este contenido en CUALQUIER clip (fijado o no)
+        for clip in self.clips:
+            if clip['content'] == content:
+                # Ya existe, no duplicar
+                return
             
         clip = {
             'content': content,

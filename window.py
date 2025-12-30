@@ -725,10 +725,16 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         try:
             self._keyboard_selection_active = False
             self._first_nav_after_activation = False
+            # Limpiar estado 'copied' del modelo de datos
+            for c in getattr(self, 'clips', []):
+                c['copied'] = False
+            # Resetear todos los estados visuales de los widgets
             for w in self.findChildren(ClipItem):
                 try:
                     w.setProperty('selected', 'false')
                     w.setProperty('hover', 'false')
+                    w.setProperty('pressed', 'false')
+                    w.setProperty('copied', 'false')
                     w.style().unpolish(w)
                     w.style().polish(w)
                     if hasattr(w, '_update_background'):
