@@ -63,7 +63,11 @@ class ThemesManager:
                     
                     # Estados especiales
                     'header_buttons_click': '#9A67EA',
-                    'clear_button_border': '#9A67EA'
+                    'clear_button_border': '#9A67EA',
+                    
+                    # Selección de emoji por teclado
+                    'emoji_selection_border': '#4CAF50',
+                    'emoji_selection_bg': '#3a3a3a'
                 }
             },
             'light': {
@@ -130,7 +134,11 @@ class ThemesManager:
                     
                     # Estados especiales
                     'header_buttons_click': '#4D9AD8',
-                    'clear_button_border': '#F35642'
+                    'clear_button_border': '#F35642',
+                    
+                    # Selección de emoji por teclado
+                    'emoji_selection_border': '#2E7D32',
+                    'emoji_selection_bg': '#E8F5E9'
                 }
             }
         }

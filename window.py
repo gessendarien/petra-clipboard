@@ -508,6 +508,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
 
     def set_filter(self, filter_id):
         self.current_filter = filter_id
+        # Resetear selección de emoji reciente al cambiar filtro
+        self.selected_recent_emoji_index = -1
         self.update_filter_styles()
         if filter_id == "emoji":
             self.show_emoji_picker()
@@ -547,6 +549,10 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         
         # Crear 16 slots vacíos (2 filas x 8 columnas)
         recent_emojis = getattr(self, 'recent_emojis', [])[:16]
+        self.recent_emoji_buttons = []  # Guardar referencia a los botones
+        self.selected_recent_emoji_index = -1  # Índice del emoji seleccionado (-1 = ninguno)
+        self._emoji_keyboard_nav_active = False  # Flag para detectar navegación por teclado
+        
         for i in range(16):
             row = i // 8
             col = i % 8
@@ -561,6 +567,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 display_emoji = ensure_emoji_presentation(emoji)
                 btn.setText(display_emoji)
                 btn.clicked.connect(lambda checked, e=emoji: self.insert_emoji(e))
+                # Detectar mouse enter para desactivar resaltado de teclado
+                btn.enterEvent = lambda event, idx=i: self._on_emoji_mouse_enter(event, idx)
                 if emoji_font_name:
                     btn.setFont(QFont(emoji_font_name, 24))
             else:
@@ -568,6 +576,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 btn.setEnabled(False)
                 btn.setStyleSheet("QPushButton { background-color: #2a2a2a; border: 1px dashed #444; }")
             
+            self.recent_emoji_buttons.append(btn)
             recent_grid.addWidget(btn, row, col)
         
         emoji_layout.addWidget(recent_widget)
@@ -924,6 +933,16 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 # Enter/Return -> copy selected clip if any
                 if k == Qt.Key.Key_Return or k == Qt.Key.Key_Enter:
                     try:
+                        # Si estamos en filtro emoji con un emoji reciente seleccionado
+                        if getattr(self, 'current_filter', None) == 'emoji':
+                            selected_idx = getattr(self, 'selected_recent_emoji_index', -1)
+                            recent_emojis = getattr(self, 'recent_emojis', [])[:16]
+                            if selected_idx >= 0 and selected_idx < len(recent_emojis):
+                                emoji = recent_emojis[selected_idx]
+                                from PyQt6.QtCore import QTimer as _QTimer
+                                _QTimer.singleShot(0, lambda e=emoji: self.insert_emoji(e))
+                                return True
+                        
                         # Prefer using tracked selected content (survives refreshes)
                         sel = getattr(self, '_selected_content', None)
                         from PyQt6.QtCore import QTimer as _QTimer
@@ -1128,6 +1147,11 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         if not getattr(self, 'isVisible', None) or not self.isVisible():
             return
 
+        # Si estamos en el filtro de emoji, navegar por los emojis recientes
+        if getattr(self, 'current_filter', None) == 'emoji':
+            self._navigate_recent_emojis(-1)
+            return
+
         try:
             visible = list(self.get_visible_clip_widgets())
         except Exception:
@@ -1162,6 +1186,11 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     def navigate_down(self):
         # avoid operating on widgets when window isn't visible
         if not getattr(self, 'isVisible', None) or not self.isVisible():
+            return
+
+        # Si estamos en el filtro de emoji, navegar por los emojis recientes
+        if getattr(self, 'current_filter', None) == 'emoji':
+            self._navigate_recent_emojis(1)
             return
 
         try:
@@ -1199,6 +1228,84 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             pass
 
         self._set_selected_clip_widget(target)
+
+    def _navigate_recent_emojis(self, direction):
+        """Navegar por los botones de emojis recientes con flechas arriba/abajo."""
+        if not hasattr(self, 'recent_emoji_buttons') or not self.recent_emoji_buttons:
+            return
+        
+        recent_emojis = getattr(self, 'recent_emojis', [])[:16]
+        if not recent_emojis:
+            return
+        
+        # Activar navegación por teclado
+        self._emoji_keyboard_nav_active = True
+        
+        # Número de emojis disponibles (no vacíos)
+        num_available = len(recent_emojis)
+        
+        current_idx = getattr(self, 'selected_recent_emoji_index', -1)
+        
+        if current_idx == -1:
+            # No hay selección, seleccionar el primero
+            new_idx = 0
+        else:
+            # Mover en la dirección indicada
+            new_idx = current_idx + direction
+            # Wrap around
+            if new_idx < 0:
+                new_idx = num_available - 1
+            elif new_idx >= num_available:
+                new_idx = 0
+        
+        self._select_recent_emoji(new_idx)
+    
+    def _on_emoji_mouse_enter(self, event, index):
+        """Detectar cuando el mouse entra en un botón de emoji reciente."""
+        # Desactivar navegación por teclado y quitar resaltado
+        if getattr(self, '_emoji_keyboard_nav_active', False):
+            self._emoji_keyboard_nav_active = False
+            self._clear_emoji_selection()
+    
+    def _clear_emoji_selection(self):
+        """Quitar el resaltado de selección de emoji."""
+        old_idx = getattr(self, 'selected_recent_emoji_index', -1)
+        if old_idx >= 0 and hasattr(self, 'recent_emoji_buttons') and old_idx < len(self.recent_emoji_buttons):
+            old_btn = self.recent_emoji_buttons[old_idx]
+            old_btn.setStyleSheet("")
+        self.selected_recent_emoji_index = -1
+    
+    def _select_recent_emoji(self, index):
+        """Seleccionar un emoji reciente por índice."""
+        if not hasattr(self, 'recent_emoji_buttons'):
+            return
+        
+        # Si no está activa la navegación por teclado, no mostrar selección
+        if not getattr(self, '_emoji_keyboard_nav_active', False):
+            self.selected_recent_emoji_index = index
+            return
+        
+        # Obtener colores del tema
+        colors = self.themes_manager.get_theme_colors()
+        border_color = colors.get('emoji_selection_border', '#4CAF50')
+        bg_color = colors.get('emoji_selection_bg', '#3a3a3a')
+        
+        # Quitar selección anterior
+        old_idx = getattr(self, 'selected_recent_emoji_index', -1)
+        if old_idx >= 0 and old_idx < len(self.recent_emoji_buttons):
+            old_btn = self.recent_emoji_buttons[old_idx]
+            old_btn.setStyleSheet("")  # Restaurar estilo normal
+        
+        # Aplicar nueva selección
+        if index >= 0 and index < len(self.recent_emoji_buttons):
+            btn = self.recent_emoji_buttons[index]
+            if btn.isEnabled():
+                btn.setStyleSheet(f"QPushButton {{ border: 2px solid {border_color}; background-color: {bg_color}; }}")
+                self.selected_recent_emoji_index = index
+            else:
+                self.selected_recent_emoji_index = -1
+        else:
+            self.selected_recent_emoji_index = -1
 
     def switch_filter_left(self):
         try:
