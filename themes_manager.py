@@ -413,30 +413,42 @@ class ThemesManager:
                 font-weight: 500;
                 background-color: transparent;
             }}
+            QLabel#clip_text_link {{
+                color: {colors['link_color']} !important;
+                font-size: 14px;
+                font-weight: 500;
+                background-color: transparent;
+            }}
                 QLabel#clip_text_link a,
                 QLabel#clip_text_link a:visited,
                 QLabel#clip_text_link a:hover,
                 QLabel#clip_text_link a:link,
                 QLabel#clip_text_link * {{
                     color: {colors['link_color']} !important;
+                    background-color: transparent;
                 }}
                 QLabel#clip_text_link a {{
                     text-decoration: none;
+                    background-color: transparent;
                 }}
                 QLabel#clip_text_link a:hover {{
                     text-decoration: underline;
+                    background-color: transparent;
                 }}
             QLabel#clip_text_link a:visited {{
                 color: {colors['link_color']} !important;
+                background-color: transparent;
             }}
             
             QLabel#clip_text_link a:hover {{
                 color: {colors['link_color']} !important;
                 text-decoration: underline;
+                background-color: transparent;
             }}
             
             QLabel#clip_text_link a:link {{
                 color: {colors['link_color']} !important;
+                background-color: transparent;
             }}
             
             QLabel#clip_time {{

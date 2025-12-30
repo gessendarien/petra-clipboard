@@ -385,7 +385,8 @@ class ClipItem(QFrame):
         url_re = re.compile(r'((?:https?://|ftp://|www\.|\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?))', re.IGNORECASE)
         render_as_link = False
         try:
-            if hasattr(self, 'main_window') and getattr(self.main_window, 'current_filter', None) == 'url':
+            # Solo renderizar como enlace si es tipo URL, nunca para imágenes
+            if self.item_type == "url" or (hasattr(self, 'main_window') and getattr(self.main_window, 'current_filter', None) == 'url'):
                 render_as_link = True
         except Exception:
             pass
@@ -406,8 +407,10 @@ class ClipItem(QFrame):
             parts = self.content.rsplit('_', 3)  # Separar por los últimos 3 underscores (timestamp)
             if len(parts) >= 4:
                 display_content = parts[0]  # Solo el nombre del archivo con extensión
+            # Las imágenes nunca deben renderizarse como enlace
+            render_as_link = False
             
-        if render_as_link or url_re.search(display_content):
+        if render_as_link and url_re.search(display_content):
             def _linkify(match):
                 u = match.group(1)
                 href = u

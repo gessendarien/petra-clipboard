@@ -13,6 +13,7 @@ from filters import FilterManager
 from config import ConfigManager
 from global_shortcut_multi import GlobalShortcutManager
 from themes_manager import ThemesManager
+from emoji_keywords import search_emojis, ALL_EMOJIS
 
 
 def get_emoji_font():
@@ -526,9 +527,14 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.themes_manager.apply_theme_to_widget(self)
 
     def filter_items(self):
+        # Si estamos en el filtro de emojis, actualizar el picker con la búsqueda
+        if getattr(self, 'current_filter', None) == 'emoji':
+            search_query = self.search_bar.text() if hasattr(self, 'search_bar') else ""
+            self.show_emoji_picker(search_query)
+            return
         self.refresh_ui()
 
-    def show_emoji_picker(self):
+    def show_emoji_picker(self, search_query=""):
         while self.content_layout.count() > 1:
             item = self.content_layout.takeAt(0)
             if item.widget():
@@ -593,36 +599,11 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         grid = QGridLayout(grid_widget)
         grid.setSpacing(8)
         
-        emojis = [
-            "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃",
-            "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😗", "☺️", "😚",
-            "😙", "🥲", "😋", "😛", "😜", "🤪", "😝", "🤑", "🤗", "🤭",
-            "🤫", "🤔", "🤐", "🤨", "😐", "😑", "😶", "😏", "😒", "🙄",
-            "😬", "🤥", "😌", "😔", "😪", "🤤", "😴", "😷", "🤒", "🤕",
-            "🤢", "🤮", "🤧", "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳",
-            "🥸", "😎", "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮", "😯",
-            "😲", "😳", "🥺", "😦", "😧", "😨", "😰", "😥", "😢", "😭",
-            "😱", "😖", "😣", "😞", "😓", "😩", "😫", "🥱", "😤", "😡",
-            "😠", "🤬", "😈", "👿", "💀", "☠️", "💩", "🤡", "👹", "👺",
-            "👋", "🤚", "🖐️", "✋", "🖖", "👌", "🤌", "🤏", "✌️", "🤞",
-            "🤟", "🤘", "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️", "👍",
-            "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "👐", "🤲", "🤝",
-            "🙏", "✍️", "💅", "🤳", "💪", "🦾", "🦿", "🦵", "🦶", "👂",
-            "🦻", "👃", "🧠", "🫀", "🫁", "🦷", "🦴", "👀", "👁️", "👅",
-            "👄", "👶", "🧒", "👦", "👧", "🧑", "👱", "👨", "🧔", "👨‍🦰",
-            "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔",
-            "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟", "☮️",
-            "✝️", "☪️", "🕉️", "☸️", "✡️", "🔯", "🕎", "☯️", "☦️", "🛐",
-            "⛎", "♈", "♉", "♊", "♋", "♌", "♍", "♎", "♏", "♐",
-            "♑", "♒", "♓", "🆔", "⚛️", "🉑", "☢️", "☣️", "📴", "📳",
-            "🕛", "🕧", "🕐", "🕜", "🕑", "🕝", "🕒", "🕞", "🕓", "🕟",
-            "🕔", "🕠", "🕕", "🕡", "🕖", "🕢", "🕗", "🕣", "🕘", "🕤",
-            "🕙", "🕥", "🕚", "🕦", "⌛", "⏳", "⌚", "⏰", "⏱️", "⏲️",
-            "🕰️", "🌡️", "⛈️", "🌩️", "🌧️", "☀️", "🌤️", "⛅", "🌥️", "☁️",
-            "↩️", "↪️", "⚡", "♻️", "📛", "🔰", "🔱", "⭕", "✅", "☑️",
-            "✔️", "❌", "❎", "➰", "➿", "〽️", "✳️", "❇️", "▪️", "▫️",
-            "◾", "◽", "◼️", "◻️", "⬛", "⬜", "🔶", "🔷", "🔸", "🔹",
-        ]
+        # Filtrar emojis según búsqueda (usa ALL_EMOJIS de emoji_keywords.py)
+        if search_query:
+            emojis = search_emojis(search_query, ALL_EMOJIS)
+        else:
+            emojis = ALL_EMOJIS
         
         row, col = 0, 0
         emoji_font_name = get_emoji_font()
@@ -646,6 +627,18 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             if col > 7:
                 col = 0
                 row += 1
+        
+        # Si no hay resultados, mostrar mensaje según idioma
+        if not emojis and search_query:
+            lang = getattr(self, 'language', 'es')
+            if lang == 'es':
+                msg = f"No se encontraron emojis para '{search_query}'"
+            else:
+                msg = f"No emojis found for '{search_query}'"
+            no_results = QLabel(msg)
+            no_results.setStyleSheet("color: #888; font-size: 14px; padding: 20px;")
+            no_results.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            grid.addWidget(no_results, 0, 0, 1, 8)
         
         emoji_layout.addWidget(grid_widget)
         self.content_layout.insertWidget(0, emoji_container)
