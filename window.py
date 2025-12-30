@@ -213,6 +213,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     def setup_scroll_area(self, main_layout):
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
+        # Deshabilitar scroll horizontal
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         
         self.content_widget = QWidget()
         self.content_layout = QVBoxLayout(self.content_widget)

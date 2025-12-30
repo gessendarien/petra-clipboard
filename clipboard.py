@@ -145,6 +145,7 @@ class ClipboardManager:
                     qurl = urls[0]
                     local_path = qurl.toLocalFile()
                     if local_path and local_path.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp')):
+                        # Es una imagen local - procesarla
                         try:
                             img = QImage(local_path)
                             if img.isNull():
@@ -165,9 +166,15 @@ class ClipboardManager:
                             self.thread_pool.start(task)
                         except Exception as e:
                             print(f"Error al cargar imagen desde archivo: {e}")
+                    elif qurl.toString().startswith('file:///'):
+                        # Es un archivo local (no imagen) - ignorar
+                        # Los archivos copiados desde el explorador generan file:///
+                        # y no queremos guardarlos como URLs
+                        return
                     else:
+                        # Es una URL real (http://, https://, etc.)
                         current = qurl.toString()
-                        clip_type = "url"  # Específicamente URL
+                        clip_type = "url"
             elif mime_data.hasText():
                 current = mime_data.text()
                 # Detectar el tipo correcto

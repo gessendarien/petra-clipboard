@@ -334,6 +334,11 @@ class ThemesManager:
                 background-color: transparent;
             }}
             
+            QScrollBar:horizontal {{
+                height: 0px;
+                background: transparent;
+            }}
+            
             QScrollBar:vertical {{
                 background: {colors['scrollbar_bg']} !important;
                 width: 8px;
