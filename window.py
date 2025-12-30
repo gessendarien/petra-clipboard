@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QLineEdit, QPushButton, QScrollArea, QLabel, 
                              QGridLayout, QSizePolicy, QApplication)
 from PyQt6.QtCore import Qt, QTimer, QThreadPool, QSize, QEvent
-from PyQt6.QtGui import QIcon, QPixmap
+from PyQt6.QtGui import QIcon, QPixmap, QFont, QFontDatabase
 from pathlib import Path
 import os
 import subprocess
@@ -13,6 +13,54 @@ from filters import FilterManager
 from config import ConfigManager
 from global_shortcut_multi import GlobalShortcutManager
 from themes_manager import ThemesManager
+
+
+def get_emoji_font():
+    """Obtiene la mejor fuente de emoji colorida disponible en el sistema."""
+    emoji_fonts = [
+        "Noto Color Emoji",
+        "Twemoji",
+        "Twitter Color Emoji", 
+        "Apple Color Emoji",
+        "Segoe UI Emoji",
+        "EmojiOne Color",
+        "JoyPixels",
+        "OpenMoji Color",
+    ]
+    available = QFontDatabase.families()
+    for font_name in emoji_fonts:
+        if font_name in available:
+            return font_name
+    return None
+
+
+def ensure_emoji_presentation(emoji):
+    """
+    Asegura que el emoji use presentación gráfica (colorida) en lugar de texto.
+    Agrega el selector de variación U+FE0F si es necesario.
+    """
+    # Si ya termina con el selector de variación emoji, retornar como está
+    if emoji.endswith('\uFE0F'):
+        return emoji
+    
+    # Lista de emojis que comúnmente se renderizan como texto sin el selector
+    text_style_emojis = {
+        '☺', '☹', '☠', '✋', '✌', '☝', '✍', '❤', '♈', '♉', '♊', '♋',
+        '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '⛎', '☮', '✝', '☪',
+        '☸', '✡', '☯', '☦', '⛈', '☀', '⛅', '☁', '⌛', '⏳', '⌚', '⏰',
+        '⏱', '⏲', '☢', '☣', '↩', '↪', '⚡', '♻', '☑', '✔', '✖', '❌',
+        '❎', '➕', '➖', '➗', '✳', '✴', '❇', '‼', '⁉', '❓', '❔', '❕',
+        '❗', '▪', '▫', '◾', '◽', '◼', '◻', '⬛', '⬜', '⭐', '⭕',
+    }
+    
+    # Obtener el primer carácter base (sin modificadores)
+    base_char = emoji[0] if emoji else ''
+    
+    # Si es un emoji que tiende a mostrarse como texto, agregar selector
+    if base_char in text_style_emojis:
+        return emoji + '\uFE0F'
+    
+    return emoji
 
 class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager, GlobalShortcutManager):
     def __init__(self):
@@ -525,11 +573,21 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         ]
         
         row, col = 0, 0
+        emoji_font_name = get_emoji_font()
+        
         for emoji in emojis:
-            btn = QPushButton(emoji)
+            # Asegurar presentación colorida del emoji
+            display_emoji = ensure_emoji_presentation(emoji)
+            btn = QPushButton(display_emoji)
             btn.setObjectName("emoji_button")
             btn.setFixedSize(50, 50)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            
+            # Aplicar fuente de emoji colorida si está disponible
+            if emoji_font_name:
+                emoji_font = QFont(emoji_font_name, 24)
+                btn.setFont(emoji_font)
+            
             btn.clicked.connect(lambda checked, e=emoji: self.insert_emoji(e))
             grid.addWidget(btn, row, col)
             col += 1
