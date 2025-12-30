@@ -18,6 +18,7 @@ class ConfigManager:
         self.show_pin_btn = False
         self.shortcut = 'Control + Shift + v'
         self.theme = 'dark'
+        self.recent_emojis = []
         
         self.load_config()
 
@@ -28,7 +29,8 @@ class ConfigManager:
             'shortcut': 'Control + Shift + v',
             'show_clear_btn': True,
             'show_pin_btn': False,
-            'theme': 'dark'
+            'theme': 'dark',
+            'recent_emojis': []
         }
         
         try:
@@ -49,6 +51,7 @@ class ConfigManager:
             self.show_clear_btn = bool(self.config.get('show_clear_btn', True))
             self.show_pin_btn = bool(self.config.get('show_pin_btn', False))
             self.theme = self.config.get('theme', default.get('theme', 'dark'))
+            self.recent_emojis = list(self.config.get('recent_emojis', []))[:16]
         except Exception:
             self.config = default
             self.language = default['language']
@@ -56,6 +59,7 @@ class ConfigManager:
             self.shortcut = default['shortcut']
             self.show_clear_btn = True
             self.theme = 'dark'
+            self.recent_emojis = []
 
     def save_config(self):
         try:
@@ -68,6 +72,7 @@ class ConfigManager:
             self.config['show_clear_btn'] = getattr(self, 'show_clear_btn', True)
             self.config['show_pin_btn'] = getattr(self, 'show_pin_btn', False)
             self.config['theme'] = getattr(self, 'theme', 'dark')
+            self.config['recent_emojis'] = getattr(self, 'recent_emojis', [])[:16]
             
             with open(self.config_file, 'w') as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)

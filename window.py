@@ -535,8 +535,51 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         emoji_container = QWidget()
         emoji_layout = QVBoxLayout(emoji_container)
         emoji_layout.setContentsMargins(15, 15, 15, 15)
-        emoji_layout.setSpacing(10)
+        emoji_layout.setSpacing(8)
         
+        emoji_font_name = get_emoji_font()
+        
+        # === TABLA PEQUEÑA DE RECIENTES (2 filas x 8 columnas) ===
+        recent_widget = QWidget()
+        recent_grid = QGridLayout(recent_widget)
+        recent_grid.setSpacing(8)
+        recent_grid.setContentsMargins(0, 0, 0, 0)
+        
+        # Crear 16 slots vacíos (2 filas x 8 columnas)
+        recent_emojis = getattr(self, 'recent_emojis', [])[:16]
+        for i in range(16):
+            row = i // 8
+            col = i % 8
+            
+            btn = QPushButton()
+            btn.setObjectName("emoji_button")
+            btn.setFixedSize(50, 50)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            
+            if i < len(recent_emojis):
+                emoji = recent_emojis[i]
+                display_emoji = ensure_emoji_presentation(emoji)
+                btn.setText(display_emoji)
+                btn.clicked.connect(lambda checked, e=emoji: self.insert_emoji(e))
+                if emoji_font_name:
+                    btn.setFont(QFont(emoji_font_name, 24))
+            else:
+                # Slot vacío con estilo más tenue
+                btn.setEnabled(False)
+                btn.setStyleSheet("QPushButton { background-color: #2a2a2a; border: 1px dashed #444; }")
+            
+            recent_grid.addWidget(btn, row, col)
+        
+        emoji_layout.addWidget(recent_widget)
+        
+        # Separador visual
+        separator = QWidget()
+        separator.setFixedHeight(1)
+        separator.setStyleSheet("background-color: #444;")
+        emoji_layout.addWidget(separator)
+        emoji_layout.addSpacing(8)
+        
+        # === TABLA PRINCIPAL DE EMOJIS ===
         grid_widget = QWidget()
         grid = QGridLayout(grid_widget)
         grid.setSpacing(8)
@@ -604,6 +647,15 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.last_clipboard = emoji
         clipboard = QApplication.clipboard()
         clipboard.setText(emoji)
+        
+        # Agregar a recientes
+        if not hasattr(self, 'recent_emojis'):
+            self.recent_emojis = []
+        if emoji in self.recent_emojis:
+            self.recent_emojis.remove(emoji)
+        self.recent_emojis.insert(0, emoji)
+        self.recent_emojis = self.recent_emojis[:16]
+        self.save_config()
         
         try:
             self.input_simulator.simulate_alt_tab()
