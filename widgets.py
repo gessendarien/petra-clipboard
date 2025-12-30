@@ -164,7 +164,8 @@ class ClipItem(QFrame):
                     "url": "links.png", 
                     "image": "images.png",
                     "emoji": "emojis.png",
-                    "color": "colors.png"
+                    "color": "colors.png",
+                    "command": "console.png"
                 }
                 icon_file = icon_files.get(self.item_type)
                 if icon_file:
@@ -416,7 +417,9 @@ class ClipItem(QFrame):
                 href = u
                 if not re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*://', u):
                     href = 'http://' + u
-                return f'<a href="{html.escape(href)}" style="color: {link_color}; text-decoration: none;">{html.escape(u)}</a>'
+                # Truncar el texto visible del enlace a 45 caracteres
+                display_url = u if len(u) <= 45 else u[:42] + "..."
+                return f'<a href="{html.escape(href)}" style="color: {link_color}; text-decoration: none;">{html.escape(display_url)}</a>'
 
             escaped = html.escape(display_content)
             html_text = url_re.sub(lambda m: _linkify(m), escaped)
@@ -427,7 +430,12 @@ class ClipItem(QFrame):
             text_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
             text_label.setWordWrap(False)
         else:
-            text_label = QLabel(self.truncate_text(display_content, 43))
+            # Para imágenes, truncar preservando la extensión del archivo
+            if self.item_type == "image":
+                truncated_text = self.truncate_image_name(display_content, 40)
+            else:
+                truncated_text = self.truncate_text(display_content, 43)
+            text_label = QLabel(truncated_text)
             text_label.setObjectName("clip_text_normal")
             text_label.setWordWrap(False)
             text_label.setTextFormat(Qt.TextFormat.PlainText)
@@ -539,6 +547,32 @@ class ClipItem(QFrame):
     def truncate_text(self, text, max_len):
         text = text.replace('\n', ' ').strip()
         return text[:max_len] + "..." if len(text) > max_len else text
+    
+    def truncate_image_name(self, filename, max_len):
+        """Trunca el nombre de imagen preservando la extensión.
+        Ejemplo: 'nombre_muy_largo_de_imagen.png' -> 'nombre_muy_largo_de_imag..png'
+        """
+        filename = filename.replace('\n', ' ').strip()
+        if len(filename) <= max_len + 2:  # +2 por los ".."
+            return filename
+        
+        # Extraer la extensión
+        if '.' in filename:
+            name_part, ext = filename.rsplit('.', 1)
+            ext = '.' + ext  # Incluye el punto de la extensión
+        else:
+            name_part = filename
+            ext = ''
+        
+        # Calcular cuántos caracteres del nombre podemos mostrar
+        # Formato final: nombre_truncado..ext (dos puntos + extensión con su punto)
+        chars_for_name = max_len - len(ext) - 2  # -2 por los ".."
+        
+        if chars_for_name > 0:
+            return name_part[:chars_for_name] + ".." + ext
+        else:
+            # Si la extensión es muy larga, solo mostrar el inicio con ..
+            return filename[:max_len] + ".."
     
     def format_timestamp(self):
         now = datetime.now()

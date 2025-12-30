@@ -277,15 +277,112 @@ class ClipboardManager:
             self.refresh_ui()
 
     def detect_type(self, content):
-        url_regex = re.compile(r'(https?://|ftp://|www\.|\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?)', re.IGNORECASE)
-        if url_regex.search(content):
-            return "url"
-        elif re.match(r'^#[0-9A-Fa-f]{6}$', content):
+        # Primero verificar si es un comando de terminal (tiene prioridad sobre URLs ambiguas)
+        if self.is_terminal_command(content):
+            return "command"
+        
+        # Si tiene espacios y NO empieza con un protocolo explícito, no es URL
+        # Esto evita que "cat archivo.txt" sea detectado como URL
+        has_spaces = ' ' in content.strip()
+        has_explicit_protocol = bool(re.match(r'^(https?://|ftp://)', content.strip(), re.IGNORECASE))
+        
+        if not has_spaces or has_explicit_protocol:
+            # Solo buscar URLs si no hay espacios O si tiene protocolo explícito
+            url_regex = re.compile(r'(https?://|ftp://|www\.|\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?)', re.IGNORECASE)
+            if url_regex.search(content):
+                return "url"
+        
+        if re.match(r'^#[0-9A-Fa-f]{6}$', content):
             return "color"
         elif self.is_emoji(content):
             return "emoji"
         else:
             return "text"
+
+    def is_terminal_command(self, text):
+        """Detectar si el texto parece ser un comando de terminal Linux."""
+        text = text.strip()
+        
+        # No detectar comandos muy largos o multi-línea compleja
+        if len(text) > 500 or text.count('\n') > 5:
+            return False
+        
+        # Lista de comandos comunes de Linux/Unix
+        common_commands = [
+            # Navegación y archivos
+            'ls', 'cd', 'pwd', 'mkdir', 'rmdir', 'rm', 'cp', 'mv', 'touch', 'cat',
+            'head', 'tail', 'less', 'more', 'find', 'locate', 'which', 'whereis',
+            'file', 'stat', 'du', 'df', 'ln', 'readlink', 'tree', 'basename', 'dirname',
+            # Permisos y usuarios
+            'chmod', 'chown', 'chgrp', 'sudo', 'su', 'whoami', 'id', 'groups',
+            'useradd', 'userdel', 'usermod', 'passwd', 'adduser',
+            # Procesos
+            'ps', 'top', 'htop', 'kill', 'killall', 'pkill', 'pgrep', 'bg', 'fg',
+            'jobs', 'nohup', 'nice', 'renice', 'watch', 'timeout',
+            # Red
+            'ping', 'curl', 'wget', 'ssh', 'scp', 'rsync', 'netstat', 'ss', 'ip',
+            'ifconfig', 'dig', 'nslookup', 'host', 'traceroute', 'nc', 'telnet',
+            # Paquetes
+            'apt', 'apt-get', 'aptitude', 'dpkg', 'yum', 'dnf', 'pacman', 'snap',
+            'flatpak', 'pip', 'pip3', 'npm', 'yarn', 'cargo', 'gem', 'brew',
+            # Texto
+            'grep', 'awk', 'sed', 'cut', 'sort', 'uniq', 'wc', 'tr', 'diff',
+            'comm', 'tee', 'xargs', 'printf', 'echo', 'read',
+            # Compresión
+            'tar', 'gzip', 'gunzip', 'zip', 'unzip', 'bzip2', 'xz', '7z',
+            # Sistema
+            'systemctl', 'service', 'journalctl', 'dmesg', 'uname', 'hostname',
+            'uptime', 'free', 'lscpu', 'lsblk', 'lsusb', 'lspci', 'mount', 'umount',
+            'fdisk', 'parted', 'mkfs', 'fsck',
+            # Git
+            'git', 'gh',
+            # Docker/Contenedores
+            'docker', 'docker-compose', 'podman', 'kubectl', 'minikube',
+            # Desarrollo
+            'python', 'python3', 'node', 'java', 'javac', 'gcc', 'g++', 'make',
+            'cmake', 'go', 'rustc', 'ruby', 'perl', 'php',
+            # Editores/herramientas
+            'vim', 'nvim', 'nano', 'emacs', 'code', 'subl',
+            # Otros comunes
+            'man', 'info', 'help', 'alias', 'export', 'source', 'env', 'printenv',
+            'history', 'clear', 'reset', 'exit', 'logout', 'shutdown', 'reboot',
+            'date', 'cal', 'bc', 'expr', 'seq', 'yes', 'true', 'false', 'test',
+            'xdg-open', 'open', 'xclip', 'xsel', 'notify-send',
+        ]
+        
+        # Obtener primera palabra (comando principal)
+        first_line = text.split('\n')[0].strip()
+        words = first_line.split()
+        if not words:
+            return False
+        
+        first_word = words[0]
+        
+        # Quitar sudo/env si está al inicio
+        if first_word in ['sudo', 'env', 'nohup', 'time']:
+            if len(words) > 1:
+                first_word = words[1]
+            else:
+                return False
+        
+        # Verificar si es un comando conocido
+        if first_word in common_commands:
+            return True
+        
+        # Detectar patrones comunes de comandos
+        command_patterns = [
+            r'^\./[\w.-]+',  # ./script.sh
+            r'^\|',  # Pipe al inicio (continuación)
+            r'\|\s*\w+',  # Comandos con pipe
+            r'^[\w.-]+\s+--?[\w-]',  # comando --opcion o comando -o
+            r'^\$\s*\w+',  # $VAR o $ comando (prompt)
+        ]
+        
+        for pattern in command_patterns:
+            if re.search(pattern, text):
+                return True
+        
+        return False
 
     def is_emoji(self, text):
         emoji_pattern = re.compile("["
@@ -300,9 +397,18 @@ class ClipboardManager:
         emojis = emoji_pattern.findall(text_stripped)
         return len(emojis) > 0 and len(''.join(emojis)) >= len(text_stripped) * 0.5
 
-    def copy_and_close(self, content):
+    def copy_and_close(self, content, use_terminal_paste=False):
         try:
             clipboard = QApplication.clipboard()
+            
+            # Detectar si es un comando para usar pegado de terminal
+            clip_type = None
+            for c in self.clips:
+                if c.get('content') == content:
+                    clip_type = c.get('type')
+                    break
+            
+            is_command = clip_type == 'command' or use_terminal_paste
             
             if content in self.clipboard_images:
                 image = self.clipboard_images[content]
@@ -310,7 +416,10 @@ class ClipboardManager:
                 print(f"✓ Imagen restaurada al portapapeles")
             else:
                 clipboard.setText(content)
-                print(f"✓ Texto restaurado al portapapeles")
+                if is_command:
+                    print(f"✓ Comando restaurado al portapapeles (Ctrl+Shift+V)")
+                else:
+                    print(f"✓ Texto restaurado al portapapeles")
             
             # Decide whether to hide after marking so the copied state can be applied first
             should_hide = False
@@ -368,6 +477,9 @@ class ClipboardManager:
             except Exception:
                 pass
 
+            # Guardar si es comando para usar el método de pegado correcto
+            self._pending_paste_is_command = is_command
+
             # hide after marking if appropriate (keeps marking visible for pinned windows)
             try:
                 if should_hide:
@@ -393,7 +505,13 @@ class ClipboardManager:
         self.copy_and_close(content)
 
     def simulate_paste(self):
-        """Simular pegado usando el simulador multi-backend"""
+        """Simular pegado usando el simulador multi-backend.
+        Usa Ctrl+Shift+V para comandos de terminal, Ctrl+V para el resto."""
+        is_command = getattr(self, '_pending_paste_is_command', False)
+        self._pending_paste_is_command = False  # Resetear
+        
+        if is_command:
+            return self.input_simulator.simulate_terminal_paste()
         return self.input_simulator.simulate_paste()
 
     def reactivate_petra(self):

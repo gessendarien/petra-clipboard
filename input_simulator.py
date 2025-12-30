@@ -84,6 +84,98 @@ class InputSimulator:
         """Simular Ctrl+V para pegar"""
         return self.simulate_key('ctrl+v')
     
+    def simulate_terminal_paste(self):
+        """Simular Ctrl+Shift+V para pegar en terminal.
+        Nota: Como Petra usa Ctrl+Shift+V como atajo global, este método
+        intenta usar xdotool type para escribir directamente el contenido
+        del portapapeles en la terminal."""
+        if self.display_server == 'x11':
+            return self._paste_to_terminal_x11()
+        elif self.display_server == 'wayland':
+            if self.key_tool == 'ydotool':
+                return self._paste_to_terminal_ydotool()
+            elif self.key_tool == 'wtype':
+                return self._paste_to_terminal_wtype()
+        return False
+    
+    def _paste_to_terminal_x11(self):
+        """Pegar en terminal en X11 usando xdotool type."""
+        try:
+            import subprocess
+            text = None
+            
+            # Intentar obtener el contenido del portapapeles con diferentes métodos
+            # Método 1: xclip
+            try:
+                result = subprocess.run(['xclip', '-selection', 'clipboard', '-o'], 
+                                      capture_output=True, text=True, timeout=2)
+                if result.returncode == 0:
+                    text = result.stdout
+            except FileNotFoundError:
+                pass
+            
+            # Método 2: xsel
+            if not text:
+                try:
+                    result = subprocess.run(['xsel', '--clipboard', '--output'], 
+                                          capture_output=True, text=True, timeout=2)
+                    if result.returncode == 0:
+                        text = result.stdout
+                except FileNotFoundError:
+                    pass
+            
+            # Método 3: Obtener de PyQt directamente (más lento pero siempre funciona)
+            if not text:
+                try:
+                    from PyQt6.QtWidgets import QApplication
+                    clipboard = QApplication.clipboard()
+                    text = clipboard.text()
+                except Exception:
+                    pass
+            
+            if text:
+                # Usar xdotool type para escribir el texto
+                # --clearmodifiers evita que modificadores afecten la escritura
+                cmd = ['xdotool', 'type', '--clearmodifiers', '--delay', '0', '--', text]
+                type_result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                return type_result.returncode == 0
+            return False
+        except Exception as e:
+            print(f"Error al pegar en terminal X11: {e}")
+            return False
+    
+    def _paste_to_terminal_ydotool(self):
+        """Pegar en terminal usando ydotool."""
+        try:
+            import subprocess
+            # Obtener contenido del portapapeles con wl-paste
+            result = subprocess.run(['wl-paste'], capture_output=True, text=True, timeout=2)
+            if result.returncode == 0 and result.stdout:
+                text = result.stdout
+                cmd = ['ydotool', 'type', '--', text]
+                type_result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                return type_result.returncode == 0
+            return False
+        except Exception as e:
+            print(f"Error con ydotool: {e}")
+            return False
+    
+    def _paste_to_terminal_wtype(self):
+        """Pegar en terminal usando wtype."""
+        try:
+            import subprocess
+            # Obtener contenido del portapapeles
+            result = subprocess.run(['wl-paste'], capture_output=True, text=True, timeout=2)
+            if result.returncode == 0 and result.stdout:
+                text = result.stdout
+                cmd = ['wtype', '--', text]
+                type_result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                return type_result.returncode == 0
+            return False
+        except Exception as e:
+            print(f"Error con wtype: {e}")
+            return False
+    
     def simulate_alt_tab(self):
         """Simular Alt+Tab para cambiar de ventana"""
         return self.simulate_key('alt+Tab')
