@@ -228,6 +228,14 @@ class ClipboardManager:
         content = str(content).strip()
         if not content or len(content) > 5000:
             return
+        
+        # Detectar tipo si no se proporciona
+        if clip_type is None:
+            clip_type = self.detect_type(content)
+        
+        # NO agregar emojis a la lista de clips - solo se insertan y van a recientes
+        if clip_type == "emoji":
+            return
             
         # Para imágenes, el content es un ID único, no el contenido real
         if clip_type == "image":
@@ -240,9 +248,6 @@ class ClipboardManager:
             for clip in self.clips[:5]:
                 if clip['content'] == content and not clip['pinned']:
                     return
-            
-        if clip_type is None:
-            clip_type = self.detect_type(content)
             
         clip = {
             'content': content,

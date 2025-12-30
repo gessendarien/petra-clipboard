@@ -1,4 +1,5 @@
 import json
+import base64
 from datetime import datetime
 from pathlib import Path
 
@@ -10,6 +11,8 @@ class ConfigManager:
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.pinned_file = self.config_dir / "pinned.json"
         self.config_file = self.config_dir / "config.json"
+        self.pinned_images_dir = self.config_dir / "pinned_images"
+        self.pinned_images_dir.mkdir(parents=True, exist_ok=True)
         
         self.max_images = 10
         self.language = 'es'
@@ -84,17 +87,45 @@ class ConfigManager:
             print(f"Error saving config: {e}")
 
     def save_pinned(self):
-        pinned = [
-            {
-                'content': c['content'],
-                'type': c['type'],
-                'timestamp': c['timestamp'].isoformat(),
-                'pinned': True
-            }
-            for c in self.clips if c['pinned']
-        ]
+        pinned = []
+        for c in self.clips:
+            if c['pinned']:
+                item = {
+                    'content': c['content'],
+                    'type': c['type'],
+                    'timestamp': c['timestamp'].isoformat(),
+                    'pinned': True
+                }
+                
+                # Para imágenes, guardar el archivo en disco
+                if c['type'] == 'image' and hasattr(self, 'clipboard_images'):
+                    image_id = c['content']
+                    if image_id in self.clipboard_images:
+                        try:
+                            img = self.clipboard_images[image_id]
+                            image_path = self.pinned_images_dir / f"{image_id}.png"
+                            img.save(str(image_path), "PNG")
+                            item['image_file'] = f"{image_id}.png"
+                        except Exception as e:
+                            print(f"Error guardando imagen fijada: {e}")
+                
+                pinned.append(item)
+        
         with open(self.pinned_file, 'w') as f:
             json.dump(pinned, f, indent=2)
+        
+        # Limpiar imágenes huérfanas (que ya no están fijadas)
+        self._cleanup_orphan_images(pinned)
+    
+    def _cleanup_orphan_images(self, pinned_items):
+        """Eliminar imágenes que ya no están fijadas"""
+        try:
+            pinned_files = {item.get('image_file') for item in pinned_items if item.get('image_file')}
+            for img_file in self.pinned_images_dir.iterdir():
+                if img_file.name not in pinned_files:
+                    img_file.unlink()
+        except Exception as e:
+            print(f"Error limpiando imágenes huérfanas: {e}")
 
     def load_pinned(self):
         if self.pinned_file.exists():
@@ -103,8 +134,31 @@ class ConfigManager:
                     pinned = json.load(f)
                     if not hasattr(self, 'clips'):
                         self.clips = []
+                    if not hasattr(self, 'clipboard_images'):
+                        self.clipboard_images = {}
+                    
                     for item in pinned:
                         item['timestamp'] = datetime.fromisoformat(item['timestamp'])
+                        
+                        # Para imágenes, cargar desde disco
+                        if item['type'] == 'image' and item.get('image_file'):
+                            try:
+                                from PyQt6.QtGui import QImage
+                                image_path = self.pinned_images_dir / item['image_file']
+                                if image_path.exists():
+                                    img = QImage(str(image_path))
+                                    if not img.isNull():
+                                        self.clipboard_images[item['content']] = img
+                                    else:
+                                        # Imagen corrupta, saltar
+                                        continue
+                                else:
+                                    # Archivo no existe, saltar
+                                    continue
+                            except Exception as e:
+                                print(f"Error cargando imagen fijada: {e}")
+                                continue
+                        
                         self.clips.append(item)
             except Exception as e:
                 print(f"Error loading pinned: {e}")
