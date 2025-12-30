@@ -466,15 +466,11 @@ class ClipItem(QFrame):
         self._pin_icon = QIcon(str(pin_path)) if pin_path.exists() else None
         self._unpin_icon = QIcon(str(unpin_path)) if unpin_path.exists() else None
         
-        # Set initial pin/unpin icon
-        if self.pinned:
-            if self._unpin_icon:
-                self.pin_action_btn.setIcon(self._unpin_icon)
-                self.pin_action_btn.setIconSize(QSize(18, 18))
-        else:
-            if self._pin_icon:
-                self.pin_action_btn.setIcon(self._pin_icon)
-                self.pin_action_btn.setIconSize(QSize(18, 18))
+        # Set initial icon: always show pin.png
+        # When hovering over a pinned item's button, it changes to unpin.png
+        if self._pin_icon:
+            self.pin_action_btn.setIcon(self._pin_icon)
+            self.pin_action_btn.setIconSize(QSize(18, 18))
                 
         self.pin_action_btn.installEventFilter(self)
         self.pin_action_btn.clicked.connect(self.pin_toggled.emit)

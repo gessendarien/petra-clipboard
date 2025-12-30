@@ -19,6 +19,7 @@ class ConfigManager:
         self.shortcut = 'Control + Shift + v'
         self.theme = 'dark'
         self.recent_emojis = []
+        self.open_at_mouse = False
         
         self.load_config()
 
@@ -30,7 +31,8 @@ class ConfigManager:
             'show_clear_btn': True,
             'show_pin_btn': False,
             'theme': 'dark',
-            'recent_emojis': []
+            'recent_emojis': [],
+            'open_at_mouse': False
         }
         
         try:
@@ -52,6 +54,7 @@ class ConfigManager:
             self.show_pin_btn = bool(self.config.get('show_pin_btn', False))
             self.theme = self.config.get('theme', default.get('theme', 'dark'))
             self.recent_emojis = list(self.config.get('recent_emojis', []))[:16]
+            self.open_at_mouse = bool(self.config.get('open_at_mouse', False))
         except Exception:
             self.config = default
             self.language = default['language']
@@ -73,6 +76,7 @@ class ConfigManager:
             self.config['show_pin_btn'] = getattr(self, 'show_pin_btn', False)
             self.config['theme'] = getattr(self, 'theme', 'dark')
             self.config['recent_emojis'] = getattr(self, 'recent_emojis', [])[:16]
+            self.config['open_at_mouse'] = getattr(self, 'open_at_mouse', False)
             
             with open(self.config_file, 'w') as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)

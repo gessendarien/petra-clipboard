@@ -350,6 +350,33 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         y = (screen.height() - self.height()) // 2
         self.move(x, y)
     
+    def position_at_mouse(self):
+        """Posicionar la ventana en la ubicación actual del mouse"""
+        try:
+            from PyQt6.QtGui import QCursor
+            cursor_pos = QCursor.pos()
+            screen = QApplication.primaryScreen().geometry()
+            
+            # Calcular posición para que la ventana no salga de la pantalla
+            x = cursor_pos.x() - self.width() // 2
+            y = cursor_pos.y() - 20  # Un poco arriba del cursor
+            
+            # Asegurar que no salga de los bordes
+            if x < 0:
+                x = 0
+            elif x + self.width() > screen.width():
+                x = screen.width() - self.width()
+                
+            if y < 0:
+                y = 0
+            elif y + self.height() > screen.height():
+                y = screen.height() - self.height()
+            
+            self.move(x, y)
+        except Exception:
+            # Fallback al centro si hay error
+            self.center_window()
+    
     def closeEvent(self, event):
         if hasattr(self, 'timer'):
             self.timer.stop()
@@ -673,7 +700,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.last_emoji_inserted = None
 
     def show_window(self):
-        """Mostrar ventana centrada y enfocada"""
+        """Mostrar ventana centrada o en posición del mouse según configuración"""
         try:
             # Guardar ventana activa actual
             if self.display_server == 'x11' and self.detector.is_tool_available('xdotool'):
@@ -684,8 +711,11 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         except Exception:
             self.last_active_window = None
 
-        # Mostrar y centrar ventana
-        self.center_window()
+        # Posicionar ventana según configuración
+        if getattr(self, 'open_at_mouse', False):
+            self.position_at_mouse()
+        else:
+            self.center_window()
         self.show()
         self.activateWindow()
         self.raise_()

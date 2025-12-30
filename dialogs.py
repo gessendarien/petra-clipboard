@@ -12,7 +12,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.themes_manager = ThemesManager()
         self.setWindowTitle("Configuración")
-        self.setFixedSize(400, 320)  # Aumentado para incluir tema
+        self.setFixedSize(400, 360)  # Aumentado para incluir nueva opción
         self.setModal(True)
 
         self.apply_dark_theme()
@@ -77,6 +77,11 @@ class SettingsDialog(QDialog):
         self.show_pin_cb = QCheckBox("Mostrar botón 'Fijar ventana' en la cabecera")
         self.show_pin_cb.setObjectName("settings_checkbox")
         layout.addWidget(self.show_pin_cb)
+
+        # Open window at mouse position
+        self.open_at_mouse_cb = QCheckBox("Abrir desde origen del mouse")
+        self.open_at_mouse_cb.setObjectName("settings_checkbox")
+        layout.addWidget(self.open_at_mouse_cb)
 
         # Shortcut input
         sc_row = QWidget()
@@ -178,6 +183,7 @@ class SettingsDialog(QDialog):
                     
                 self.show_clear_cb.setChecked(bool(getattr(parent, 'show_clear_btn', True)))
                 self.show_pin_cb.setChecked(bool(getattr(parent, 'show_pin_btn', False)))
+                self.open_at_mouse_cb.setChecked(bool(getattr(parent, 'open_at_mouse', False)))
                 
                 sc = getattr(parent, 'shortcut', 'Control + Shift + v')
                 if sc:
@@ -196,6 +202,7 @@ class SettingsDialog(QDialog):
                 'theme': 'Tema:',
                 'show_clear': "Mostrar botón 'Borrar todo' en la cabecera",
                 'show_pin': "Mostrar botón 'Fijar ventana' en la cabecera",
+                'open_at_mouse': "Abrir desde origen del mouse",
                 'shortcut': "Atajo (ej. Control+Shift+v):"
             },
             'en': {
@@ -207,6 +214,7 @@ class SettingsDialog(QDialog):
                 'theme': 'Theme:',
                 'show_clear': "Show 'Clear All' button in header",
                 'show_pin': "Show 'Pin window' button in header",
+                'open_at_mouse': "Open from mouse position",
                 'shortcut': "Shortcut (e.g. Control+Shift+v):"
             }
         }
@@ -243,6 +251,8 @@ class SettingsDialog(QDialog):
                         parent.pin_window_btn.show()
                     else:
                         parent.pin_window_btn.hide()
+                
+                parent.open_at_mouse = bool(self.open_at_mouse_cb.isChecked())
                         
                 parent.shortcut = str(self.shortcut_edit.text()).strip() if hasattr(self, 'shortcut_edit') else getattr(parent, 'shortcut', 'Super + v')
                 
@@ -286,6 +296,9 @@ class SettingsDialog(QDialog):
                 
             if hasattr(self, 'show_pin_cb'):
                 self.show_pin_cb.setText(t.get('show_pin', self.show_pin_cb.text()))
+            
+            if hasattr(self, 'open_at_mouse_cb'):
+                self.open_at_mouse_cb.setText(t.get('open_at_mouse', self.open_at_mouse_cb.text()))
                 
             if hasattr(self, 'save_btn'):
                 self.save_btn.setText(t.get('save', self.save_btn.text()))
