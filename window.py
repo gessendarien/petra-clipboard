@@ -105,7 +105,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.setCentralWidget(central)
         
         main_layout = QVBoxLayout(central)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        # Margen inferior para que las esquinas redondeadas del main_window sean visibles
+        main_layout.setContentsMargins(0, 0, 0, 12)
         main_layout.setSpacing(0)
         
         self.setup_header(main_layout)
@@ -212,8 +213,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     
     def setup_scroll_area(self, main_layout):
         scroll = QScrollArea()
+        scroll.setObjectName("main_scroll_area")
         scroll.setWidgetResizable(True)
-        # Deshabilitar scroll horizontal
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         
         self.content_widget = QWidget()
@@ -223,7 +224,6 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.content_layout.addStretch()
         
         scroll.setWidget(self.content_widget)
-        # keep a reference so we can call ensureWidgetVisible when navigating
         self.scroll_area = scroll
         main_layout.addWidget(scroll)
     

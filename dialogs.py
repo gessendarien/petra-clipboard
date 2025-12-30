@@ -3,16 +3,69 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from pathlib import Path
+import os
+import sys
 
 from widgets import ShortcutEdit
 from themes_manager import ThemesManager
+
+
+def get_autostart_path():
+    """Obtener la ruta del archivo .desktop en autostart"""
+    return Path.home() / ".config" / "autostart" / "petra.desktop"
+
+
+def is_autostart_enabled():
+    """Verificar si el autostart está habilitado"""
+    return get_autostart_path().exists()
+
+
+def enable_autostart():
+    """Crear el archivo .desktop para autostart"""
+    autostart_dir = Path.home() / ".config" / "autostart"
+    autostart_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Obtener la ruta del ejecutable
+    if getattr(sys, 'frozen', False):
+        # Si es un ejecutable compilado
+        exec_path = sys.executable
+    else:
+        # Si se ejecuta como script de Python
+        main_script = Path(__file__).parent / "main.py"
+        exec_path = f"python3 {main_script}"
+    
+    desktop_content = f"""[Desktop Entry]
+Type=Application
+Name=Petra Clipboard
+Comment=Clipboard manager with emoji support
+Exec={exec_path} --hidden
+Icon=accessories-clipboard
+Terminal=false
+Categories=Utility;
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
+"""
+    
+    desktop_file = get_autostart_path()
+    with open(desktop_file, 'w') as f:
+        f.write(desktop_content)
+    
+    # Hacer el archivo ejecutable
+    os.chmod(desktop_file, 0o755)
+
+
+def disable_autostart():
+    """Eliminar el archivo .desktop de autostart"""
+    desktop_file = get_autostart_path()
+    if desktop_file.exists():
+        desktop_file.unlink()
 
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.themes_manager = ThemesManager()
         self.setWindowTitle("Configuración")
-        self.setFixedSize(400, 360)  # Aumentado para incluir nueva opción
+        self.setFixedSize(400, 390)  # Aumentado para incluir nueva opción
         self.setModal(True)
 
         self.apply_dark_theme()
@@ -82,6 +135,11 @@ class SettingsDialog(QDialog):
         self.open_at_mouse_cb = QCheckBox("Abrir desde origen del mouse")
         self.open_at_mouse_cb.setObjectName("settings_checkbox")
         layout.addWidget(self.open_at_mouse_cb)
+
+        # Start with system (autostart)
+        self.autostart_cb = QCheckBox("Iniciar con el sistema")
+        self.autostart_cb.setObjectName("settings_checkbox")
+        layout.addWidget(self.autostart_cb)
 
         # Shortcut input
         sc_row = QWidget()
@@ -185,6 +243,9 @@ class SettingsDialog(QDialog):
                 self.show_pin_cb.setChecked(bool(getattr(parent, 'show_pin_btn', False)))
                 self.open_at_mouse_cb.setChecked(bool(getattr(parent, 'open_at_mouse', False)))
                 
+                # Verificar si autostart está habilitado
+                self.autostart_cb.setChecked(is_autostart_enabled())
+                
                 sc = getattr(parent, 'shortcut', 'Control + Shift + v')
                 if sc:
                     self.shortcut_edit.setText(str(sc))
@@ -203,6 +264,7 @@ class SettingsDialog(QDialog):
                 'show_clear': "Mostrar botón 'Borrar todo' en la cabecera",
                 'show_pin': "Mostrar botón 'Fijar ventana' en la cabecera",
                 'open_at_mouse': "Abrir desde origen del mouse",
+                'autostart': "Iniciar con el sistema",
                 'shortcut': "Atajo (ej. Control+Shift+v):"
             },
             'en': {
@@ -215,6 +277,7 @@ class SettingsDialog(QDialog):
                 'show_clear': "Show 'Clear All' button in header",
                 'show_pin': "Show 'Pin window' button in header",
                 'open_at_mouse': "Open from mouse position",
+                'autostart': "Start with system",
                 'shortcut': "Shortcut (e.g. Control+Shift+v):"
             }
         }
@@ -253,6 +316,12 @@ class SettingsDialog(QDialog):
                         parent.pin_window_btn.hide()
                 
                 parent.open_at_mouse = bool(self.open_at_mouse_cb.isChecked())
+                
+                # Manejar autostart
+                if self.autostart_cb.isChecked():
+                    enable_autostart()
+                else:
+                    disable_autostart()
                         
                 parent.shortcut = str(self.shortcut_edit.text()).strip() if hasattr(self, 'shortcut_edit') else getattr(parent, 'shortcut', 'Super + v')
                 
@@ -299,6 +368,9 @@ class SettingsDialog(QDialog):
             
             if hasattr(self, 'open_at_mouse_cb'):
                 self.open_at_mouse_cb.setText(t.get('open_at_mouse', self.open_at_mouse_cb.text()))
+            
+            if hasattr(self, 'autostart_cb'):
+                self.autostart_cb.setText(t.get('autostart', self.autostart_cb.text()))
                 
             if hasattr(self, 'save_btn'):
                 self.save_btn.setText(t.get('save', self.save_btn.text()))

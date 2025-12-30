@@ -329,9 +329,9 @@ class ThemesManager:
             }}
             
             /* ========== ÁREA DE SCROLL ========== */
-            QScrollArea {{
+            QScrollArea#main_scroll_area {{
                 border: none;
-                background-color: transparent;
+                background-color: {colors['background']};
             }}
             
             QScrollBar:horizontal {{
@@ -340,20 +340,20 @@ class ThemesManager:
             }}
             
             QScrollBar:vertical {{
-                background: {colors['scrollbar_bg']} !important;
+                background: {colors['scrollbar_bg']};
                 width: 8px;
                 margin: 0px;
                 border-radius: 4px;
             }}
             
             QScrollBar::handle:vertical {{
-                background: {colors['scrollbar_handle']} !important;
+                background: {colors['scrollbar_handle']};
                 border-radius: 4px;
                 min-height: 30px;
             }}
             
             QScrollBar::handle:vertical:hover {{
-                background: {colors['element_hover']} !important;
+                background: {colors['element_hover']};
             }}
             
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
