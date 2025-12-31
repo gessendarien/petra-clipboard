@@ -1,144 +1,782 @@
 class ThemesManager:
     def __init__(self):
         self.available_themes = {
+            # ==================== DARK (Default - Grayscale) ====================
             'dark': {
                 'name': 'Dark',
                 'icons_folder': 'dark',
                 'colors': {
-                    # Colores principales
-                    'primary': '#BB86FC',
-                    
-                    # Fondos principales
+                    'primary': '#606060',
                     'background': '#121212',
-                    'header': '#1E1E1E',
-                    
-                    # Textos
-                    'text_primary': '#FFFFFF',
-                    'text_secondary': '#AAAAAA',
-                    'card_text': '#E0E0E0',
-                    
-                    # Items clipboard
+                    'header': '#1A1A1A',
+                    'text_primary': '#E0E0E0',
+                    'text_secondary': '#888888',
+                    'card_text': '#D0D0D0',
+                    'clip_hover_bg': '#3A3A3A',
+                    'element_click': '#4A4A4A',
+                    'link_color': '#A0A0A0',
+                    'search_input_focus': '#606060',
+                    'button_bg': '#2A2A2A',
+                    'button_hover': '#3A3A3A',
+                    'header_buttons': '#222222',
+                    'filters_background': '#1A1A1A',
+                    'filter_selected': '#505050',
+                    'filter_hover': '#606060',
+                    'filter_click': '#404040',
+                    'element_hover': '#303030',
+                    'emoji_table': '#252525',
+                    'delete_button': '#8B4049',
+                    'pin_button': '#4A6B5D',
+                    'delete_hover': '#A04050',
+                    'pin_hover': '#5A7B6D',
+                    'settings_window': '#1A1A1A',
+                    'settings_text': '#E0E0E0',
+                    'input_border': '#505050',
+                    'scrollbar_bg': '#1A1A1A',
+                    'scrollbar_handle': '#404040',
+                    'icon_bg': '#2A2A2A',
+                    'header_buttons_click': '#505050',
+                    'clear_button_border': '#606060',
+                    'emoji_selection_border': '#707070',
+                    'emoji_selection_bg': '#2A2A2A'
+                }
+            },
+            
+            # ==================== DARK PURPLE ====================
+            'dark_purple': {
+                'name': 'Dark Purple',
+                'icons_folder': 'dark',
+                'colors': {
+                    'primary': '#BB86FC',
+                    'background': '#121212',
+                    'header': '#1A1A1A',
+                    'text_primary': '#E0E0E0',
+                    'text_secondary': '#888888',
+                    'card_text': '#D0D0D0',
                     'clip_hover_bg': '#8559BA',
                     'element_click': '#74559A',
-
-                    # Enlaces
                     'link_color': '#BB86FC',
-                    
-                    # Búsqueda
                     'search_input_focus': '#BB86FC',
-                    
-                    # Botones
-                    'button_bg': '#2C2C2C',
-                    'button_hover': '#3C3C3C',
-                    'header_buttons': '#252525',
-                    
-                    # Filtros
-                    'filters_background': '#181818',
+                    'button_bg': '#2A2A2A',
+                    'button_hover': '#3A3A3A',
+                    'header_buttons': '#222222',
+                    'filters_background': '#1A1A1A',
                     'filter_selected': '#BB86FC',
                     'filter_hover': '#D0A8FF',
                     'filter_click': '#9A67EA',
-                    
-                    # Elementos varios
-                    'element_hover': '#343434',
-                    'emoji_table': '#2D2D2D',
-                    
-                    # Botones de acción
+                    'element_hover': '#303030',
+                    'emoji_table': '#252525',
                     'delete_button': '#CF6679',
                     'pin_button': '#03DAC6',
                     'delete_hover': '#FF5252',
                     'pin_hover': '#04C5B0',
-                    
-                    
-                    # Configuración
-                    'settings_window': '#FA0000',
-                    'settings_text': '#EDEDED',
-                    'input_border': '#892E80',
-                    
-                    # Scrollbars
-                    'scrollbar_bg': '#242323',
-                    'scrollbar_handle': '#565656',
-                    
-                    # Selects config
-                    'icon_bg': '#323232',
-                    
-                    # Estados especiales
+                    'settings_window': '#1A1A1A',
+                    'settings_text': '#E0E0E0',
+                    'input_border': '#BB86FC',
+                    'scrollbar_bg': '#1A1A1A',
+                    'scrollbar_handle': '#404040',
+                    'icon_bg': '#2A2A2A',
                     'header_buttons_click': '#9A67EA',
                     'clear_button_border': '#9A67EA',
-                    
-                    # Selección de emoji por teclado
-                    'emoji_selection_border': '#4CAF50',
-                    'emoji_selection_bg': '#3a3a3a'
+                    'emoji_selection_border': '#BB86FC',
+                    'emoji_selection_bg': '#2A2A2A'
                 }
             },
+            
+            # ==================== DARK BLUE ====================
+            'dark_blue': {
+                'name': 'Dark Blue',
+                'icons_folder': 'dark',
+                'colors': {
+                    'primary': '#64B5F6',
+                    'background': '#121212',
+                    'header': '#1A1A1A',
+                    'text_primary': '#E0E0E0',
+                    'text_secondary': '#888888',
+                    'card_text': '#D0D0D0',
+                    'clip_hover_bg': '#1F4A6E',
+                    'element_click': '#2D5A7B',
+                    'link_color': '#64B5F6',
+                    'search_input_focus': '#64B5F6',
+                    'button_bg': '#2A2A2A',
+                    'button_hover': '#3A3A3A',
+                    'header_buttons': '#222222',
+                    'filters_background': '#1A1A1A',
+                    'filter_selected': '#1F6FEB',
+                    'filter_hover': '#388BFD',
+                    'filter_click': '#1A5FC9',
+                    'element_hover': '#303030',
+                    'emoji_table': '#252525',
+                    'delete_button': '#DA3633',
+                    'pin_button': '#238636',
+                    'delete_hover': '#F85149',
+                    'pin_hover': '#2EA043',
+                    'settings_window': '#1A1A1A',
+                    'settings_text': '#E0E0E0',
+                    'input_border': '#64B5F6',
+                    'scrollbar_bg': '#1A1A1A',
+                    'scrollbar_handle': '#404040',
+                    'icon_bg': '#2A2A2A',
+                    'header_buttons_click': '#1F6FEB',
+                    'clear_button_border': '#1F6FEB',
+                    'emoji_selection_border': '#64B5F6',
+                    'emoji_selection_bg': '#2A2A2A'
+                }
+            },
+            
+            # ==================== DARK GREEN ====================
+            'dark_green': {
+                'name': 'Dark Green',
+                'icons_folder': 'dark',
+                'colors': {
+                    'primary': '#66BB6A',
+                    'background': '#121212',
+                    'header': '#1A1A1A',
+                    'text_primary': '#E0E0E0',
+                    'text_secondary': '#888888',
+                    'card_text': '#D0D0D0',
+                    'clip_hover_bg': '#2E5930',
+                    'element_click': '#3D6B3F',
+                    'link_color': '#66BB6A',
+                    'search_input_focus': '#66BB6A',
+                    'button_bg': '#2A2A2A',
+                    'button_hover': '#3A3A3A',
+                    'header_buttons': '#222222',
+                    'filters_background': '#1A1A1A',
+                    'filter_selected': '#43A047',
+                    'filter_hover': '#66BB6A',
+                    'filter_click': '#388E3C',
+                    'element_hover': '#303030',
+                    'emoji_table': '#252525',
+                    'delete_button': '#C75050',
+                    'pin_button': '#4DB6AC',
+                    'delete_hover': '#E57373',
+                    'pin_hover': '#80CBC4',
+                    'settings_window': '#1A1A1A',
+                    'settings_text': '#E0E0E0',
+                    'input_border': '#66BB6A',
+                    'scrollbar_bg': '#1A1A1A',
+                    'scrollbar_handle': '#404040',
+                    'icon_bg': '#2A2A2A',
+                    'header_buttons_click': '#43A047',
+                    'clear_button_border': '#43A047',
+                    'emoji_selection_border': '#66BB6A',
+                    'emoji_selection_bg': '#2A2A2A'
+                }
+            },
+            
+            # ==================== DARK RED ====================
+            'dark_red': {
+                'name': 'Dark Red',
+                'icons_folder': 'dark',
+                'colors': {
+                    'primary': '#EF5350',
+                    'background': '#121212',
+                    'header': '#1A1A1A',
+                    'text_primary': '#E0E0E0',
+                    'text_secondary': '#888888',
+                    'card_text': '#D0D0D0',
+                    'clip_hover_bg': '#5C2828',
+                    'element_click': '#7A3535',
+                    'link_color': '#EF5350',
+                    'search_input_focus': '#EF5350',
+                    'button_bg': '#2A2A2A',
+                    'button_hover': '#3A3A3A',
+                    'header_buttons': '#222222',
+                    'filters_background': '#1A1A1A',
+                    'filter_selected': '#E53935',
+                    'filter_hover': '#EF5350',
+                    'filter_click': '#C62828',
+                    'element_hover': '#303030',
+                    'emoji_table': '#252525',
+                    'delete_button': '#FF7043',
+                    'pin_button': '#26A69A',
+                    'delete_hover': '#FF8A65',
+                    'pin_hover': '#4DB6AC',
+                    'settings_window': '#1A1A1A',
+                    'settings_text': '#E0E0E0',
+                    'input_border': '#EF5350',
+                    'scrollbar_bg': '#1A1A1A',
+                    'scrollbar_handle': '#404040',
+                    'icon_bg': '#2A2A2A',
+                    'header_buttons_click': '#E53935',
+                    'clear_button_border': '#E53935',
+                    'emoji_selection_border': '#EF5350',
+                    'emoji_selection_bg': '#2A2A2A'
+                }
+            },
+            
+            # ==================== DARK PINK ====================
+            'dark_pink': {
+                'name': 'Dark Pink',
+                'icons_folder': 'dark',
+                'colors': {
+                    'primary': '#E91E63',
+                    'background': '#121212',
+                    'header': '#1A1A1A',
+                    'text_primary': '#E0E0E0',
+                    'text_secondary': '#888888',
+                    'card_text': '#D0D0D0',
+                    'clip_hover_bg': '#5C2845',
+                    'element_click': '#7A3558',
+                    'link_color': '#E91E63',
+                    'search_input_focus': '#E91E63',
+                    'button_bg': '#2A2A2A',
+                    'button_hover': '#3A3A3A',
+                    'header_buttons': '#222222',
+                    'filters_background': '#1A1A1A',
+                    'filter_selected': '#C2185B',
+                    'filter_hover': '#E91E63',
+                    'filter_click': '#AD1457',
+                    'element_hover': '#303030',
+                    'emoji_table': '#252525',
+                    'delete_button': '#FF7043',
+                    'pin_button': '#26A69A',
+                    'delete_hover': '#FF8A65',
+                    'pin_hover': '#4DB6AC',
+                    'settings_window': '#1A1A1A',
+                    'settings_text': '#E0E0E0',
+                    'input_border': '#E91E63',
+                    'scrollbar_bg': '#1A1A1A',
+                    'scrollbar_handle': '#404040',
+                    'icon_bg': '#2A2A2A',
+                    'header_buttons_click': '#C2185B',
+                    'clear_button_border': '#C2185B',
+                    'emoji_selection_border': '#E91E63',
+                    'emoji_selection_bg': '#2A2A2A'
+                }
+            },
+            
+            # ==================== LIGHT ====================
             'light': {
                 'name': 'Light',
                 'icons_folder': 'light',
                 'colors': {
-                    # Colores principales
                     'primary': '#4597DF',
-                    
-                    # Fondos principales
                     'background': '#DFE0E1',
                     'header': '#E9ECEF',
-                    
-                    # Textos
                     'text_primary': '#2D3748',
                     'text_secondary': '#718096',
                     'card_text': '#2A2A2A',
-                    
-                    # Items del clipboard
-                    # removed copied_* keys (unused) — use `clip_hover_bg` and `element_click` instead
-                    # Hover background (single source): same test color
                     'clip_hover_bg': '#00D6D6',
-                    # clip_hover_border removed — no border used for clip items
-                    
-                    # Búsqueda
                     'search_input_focus': '#53A3C6',
-                    
-                    # Botones
-                    'button_bg': '#FFFFFF',
+                    'button_bg': '#CCCCCC',
                     'button_hover': '#EDF2F7',
                     'header_buttons': '#F8FAFC',
-                    
-                    # Filtros
                     'filters_background': '#F0F4F8',
                     'filter_selected': '#4597DF',
                     'filter_hover': '#448ECF',
                     'filter_click': '#4076A6',
-                    
-                    # Elementos varios
                     'element_hover': '#E2E8F0',
-                    'element_click': '#FFFF00',
+                    'element_click': '#A8D8D8',
                     'emoji_table': '#EDF2F7',
-                    
-                    # Botones de acción
                     'delete_button': '#D87A8A',
                     'pin_button': '#4A9C8E',
                     'delete_hover': '#E53E3E',
                     'pin_hover': '#3A8C7E',
-                    
-                    # Enlaces - CORREGIDO
                     'link_color': '#7E6BC9',
-                    
-                    # Configuración - CORREGIDO
                     'settings_window': '#FFFFFF',
                     'settings_text': '#2D3748',
                     'input_border': '#7E6BC9',
-                    
-                    # Scrollbars
                     'scrollbar_bg': '#E2E8F0',
                     'scrollbar_handle': '#CBD5E0',
-                    
-                    # Iconos
                     'icon_bg': '#F7FAFC',
-                    
-                    # Estados especiales
                     'header_buttons_click': '#4D9AD8',
                     'clear_button_border': '#F35642',
-                    
-                    # Selección de emoji por teclado
                     'emoji_selection_border': '#2E7D32',
                     'emoji_selection_bg': '#E8F5E9'
+                }
+            },
+            
+            # ==================== LIGHT PURPLE ====================
+            'light_purple': {
+                'name': 'Light Purple',
+                'icons_folder': 'light',
+                'colors': {
+                    'primary': '#9C27B0',
+                    'background': '#DFE0E1',
+                    'header': '#E9ECEF',
+                    'text_primary': '#2D3748',
+                    'text_secondary': '#718096',
+                    'card_text': '#2A2A2A',
+                    'clip_hover_bg': '#CE93D8',
+                    'element_click': '#BA68C8',
+                    'link_color': '#9C27B0',
+                    'search_input_focus': '#9C27B0',
+                    'button_bg': '#CCCCCC',
+                    'button_hover': '#EDF2F7',
+                    'header_buttons': '#F8FAFC',
+                    'filters_background': '#F0F4F8',
+                    'filter_selected': '#9C27B0',
+                    'filter_hover': '#AB47BC',
+                    'filter_click': '#7B1FA2',
+                    'element_hover': '#E2E8F0',
+                    'emoji_table': '#EDF2F7',
+                    'delete_button': '#E57373',
+                    'pin_button': '#4DB6AC',
+                    'delete_hover': '#EF5350',
+                    'pin_hover': '#26A69A',
+                    'settings_window': '#FFFFFF',
+                    'settings_text': '#2D3748',
+                    'input_border': '#9C27B0',
+                    'scrollbar_bg': '#E2E8F0',
+                    'scrollbar_handle': '#CBD5E0',
+                    'icon_bg': '#F7FAFC',
+                    'header_buttons_click': '#AB47BC',
+                    'clear_button_border': '#E91E63',
+                    'emoji_selection_border': '#9C27B0',
+                    'emoji_selection_bg': '#E8F5E9'
+                }
+            },
+            
+            # ==================== LIGHT BLUE ====================
+            'light_blue': {
+                'name': 'Light Blue',
+                'icons_folder': 'light',
+                'colors': {
+                    'primary': '#1976D2',
+                    'background': '#DFE0E1',
+                    'header': '#E9ECEF',
+                    'text_primary': '#2D3748',
+                    'text_secondary': '#718096',
+                    'card_text': '#2A2A2A',
+                    'clip_hover_bg': '#90CAF9',
+                    'element_click': '#64B5F6',
+                    'link_color': '#1976D2',
+                    'search_input_focus': '#1976D2',
+                    'button_bg': '#CCCCCC',
+                    'button_hover': '#EDF2F7',
+                    'header_buttons': '#F8FAFC',
+                    'filters_background': '#F0F4F8',
+                    'filter_selected': '#1976D2',
+                    'filter_hover': '#1E88E5',
+                    'filter_click': '#1565C0',
+                    'element_hover': '#E2E8F0',
+                    'emoji_table': '#EDF2F7',
+                    'delete_button': '#E57373',
+                    'pin_button': '#81C784',
+                    'delete_hover': '#EF5350',
+                    'pin_hover': '#66BB6A',
+                    'settings_window': '#FFFFFF',
+                    'settings_text': '#2D3748',
+                    'input_border': '#1976D2',
+                    'scrollbar_bg': '#E2E8F0',
+                    'scrollbar_handle': '#CBD5E0',
+                    'icon_bg': '#F7FAFC',
+                    'header_buttons_click': '#1E88E5',
+                    'clear_button_border': '#F44336',
+                    'emoji_selection_border': '#1976D2',
+                    'emoji_selection_bg': '#E8F5E9'
+                }
+            },
+            
+            # ==================== LIGHT GREEN ====================
+            'light_green': {
+                'name': 'Light Green',
+                'icons_folder': 'light',
+                'colors': {
+                    'primary': '#388E3C',
+                    'background': '#DFE0E1',
+                    'header': '#E9ECEF',
+                    'text_primary': '#2D3748',
+                    'text_secondary': '#718096',
+                    'card_text': '#2A2A2A',
+                    'clip_hover_bg': '#A5D6A7',
+                    'element_click': '#81C784',
+                    'link_color': '#388E3C',
+                    'search_input_focus': '#388E3C',
+                    'button_bg': '#CCCCCC',
+                    'button_hover': '#EDF2F7',
+                    'header_buttons': '#F8FAFC',
+                    'filters_background': '#F0F4F8',
+                    'filter_selected': '#388E3C',
+                    'filter_hover': '#43A047',
+                    'filter_click': '#2E7D32',
+                    'element_hover': '#E2E8F0',
+                    'emoji_table': '#EDF2F7',
+                    'delete_button': '#E57373',
+                    'pin_button': '#4DB6AC',
+                    'delete_hover': '#EF5350',
+                    'pin_hover': '#26A69A',
+                    'settings_window': '#FFFFFF',
+                    'settings_text': '#2D3748',
+                    'input_border': '#388E3C',
+                    'scrollbar_bg': '#E2E8F0',
+                    'scrollbar_handle': '#CBD5E0',
+                    'icon_bg': '#F7FAFC',
+                    'header_buttons_click': '#43A047',
+                    'clear_button_border': '#F44336',
+                    'emoji_selection_border': '#388E3C',
+                    'emoji_selection_bg': '#E8F5E9'
+                }
+            },
+            
+            # ==================== LIGHT RED ====================
+            'light_red': {
+                'name': 'Light Red',
+                'icons_folder': 'light',
+                'colors': {
+                    'primary': '#D32F2F',
+                    'background': '#DFE0E1',
+                    'header': '#E9ECEF',
+                    'text_primary': '#2D3748',
+                    'text_secondary': '#718096',
+                    'card_text': '#2A2A2A',
+                    'clip_hover_bg': '#EF9A9A',
+                    'element_click': '#E57373',
+                    'link_color': '#D32F2F',
+                    'search_input_focus': '#D32F2F',
+                    'button_bg': '#CCCCCC',
+                    'button_hover': '#EDF2F7',
+                    'header_buttons': '#F8FAFC',
+                    'filters_background': '#F0F4F8',
+                    'filter_selected': '#D32F2F',
+                    'filter_hover': '#E53935',
+                    'filter_click': '#C62828',
+                    'element_hover': '#E2E8F0',
+                    'emoji_table': '#EDF2F7',
+                    'delete_button': '#FF7043',
+                    'pin_button': '#66BB6A',
+                    'delete_hover': '#FF5722',
+                    'pin_hover': '#4CAF50',
+                    'settings_window': '#FFFFFF',
+                    'settings_text': '#2D3748',
+                    'input_border': '#D32F2F',
+                    'scrollbar_bg': '#E2E8F0',
+                    'scrollbar_handle': '#CBD5E0',
+                    'icon_bg': '#F7FAFC',
+                    'header_buttons_click': '#E53935',
+                    'clear_button_border': '#FF5722',
+                    'emoji_selection_border': '#D32F2F',
+                    'emoji_selection_bg': '#E8F5E9'
+                }
+            },
+            
+            # ==================== LIGHT PINK ====================
+            'light_pink': {
+                'name': 'Light Pink',
+                'icons_folder': 'light',
+                'colors': {
+                    'primary': '#E91E63',
+                    'background': '#DFE0E1',
+                    'header': '#E9ECEF',
+                    'text_primary': '#2D3748',
+                    'text_secondary': '#718096',
+                    'card_text': '#2A2A2A',
+                    'clip_hover_bg': '#F48FB1',
+                    'element_click': '#F06292',
+                    'link_color': '#E91E63',
+                    'search_input_focus': '#E91E63',
+                    'button_bg': '#CCCCCC',
+                    'button_hover': '#EDF2F7',
+                    'header_buttons': '#F8FAFC',
+                    'filters_background': '#F0F4F8',
+                    'filter_selected': '#E91E63',
+                    'filter_hover': '#EC407A',
+                    'filter_click': '#C2185B',
+                    'element_hover': '#E2E8F0',
+                    'emoji_table': '#EDF2F7',
+                    'delete_button': '#FF7043',
+                    'pin_button': '#66BB6A',
+                    'delete_hover': '#FF5722',
+                    'pin_hover': '#4CAF50',
+                    'settings_window': '#FFFFFF',
+                    'settings_text': '#2D3748',
+                    'input_border': '#E91E63',
+                    'scrollbar_bg': '#E2E8F0',
+                    'scrollbar_handle': '#CBD5E0',
+                    'icon_bg': '#F7FAFC',
+                    'header_buttons_click': '#EC407A',
+                    'clear_button_border': '#E91E63',
+                    'emoji_selection_border': '#E91E63',
+                    'emoji_selection_bg': '#E8F5E9'
+                }
+            },
+            
+            # ==================== UBUNTU ====================
+            'ubuntu': {
+                'name': 'Ubuntu',
+                'icons_folder': 'dark',
+                'colors': {
+                    'primary': '#E95420',
+                    'background': '#1D1D1D',
+                    'header': '#2C2C2C',
+                    'text_primary': '#FFFFFF',
+                    'text_secondary': '#999999',
+                    'card_text': '#F0F0F0',
+                    'clip_hover_bg': '#E95420',
+                    'element_click': '#C34113',
+                    'link_color': '#E95420',
+                    'search_input_focus': '#E95420',
+                    'button_bg': '#333333',
+                    'button_hover': '#444444',
+                    'header_buttons': '#2C2C2C',
+                    'filters_background': '#262626',
+                    'filter_selected': '#E95420',
+                    'filter_hover': '#F27249',
+                    'filter_click': '#C34113',
+                    'element_hover': '#3D3D3D',
+                    'emoji_table': '#333333',
+                    'delete_button': '#C84646',
+                    'pin_button': '#3EB34F',
+                    'delete_hover': '#E55555',
+                    'pin_hover': '#4FC460',
+                    'settings_window': '#2C2C2C',
+                    'settings_text': '#FFFFFF',
+                    'input_border': '#E95420',
+                    'scrollbar_bg': '#1D1D1D',
+                    'scrollbar_handle': '#555555',
+                    'icon_bg': '#333333',
+                    'header_buttons_click': '#C34113',
+                    'clear_button_border': '#E95420',
+                    'emoji_selection_border': '#E95420',
+                    'emoji_selection_bg': '#333333'
+                }
+            },
+            
+            # ==================== LINUX MINT ====================
+            'mint': {
+                'name': 'Linux Mint',
+                'icons_folder': 'dark',
+                'colors': {
+                    'primary': '#8FA876',
+                    'background': '#1E1E1E',
+                    'header': '#2B2B2B',
+                    'text_primary': '#FFFFFF',
+                    'text_secondary': '#9E9E9E',
+                    'card_text': '#E0E0E0',
+                    'clip_hover_bg': '#5D6B4D',
+                    'element_click': '#4A5640',
+                    'link_color': '#8FA876',
+                    'search_input_focus': '#8FA876',
+                    'button_bg': '#303030',
+                    'button_hover': '#404040',
+                    'header_buttons': '#2B2B2B',
+                    'filters_background': '#252525',
+                    'filter_selected': '#8FA876',
+                    'filter_hover': '#A3B892',
+                    'filter_click': '#6B7D5A',
+                    'element_hover': '#383838',
+                    'emoji_table': '#303030',
+                    'delete_button': '#A65D5D',
+                    'pin_button': '#5D8A6B',
+                    'delete_hover': '#C07070',
+                    'pin_hover': '#6FA080',
+                    'settings_window': '#2B2B2B',
+                    'settings_text': '#FFFFFF',
+                    'input_border': '#8FA876',
+                    'scrollbar_bg': '#1E1E1E',
+                    'scrollbar_handle': '#4A4A4A',
+                    'icon_bg': '#303030',
+                    'header_buttons_click': '#6B7D5A',
+                    'clear_button_border': '#8FA876',
+                    'emoji_selection_border': '#8FA876',
+                    'emoji_selection_bg': '#2B2B2B'
+                }
+            },
+            
+            # ==================== ELEMENTARY ====================
+            'elementary': {
+                'name': 'Elementary',
+                'icons_folder': 'dark',
+                'colors': {
+                    'primary': '#64BAFF',
+                    'background': '#1A1A1A',
+                    'header': '#333333',
+                    'text_primary': '#FAFAFA',
+                    'text_secondary': '#ABACAE',
+                    'card_text': '#E0E0E0',
+                    'clip_hover_bg': '#2A4A5E',
+                    'element_click': '#3A5A6E',
+                    'link_color': '#64BAFF',
+                    'search_input_focus': '#64BAFF',
+                    'button_bg': '#3D3D3D',
+                    'button_hover': '#4A4A4A',
+                    'header_buttons': '#333333',
+                    'filters_background': '#2A2A2A',
+                    'filter_selected': '#3689E6',
+                    'filter_hover': '#64BAFF',
+                    'filter_click': '#2A70C5',
+                    'element_hover': '#404040',
+                    'emoji_table': '#3D3D3D',
+                    'delete_button': '#DA4453',
+                    'pin_button': '#68B723',
+                    'delete_hover': '#ED5565',
+                    'pin_hover': '#7EC833',
+                    'settings_window': '#333333',
+                    'settings_text': '#FAFAFA',
+                    'input_border': '#64BAFF',
+                    'scrollbar_bg': '#1A1A1A',
+                    'scrollbar_handle': '#4A4A4A',
+                    'icon_bg': '#3D3D3D',
+                    'header_buttons_click': '#3689E6',
+                    'clear_button_border': '#64BAFF',
+                    'emoji_selection_border': '#64BAFF',
+                    'emoji_selection_bg': '#333333'
+                }
+            },
+            
+            # ==================== ZORIN ====================
+            'zorin': {
+                'name': 'Zorin',
+                'icons_folder': 'dark',
+                'colors': {
+                    'primary': '#15A6F0',
+                    'background': '#1F2025',
+                    'header': '#2A2B30',
+                    'text_primary': '#FFFFFF',
+                    'text_secondary': '#9A9B9E',
+                    'card_text': '#E8E8E8',
+                    'clip_hover_bg': '#0D5A80',
+                    'element_click': '#0E6A95',
+                    'link_color': '#15A6F0',
+                    'search_input_focus': '#15A6F0',
+                    'button_bg': '#35363B',
+                    'button_hover': '#454650',
+                    'header_buttons': '#2A2B30',
+                    'filters_background': '#25262B',
+                    'filter_selected': '#15A6F0',
+                    'filter_hover': '#3DB8F5',
+                    'filter_click': '#108AC5',
+                    'element_hover': '#3A3B40',
+                    'emoji_table': '#35363B',
+                    'delete_button': '#E04B4B',
+                    'pin_button': '#4BB24B',
+                    'delete_hover': '#F06060',
+                    'pin_hover': '#5CC25C',
+                    'settings_window': '#2A2B30',
+                    'settings_text': '#FFFFFF',
+                    'input_border': '#15A6F0',
+                    'scrollbar_bg': '#1F2025',
+                    'scrollbar_handle': '#55565B',
+                    'icon_bg': '#35363B',
+                    'header_buttons_click': '#108AC5',
+                    'clear_button_border': '#15A6F0',
+                    'emoji_selection_border': '#15A6F0',
+                    'emoji_selection_bg': '#2A2B30'
+                }
+            },
+            
+            # ==================== DRACULA ====================
+            'dracula': {
+                'name': 'Dracula',
+                'icons_folder': 'dark',
+                'colors': {
+                    'primary': '#BD93F9',
+                    'background': '#282A36',
+                    'header': '#21222C',
+                    'text_primary': '#F8F8F2',
+                    'text_secondary': '#6272A4',
+                    'card_text': '#F8F8F2',
+                    'clip_hover_bg': '#44475A',
+                    'element_click': '#6272A4',
+                    'link_color': '#8BE9FD',
+                    'search_input_focus': '#BD93F9',
+                    'button_bg': '#44475A',
+                    'button_hover': '#565869',
+                    'header_buttons': '#21222C',
+                    'filters_background': '#21222C',
+                    'filter_selected': '#BD93F9',
+                    'filter_hover': '#FF79C6',
+                    'filter_click': '#9A6DD7',
+                    'element_hover': '#44475A',
+                    'emoji_table': '#44475A',
+                    'delete_button': '#FF5555',
+                    'pin_button': '#50FA7B',
+                    'delete_hover': '#FF6E6E',
+                    'pin_hover': '#69FF94',
+                    'settings_window': '#21222C',
+                    'settings_text': '#F8F8F2',
+                    'input_border': '#BD93F9',
+                    'scrollbar_bg': '#282A36',
+                    'scrollbar_handle': '#44475A',
+                    'icon_bg': '#44475A',
+                    'header_buttons_click': '#FF79C6',
+                    'clear_button_border': '#FF79C6',
+                    'emoji_selection_border': '#50FA7B',
+                    'emoji_selection_bg': '#44475A'
+                }
+            },
+            
+            # ==================== SOLARIZED DARK ====================
+            'solarized': {
+                'name': 'Solarized',
+                'icons_folder': 'dark',
+                'colors': {
+                    'primary': '#268BD2',
+                    'background': '#002B36',
+                    'header': '#073642',
+                    'text_primary': '#839496',
+                    'text_secondary': '#586E75',
+                    'card_text': '#93A1A1',
+                    'clip_hover_bg': '#073642',
+                    'element_click': '#0A4A5C',
+                    'link_color': '#2AA198',
+                    'search_input_focus': '#268BD2',
+                    'button_bg': '#073642',
+                    'button_hover': '#0A4A5C',
+                    'header_buttons': '#073642',
+                    'filters_background': '#073642',
+                    'filter_selected': '#268BD2',
+                    'filter_hover': '#2AA198',
+                    'filter_click': '#1A6B9C',
+                    'element_hover': '#094050',
+                    'emoji_table': '#073642',
+                    'delete_button': '#DC322F',
+                    'pin_button': '#859900',
+                    'delete_hover': '#EF4444',
+                    'pin_hover': '#98B300',
+                    'settings_window': '#073642',
+                    'settings_text': '#839496',
+                    'input_border': '#268BD2',
+                    'scrollbar_bg': '#002B36',
+                    'scrollbar_handle': '#586E75',
+                    'icon_bg': '#073642',
+                    'header_buttons_click': '#2AA198',
+                    'clear_button_border': '#CB4B16',
+                    'emoji_selection_border': '#859900',
+                    'emoji_selection_bg': '#073642'
+                }
+            },
+            
+            # ==================== SUNSET ====================
+            'sunset': {
+                'name': 'Sunset',
+                'icons_folder': 'dark',
+                'colors': {
+                    'primary': '#FF6B6B',
+                    'background': '#1A1423',
+                    'header': '#251B2E',
+                    'text_primary': '#FFF0E5',
+                    'text_secondary': '#C9A9A9',
+                    'card_text': '#FFE4D6',
+                    'clip_hover_bg': '#6B3A5C',
+                    'element_click': '#8B4A6C',
+                    'link_color': '#FFA07A',
+                    'search_input_focus': '#FF6B6B',
+                    'button_bg': '#2D2235',
+                    'button_hover': '#3D3045',
+                    'header_buttons': '#251B2E',
+                    'filters_background': '#201828',
+                    'filter_selected': '#FF6B6B',
+                    'filter_hover': '#FF8E72',
+                    'filter_click': '#E05555',
+                    'element_hover': '#3A2845',
+                    'emoji_table': '#2D2235',
+                    'delete_button': '#FF5252',
+                    'pin_button': '#FFB347',
+                    'delete_hover': '#FF7070',
+                    'pin_hover': '#FFC56A',
+                    'settings_window': '#251B2E',
+                    'settings_text': '#FFF0E5',
+                    'input_border': '#FF6B6B',
+                    'scrollbar_bg': '#1A1423',
+                    'scrollbar_handle': '#6B3A5C',
+                    'icon_bg': '#2D2235',
+                    'header_buttons_click': '#E05555',
+                    'clear_button_border': '#FF6B6B',
+                    'emoji_selection_border': '#FFB347',
+                    'emoji_selection_bg': '#2D2235'
                 }
             }
         }
