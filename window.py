@@ -523,6 +523,13 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.content_layout.insertWidget(self.content_layout.count() - 1, container)
     
     def delete_clip(self, clip):
+        # Si es una imagen fijada, remover su hash del set
+        if clip['type'] == 'image' and clip['pinned']:
+            if hasattr(self, '_image_hashes') and clip['content'] in self._image_hashes:
+                image_hash = self._image_hashes[clip['content']]
+                if hasattr(self, '_pinned_image_hashes'):
+                    self._pinned_image_hashes.discard(image_hash)
+        
         self.clips.remove(clip)
         if clip['pinned']:
             self.save_pinned()
@@ -530,6 +537,18 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     
     def toggle_pin(self, clip):
         clip['pinned'] = not clip['pinned']
+        
+        # Si es una imagen, actualizar el set de hashes fijados
+        if clip['type'] == 'image' and hasattr(self, '_image_hashes'):
+            image_hash = self._image_hashes.get(clip['content'])
+            if image_hash:
+                if not hasattr(self, '_pinned_image_hashes'):
+                    self._pinned_image_hashes = set()
+                if clip['pinned']:
+                    self._pinned_image_hashes.add(image_hash)
+                else:
+                    self._pinned_image_hashes.discard(image_hash)
+        
         self.save_pinned()
         # Clear selected content to avoid hover state being restored after refresh
         self._selected_content = None

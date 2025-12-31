@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 import subprocess
 import re
+import hashlib
 
 from input_simulator import InputSimulator
 
@@ -31,7 +32,7 @@ class ImageTask(QRunnable):
             buffer.open(QIODevice.OpenModeFlag.WriteOnly)
             img.save(buffer, "PNG", 50)
             image_data = buffer.data()
-            image_hash = str(hash(bytes(image_data)))
+            image_hash = hashlib.md5(bytes(image_data)).hexdigest()
 
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
             unique_id = f"{self.image_name}_{timestamp}"
@@ -73,6 +74,8 @@ class ClipboardManager:
         self.thread_pool = QThreadPool.globalInstance()
         self.last_active_window = None
         self.window_pinned = False
+        self._image_hashes = {}  # Almacena hashes de imágenes para persistencia
+        self._pinned_image_hashes = set()  # Hashes de imágenes fijadas para evitar duplicados
         
         # Input simulator multi-backend
         self.input_simulator = InputSimulator()
@@ -97,13 +100,19 @@ class ClipboardManager:
             if mime_data.hasImage():
                 img = clipboard.image()
                 if not img.isNull():
+                    # Usar el mismo proceso de escalado y compresión que ImageTask
+                    # para que el hash sea consistente y se detecten duplicados
+                    if img.width() > 1200 or img.height() > 1200:
+                        img = img.scaled(1200, 1200, Qt.AspectRatioMode.KeepAspectRatio,
+                                         Qt.TransformationMode.FastTransformation)
+                    
                     from PyQt6.QtCore import QBuffer, QIODevice
                     buffer = QBuffer()
                     buffer.open(QIODevice.OpenModeFlag.WriteOnly)
-                    img.save(buffer, "PNG")
+                    img.save(buffer, "PNG", 50)  # Misma calidad que ImageTask
                     image_data = buffer.data()
-                    image_hash = hash(bytes(image_data))
-                    self.last_clipboard = str(image_hash)
+                    image_hash = hashlib.md5(bytes(image_data)).hexdigest()
+                    self.last_clipboard = image_hash
             elif mime_data.hasText():
                 self.last_clipboard = mime_data.text()
             elif mime_data.hasUrls():
@@ -202,11 +211,21 @@ class ClipboardManager:
 
             if str(image_hash) == self.last_clipboard:
                 return
+            
+            # Verificar si este hash ya existe en imágenes fijadas (evita duplicados al reiniciar)
+            if hasattr(self, '_pinned_image_hashes') and str(image_hash) in self._pinned_image_hashes:
+                self.last_clipboard = str(image_hash)
+                return
 
             current = unique_id
             clip_type = "image"  # Específicamente imagen
             self.clipboard_images[unique_id] = img
             self.last_clipboard = str(image_hash)
+            
+            # Guardar el hash de la imagen para poder persistirlo si se fija
+            if not hasattr(self, '_image_hashes'):
+                self._image_hashes = {}
+            self._image_hashes[unique_id] = str(image_hash)
             
             try:
                 if not hasattr(self, '_thumbnail_cache'):

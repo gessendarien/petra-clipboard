@@ -1,5 +1,6 @@
 import json
 import base64
+import hashlib
 from datetime import datetime
 from pathlib import Path
 
@@ -97,7 +98,7 @@ class ConfigManager:
                     'pinned': True
                 }
                 
-                # Para imágenes, guardar el archivo en disco
+                # Para imágenes, guardar el archivo en disco y el hash
                 if c['type'] == 'image' and hasattr(self, 'clipboard_images'):
                     image_id = c['content']
                     if image_id in self.clipboard_images:
@@ -106,6 +107,10 @@ class ConfigManager:
                             image_path = self.pinned_images_dir / f"{image_id}.png"
                             img.save(str(image_path), "PNG")
                             item['image_file'] = f"{image_id}.png"
+                            
+                            # Guardar el hash de la imagen para evitar duplicados al reiniciar
+                            if hasattr(self, '_image_hashes') and image_id in self._image_hashes:
+                                item['image_hash'] = self._image_hashes[image_id]
                         except Exception as e:
                             print(f"Error guardando imagen fijada: {e}")
                 
@@ -136,6 +141,10 @@ class ConfigManager:
                         self.clips = []
                     if not hasattr(self, 'clipboard_images'):
                         self.clipboard_images = {}
+                    if not hasattr(self, '_image_hashes'):
+                        self._image_hashes = {}
+                    if not hasattr(self, '_pinned_image_hashes'):
+                        self._pinned_image_hashes = set()
                     
                     for item in pinned:
                         item['timestamp'] = datetime.fromisoformat(item['timestamp'])
@@ -144,11 +153,30 @@ class ConfigManager:
                         if item['type'] == 'image' and item.get('image_file'):
                             try:
                                 from PyQt6.QtGui import QImage
+                                from PyQt6.QtCore import QBuffer, QIODevice, Qt
                                 image_path = self.pinned_images_dir / item['image_file']
                                 if image_path.exists():
                                     img = QImage(str(image_path))
                                     if not img.isNull():
                                         self.clipboard_images[item['content']] = img
+                                        
+                                        # Recalcular el hash usando el mismo método que ImageTask
+                                        # para garantizar consistencia (MD5 del PNG escalado a 1200px, calidad 50)
+                                        img_for_hash = img
+                                        if img_for_hash.width() > 1200 or img_for_hash.height() > 1200:
+                                            img_for_hash = img_for_hash.scaled(
+                                                1200, 1200, 
+                                                Qt.AspectRatioMode.KeepAspectRatio,
+                                                Qt.TransformationMode.FastTransformation
+                                            )
+                                        buffer = QBuffer()
+                                        buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+                                        img_for_hash.save(buffer, "PNG", 50)
+                                        image_data = buffer.data()
+                                        calculated_hash = hashlib.md5(bytes(image_data)).hexdigest()
+                                        
+                                        self._image_hashes[item['content']] = calculated_hash
+                                        self._pinned_image_hashes.add(calculated_hash)
                                     else:
                                         # Imagen corrupta, saltar
                                         continue
