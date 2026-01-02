@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                              QSpinBox, QCheckBox, QPushButton, QWidget, QComboBox, QSizePolicy)
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtGui import QIcon, QDesktopServices
+from PyQt6.QtCore import QUrl
 from pathlib import Path
 import os
 import sys
@@ -65,7 +66,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.themes_manager = ThemesManager()
         self.setWindowTitle("Configuración")
-        self.setFixedSize(400, 390)  # Aumentado para incluir nueva opción
+        self.setFixedSize(400, 420)  # Aumentado para incluir nueva opción
         self.setModal(True)
 
         self.apply_dark_theme()
@@ -131,15 +132,31 @@ class SettingsDialog(QDialog):
         self.show_pin_cb.setObjectName("settings_checkbox")
         layout.addWidget(self.show_pin_cb)
 
-        # Open window at mouse position
-        self.open_at_mouse_cb = QCheckBox("Abrir desde origen del mouse")
-        self.open_at_mouse_cb.setObjectName("settings_checkbox")
-        layout.addWidget(self.open_at_mouse_cb)
-
         # Start with system (autostart)
         self.autostart_cb = QCheckBox("Iniciar con el sistema")
         self.autostart_cb.setObjectName("settings_checkbox")
         layout.addWidget(self.autostart_cb)
+
+        # Open position selector
+        open_pos_row = QWidget()
+        ophl = QHBoxLayout(open_pos_row)
+        ophl.setContentsMargins(0, 0, 0, 0)
+        ophl.setSpacing(8)
+        
+        self.open_pos_label = QLabel("Abrir desde:")
+        self.open_pos_label.setObjectName("settings_label")
+        ophl.addWidget(self.open_pos_label)
+        
+        self.open_pos_combo = QComboBox()
+        self.open_pos_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.open_pos_combo.setMinimumWidth(160)
+        self.open_pos_combo.addItem("Posición del mouse", 'mouse')
+        self.open_pos_combo.addItem("Centro de pantalla", 'center')
+        self.open_pos_combo.addItem("Izquierda de pantalla", 'left')
+        self.open_pos_combo.addItem("Derecha de pantalla", 'right')
+        ophl.addWidget(self.open_pos_combo)
+        ophl.addStretch()
+        layout.addWidget(open_pos_row)
 
         # Shortcut input
         sc_row = QWidget()
@@ -161,18 +178,33 @@ class SettingsDialog(QDialog):
         btn_row = QWidget()
         brl = QHBoxLayout(btn_row)
         brl.setContentsMargins(0, 0, 0, 0)
+        
+        # GitHub icon button (left side)
+        self.github_btn = QPushButton()
+        self.github_btn.setFixedSize(36, 36)
+        self.github_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.github_btn.setToolTip("GitHub")
+        self.github_btn.setStyleSheet("QPushButton { border: none; background: transparent; }")
+        self.github_btn.clicked.connect(self.open_github)
+        brl.addWidget(self.github_btn)
+        
         brl.addStretch()
         
         self.save_btn = QPushButton("Guardar")
         self.save_btn.setObjectName("settings_save_button")
         self.save_btn.clicked.connect(self.save)
         
-        self.close_btn = QPushButton("Cerrar")
+        self.close_btn = QPushButton("Cancelar")
         self.close_btn.setObjectName("settings_close_button")
         self.close_btn.clicked.connect(self.reject)
         
+        self.quit_btn = QPushButton("Salir")
+        self.quit_btn.setObjectName("settings_quit_button")
+        self.quit_btn.clicked.connect(self.quit_app)
+        
         brl.addWidget(self.save_btn)
         brl.addWidget(self.close_btn)
+        brl.addWidget(self.quit_btn)
 
         # Max images spinbox (added last before buttons)
         h = QWidget()
@@ -197,8 +229,28 @@ class SettingsDialog(QDialog):
         self.apply_translations(self.lang_combo.currentData())
         self.lang_combo.currentIndexChanged.connect(lambda i: self.apply_translations(self.lang_combo.itemData(i)))
         
+        # Update GitHub icon based on current applied theme
+        self.update_github_icon()
+        
         # Aplicar tema al diálogo
         self.apply_dark_theme()
+
+    def update_github_icon(self):
+        """Update GitHub icon based on currently applied theme (from parent)"""
+        theme = 'dark'
+        if self.parent() is not None:
+            theme = getattr(self.parent(), 'theme', 'dark') or 'dark'
+        
+        # Determine icon folder based on theme
+        if 'light' in str(theme).lower():
+            icon_folder = 'light'
+        else:
+            icon_folder = 'dark'
+        
+        icon_path = Path(__file__).parent / "icons" / icon_folder / "code.png"
+        if icon_path.exists():
+            self.github_btn.setIcon(QIcon(str(icon_path)))
+            self.github_btn.setIconSize(QSize(30, 30))
 
     def apply_dark_theme(self):
         """Force dark theme for settings dialog with borders on inputs."""
@@ -241,7 +293,12 @@ class SettingsDialog(QDialog):
                     
                 self.show_clear_cb.setChecked(bool(getattr(parent, 'show_clear_btn', True)))
                 self.show_pin_cb.setChecked(bool(getattr(parent, 'show_pin_btn', False)))
-                self.open_at_mouse_cb.setChecked(bool(getattr(parent, 'open_at_mouse', False)))
+                
+                # Open position combo
+                open_pos = getattr(parent, 'open_position', 'mouse')
+                pos_idx = self.open_pos_combo.findData(open_pos)
+                if pos_idx >= 0:
+                    self.open_pos_combo.setCurrentIndex(pos_idx)
                 
                 # Verificar si autostart está habilitado
                 self.autostart_cb.setChecked(is_autostart_enabled())
@@ -258,12 +315,17 @@ class SettingsDialog(QDialog):
                 'title': 'Configuración',
                 'max_images': 'Máx. imágenes en caché:',
                 'save': 'Guardar',
-                'close': 'Cerrar',
+                'close': 'Cancelar',
+                'quit': 'Salir',
                 'language': 'Idioma:',
                 'theme': 'Tema:',
                 'show_clear': "Mostrar botón 'Borrar todo' en la cabecera",
                 'show_pin': "Mostrar botón 'Fijar ventana' en la cabecera",
-                'open_at_mouse': "Abrir desde origen del mouse",
+                'open_from': "Abrir desde:",
+                'pos_mouse': "Posición del mouse",
+                'pos_center': "Centro de pantalla",
+                'pos_left': "Izquierda de pantalla",
+                'pos_right': "Derecha de pantalla",
                 'autostart': "Iniciar con el sistema",
                 'shortcut': "Atajo (ej. Control+Shift+v):"
             },
@@ -271,12 +333,17 @@ class SettingsDialog(QDialog):
                 'title': 'Settings',
                 'max_images': 'Max images in cache:',
                 'save': 'Save',
-                'close': 'Close',
+                'close': 'Cancel',
+                'quit': 'Quit',
                 'language': 'Language:',
                 'theme': 'Theme:',
                 'show_clear': "Show 'Clear All' button in header",
                 'show_pin': "Show 'Pin window' button in header",
-                'open_at_mouse': "Open from mouse position",
+                'open_from': "Open from:",
+                'pos_mouse': "Mouse position",
+                'pos_center': "Center of screen",
+                'pos_left': "Left of screen",
+                'pos_right': "Right of screen",
                 'autostart': "Start with system",
                 'shortcut': "Shortcut (e.g. Control+Shift+v):"
             }
@@ -315,7 +382,7 @@ class SettingsDialog(QDialog):
                     else:
                         parent.pin_window_btn.hide()
                 
-                parent.open_at_mouse = bool(self.open_at_mouse_cb.isChecked())
+                parent.open_position = self.open_pos_combo.currentData()
                 
                 # Manejar autostart
                 if self.autostart_cb.isChecked():
@@ -337,7 +404,7 @@ class SettingsDialog(QDialog):
                     parent.apply_theme()
                 
                 if hasattr(parent, 'register_global_hotkey'):
-                    parent.register_global_hotkey()
+                    parent.register_global_hotkey(parent.shortcut)
         except Exception as e:
             print(f"DEBUG: Error saving settings: {e}")
         self.accept()
@@ -366,8 +433,15 @@ class SettingsDialog(QDialog):
             if hasattr(self, 'show_pin_cb'):
                 self.show_pin_cb.setText(t.get('show_pin', self.show_pin_cb.text()))
             
-            if hasattr(self, 'open_at_mouse_cb'):
-                self.open_at_mouse_cb.setText(t.get('open_at_mouse', self.open_at_mouse_cb.text()))
+            if hasattr(self, 'open_pos_label'):
+                self.open_pos_label.setText(t.get('open_from', self.open_pos_label.text()))
+            
+            if hasattr(self, 'open_pos_combo'):
+                # Update combo items with translations
+                self.open_pos_combo.setItemText(0, t.get('pos_mouse', 'Posición del mouse'))
+                self.open_pos_combo.setItemText(1, t.get('pos_center', 'Centro de pantalla'))
+                self.open_pos_combo.setItemText(2, t.get('pos_left', 'Izquierda de pantalla'))
+                self.open_pos_combo.setItemText(3, t.get('pos_right', 'Derecha de pantalla'))
             
             if hasattr(self, 'autostart_cb'):
                 self.autostart_cb.setText(t.get('autostart', self.autostart_cb.text()))
@@ -376,5 +450,44 @@ class SettingsDialog(QDialog):
                 self.save_btn.setText(t.get('save', self.save_btn.text()))
             if hasattr(self, 'close_btn'):
                 self.close_btn.setText(t.get('close', self.close_btn.text()))
+            if hasattr(self, 'quit_btn'):
+                self.quit_btn.setText(t.get('quit', self.quit_btn.text()))
         except Exception:
             pass
+    
+    def quit_app(self):
+        """Quit the application completely"""
+        from PyQt6.QtWidgets import QApplication, QMessageBox
+        
+        # Confirmation dialog
+        lang = self.lang_combo.currentData() if hasattr(self, 'lang_combo') else 'en'
+        if lang == 'es':
+            title = "Confirmar"
+            text = "¿Estás seguro de que quieres cerrar Petra?"
+            yes_text = "Sí"
+            no_text = "No"
+        else:
+            title = "Confirm"
+            text = "Are you sure you want to quit Petra?"
+            yes_text = "Yes"
+            no_text = "No"
+        
+        msg = QMessageBox(self)
+        msg.setWindowTitle(title)
+        msg.setText(text)
+        msg.setIcon(QMessageBox.Icon.Question)
+        yes_btn = msg.addButton(yes_text, QMessageBox.ButtonRole.YesRole)
+        no_btn = msg.addButton(no_text, QMessageBox.ButtonRole.NoRole)
+        msg.setDefaultButton(no_btn)
+        msg.exec()
+        
+        if msg.clickedButton() == yes_btn:
+            self.reject()
+            if self.parent() and hasattr(self.parent(), 'quit_application'):
+                self.parent().quit_application()
+            else:
+                QApplication.quit()
+    
+    def open_github(self):
+        """Open the GitHub repository in the default browser"""
+        QDesktopServices.openUrl(QUrl("https://github.com/gessendarien/petra-clipboard"))

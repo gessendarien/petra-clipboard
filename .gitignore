@@ -1,3 +1,17 @@
 __pycache__/
 *.pyc
 *.pyo
+# Flatpak build
+.flatpak-builder/
+flatpak-build/
+flatpak-repo/
+*.flatpak
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Config local
+*.log

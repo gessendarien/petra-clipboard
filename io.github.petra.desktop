@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Petra
+Comment=Clipboard manager
+Comment[es]=Gestor de portapapeles
+Exec=petra
+Icon=io.github.petra
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=clipboard;paste;copy;emoji;
+StartupNotify=true

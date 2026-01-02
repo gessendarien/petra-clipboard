@@ -113,6 +113,12 @@ class ClipboardManager:
                     image_data = buffer.data()
                     image_hash = hashlib.md5(bytes(image_data)).hexdigest()
                     self.last_clipboard = image_hash
+                    
+                    # Si la imagen actual del portapapeles ya está en los pins,
+                    # añadir su hash a _pinned_image_hashes para evitar duplicados
+                    if hasattr(self, '_pinned_image_hashes') and image_hash in self._pinned_image_hashes:
+                        # Ya está marcado, no hacer nada extra
+                        pass
             elif mime_data.hasText():
                 self.last_clipboard = mime_data.text()
             elif mime_data.hasUrls():
@@ -431,9 +437,17 @@ class ClipboardManager:
             if content in self.clipboard_images:
                 image = self.clipboard_images[content]
                 clipboard.setImage(image)
+                
+                # Actualizar last_clipboard con el hash de la imagen para evitar duplicados
+                # cuando el monitor detecte esta misma imagen en el portapapeles
+                if hasattr(self, '_image_hashes') and content in self._image_hashes:
+                    self.last_clipboard = self._image_hashes[content]
+                
                 print(f"✓ Imagen restaurada al portapapeles")
             else:
                 clipboard.setText(content)
+                # Actualizar last_clipboard para texto también
+                self.last_clipboard = content
                 if is_command:
                     print(f"✓ Comando restaurado al portapapeles (Ctrl+Shift+V)")
                 else:

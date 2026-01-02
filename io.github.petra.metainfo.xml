@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.petra</id>
+  <name>Petra</name>
+  <summary>Clipboard Manager</summary>
+  <summary xml:lang="es">Gestor de Portapapeles</summary>
+  
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  
+  <description>
+    <p>
+      Petra is a modern clipboard manager with emoji support.
+      It allows you to manage your clipboard history, pin important items,
+      and quickly insert emojis.
+    </p>
+    <p xml:lang="es">
+      Petra es un gestor de portapapeles moderno con soporte para emojis.
+      Permite gestionar el historial del portapapeles, fijar elementos importantes,
+      e insertar emojis rápidamente.
+    </p>
+  </description>
+  
+  <launchable type="desktop-id">io.github.petra.desktop</launchable>
+  
+  <url type="homepage">https://github.com/petra</url>
+  
+  <provides>
+    <binary>petra</binary>
+  </provides>
+  
+  <content_rating type="oars-1.1" />
+  
+  <releases>
+    <release version="1.0.0" date="2026-01-01">
+      <description>
+        <p>Initial release</p>
+      </description>
+    </release>
+  </releases>
+</component>

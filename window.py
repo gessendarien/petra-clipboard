@@ -90,7 +90,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.load_pinned()
         self.initialize_clipboard_state()
         self.setup_clipboard_monitor()
-        self.setup_global_shortcut()
+        self.setup_global_shortcut(self.shortcut)
         
         self.apply_theme()
         
@@ -350,6 +350,28 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         y = (screen.height() - self.height()) // 2
         self.move(x, y)
     
+    def position_at_left(self):
+        """Posicionar la ventana a la izquierda de la pantalla con margen"""
+        try:
+            screen = QApplication.primaryScreen().geometry()
+            margin = 200  # Margen desde el borde izquierdo
+            x = margin
+            y = (screen.height() - self.height()) // 2
+            self.move(x, y)
+        except Exception:
+            self.center_window()
+    
+    def position_at_right(self):
+        """Posicionar la ventana a la derecha de la pantalla con margen"""
+        try:
+            screen = QApplication.primaryScreen().geometry()
+            margin = 200  # Margen desde el borde derecho
+            x = screen.width() - self.width() - margin
+            y = (screen.height() - self.height()) // 2
+            self.move(x, y)
+        except Exception:
+            self.center_window()
+    
     def position_at_mouse(self):
         """Posicionar la ventana en la ubicación actual del mouse"""
         try:
@@ -378,11 +400,17 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             self.center_window()
     
     def closeEvent(self, event):
+        # Don't close, just hide the window so it can be reopened with the shortcut
+        event.ignore()
+        self.hide()
+    
+    def quit_application(self):
+        """Actually quit the application"""
         if hasattr(self, 'timer'):
             self.timer.stop()
         if hasattr(self, 'command_timer'):
             self.command_timer.stop()
-        event.accept()
+        QApplication.quit()
     
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -398,6 +426,12 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.drag_position = None
         
     def refresh_ui(self):
+        # Si estamos en el filtro de emojis, mostrar el picker en lugar de clips
+        if getattr(self, 'current_filter', None) == 'emoji':
+            search_query = self.search_bar.text() if hasattr(self, 'search_bar') else ""
+            self.show_emoji_picker(search_query)
+            return
+        
         while self.content_layout.count() > 1:
             item = self.content_layout.takeAt(0)
             if item.widget():
@@ -718,8 +752,39 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.inserting_emoji = False
         self.last_emoji_inserted = None
 
+    def _ensure_window_icon(self):
+        """Re-establece el ícono de la ventana para que aparezca en la barra de tareas."""
+        try:
+            from PyQt6.QtCore import QSize
+            icon = QIcon()
+            icon_base = Path(__file__).parent / "icons"
+            
+            # Añadir múltiples tamaños
+            for size in [16, 32, 48, 64, 128, 256]:
+                png_path = icon_base / f"petra-{size}.png"
+                if png_path.exists():
+                    icon.addFile(str(png_path), QSize(size, size))
+            
+            # Si no hay tamaños específicos, usar el general
+            if icon.isNull():
+                if (icon_base / "petra.png").exists():
+                    icon.addFile(str(icon_base / "petra.png"))
+                elif (icon_base / "petra.svg").exists():
+                    icon.addFile(str(icon_base / "petra.svg"))
+            
+            if not icon.isNull():
+                self.setWindowIcon(icon)
+                app = QApplication.instance()
+                if app:
+                    app.setWindowIcon(icon)
+        except Exception:
+            pass
+
     def show_window(self):
         """Mostrar ventana centrada o en posición del mouse según configuración"""
+        # Re-establecer el ícono antes de mostrar la ventana
+        self._ensure_window_icon()
+        
         try:
             # Guardar ventana activa actual
             if self.display_server == 'x11' and self.detector.is_tool_available('xdotool'):
@@ -731,13 +796,21 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             self.last_active_window = None
 
         # Posicionar ventana según configuración
-        if getattr(self, 'open_at_mouse', False):
+        open_pos = getattr(self, 'open_position', 'mouse')
+        if open_pos == 'mouse':
             self.position_at_mouse()
-        else:
+        elif open_pos == 'left':
+            self.position_at_left()
+        elif open_pos == 'right':
+            self.position_at_right()
+        else:  # 'center' or default
             self.center_window()
         self.show()
         self.activateWindow()
         self.raise_()
+        
+        # Re-establecer el ícono después de mostrar (algunos compositores lo requieren)
+        QTimer.singleShot(50, self._ensure_window_icon)
         # Keyboard selection mode should be inactive when window first appears
         # (no item highlighted). We'll clear visual selection hints here and
         # only enable keyboard selection when a keypress is detected.
