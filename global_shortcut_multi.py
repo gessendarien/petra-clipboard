@@ -4,6 +4,7 @@ from pathlib import Path
 from display_detector import DisplayDetector
 from PyQt6.QtCore import QTimer
 
+
 class GlobalShortcutManager:
     def __init__(self):
         self.detector = DisplayDetector()

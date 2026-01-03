@@ -1,8 +1,8 @@
 # Petra
 
-**Version 1.0.0**
-
 Clipboard manager for Linux.
+
+**Version 1.0.0**
 
 ## Features
 
@@ -40,7 +40,7 @@ Icons by [ProCode](https://github.com/ProCode-Software/proicons)
 ---
 
 <p align="center">
-  <a href="https://paypal.me/gessendarien">
+  <a href="https://paypal.me/gessendarien" target="_blank">
     <img src="https://img.shields.io/badge/Donate-PayPal-blue.svg?style=flat-square&logo=paypal" alt="Donate with PayPal" />
   </a>
 </p>

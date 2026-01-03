@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLineEdit, QPushButton, QScrollArea, QLabel, 
-                             QGridLayout, QSizePolicy, QApplication)
+                             QGridLayout, QSizePolicy, QApplication, QGraphicsOpacityEffect)
 from PyQt6.QtCore import Qt, QTimer, QThreadPool, QSize, QEvent
 from PyQt6.QtGui import QIcon, QPixmap, QFont, QFontDatabase
 from pathlib import Path
@@ -13,7 +13,7 @@ from filters import FilterManager
 from config import ConfigManager
 from global_shortcut_multi import GlobalShortcutManager
 from themes_manager import ThemesManager
-from emoji_keywords import search_emojis, ALL_EMOJIS
+from emoji_keywords import search_emojis, ALL_EMOJIS, EMOJI_CATEGORIES
 
 
 def get_emoji_font():
@@ -676,54 +676,176 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         emoji_layout.addWidget(separator)
         emoji_layout.addSpacing(8)
         
-        # === TABLA PRINCIPAL DE EMOJIS ===
-        grid_widget = QWidget()
-        grid = QGridLayout(grid_widget)
-        grid.setSpacing(8)
-        
-        # Filtrar emojis según búsqueda (usa ALL_EMOJIS de emoji_keywords.py)
+        # === SECCIÓN PRINCIPAL DE EMOJIS ===
         if search_query:
+            # Si hay búsqueda, mostrar resultados en grid simple (sin acordeones)
             emojis = search_emojis(search_query, ALL_EMOJIS)
+            if emojis:
+                grid_widget = QWidget()
+                grid = QGridLayout(grid_widget)
+                grid.setSpacing(8)
+                self._populate_emoji_grid(emojis, grid, emoji_font_name)
+                emoji_layout.addWidget(grid_widget)
+            else:
+                # Si no hay resultados, mostrar mensaje según idioma
+                lang = getattr(self, 'language', 'es')
+                if lang == 'es':
+                    msg = f"No se encontraron emojis para '{search_query}'"
+                else:
+                    msg = f"No emojis found for '{search_query}'"
+                no_results = QLabel(msg)
+                no_results.setStyleSheet("color: #888; font-size: 14px; padding: 20px;")
+                no_results.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                emoji_layout.addWidget(no_results)
         else:
-            emojis = ALL_EMOJIS
+            # Sin búsqueda: mostrar cuadrícula de categorías (2 filas x 8 columnas)
+            categories_widget = QWidget()
+            categories_grid = QGridLayout(categories_widget)
+            categories_grid.setSpacing(8)
+            categories_grid.setContentsMargins(0, 0, 0, 0)
+            
+            # Contenedor para el contenido expandido de la categoría seleccionada
+            self._emoji_category_content = QWidget()
+            self._emoji_category_content.setVisible(False)
+            self._emoji_category_content_layout = QGridLayout(self._emoji_category_content)
+            self._emoji_category_content_layout.setSpacing(8)
+            self._emoji_category_content_layout.setContentsMargins(5, 10, 5, 10)
+            self._current_category_btn = None
+            self._category_populated = {}
+            
+            # Crear botones de categoría en cuadrícula 2x8
+            category_items = list(EMOJI_CATEGORIES.items())
+            self._category_buttons = []  # Guardar referencia a los botones
+            
+            for i, (category_name, category_emojis) in enumerate(category_items[:16]):
+                row = i // 8
+                col = i % 8
+                
+                # Extraer el emoji representativo del nombre de la categoría
+                representative_emoji = category_name.split()[0]
+                display_emoji = ensure_emoji_presentation(representative_emoji)
+                
+                btn = QPushButton(display_emoji)
+                btn.setObjectName("emoji_category_btn")
+                btn.setFixedSize(50, 50)
+                btn.setCursor(Qt.CursorShape.PointingHandCursor)
+                btn.setCheckable(True)
+                # Usar la misma fuente de emoji colorida
+                if emoji_font_name:
+                    btn.setFont(QFont(emoji_font_name, 16))
+                btn.setStyleSheet("""
+                    QPushButton#emoji_category_btn {
+                        background-color: #333;
+                        border: none;
+                        border-radius: 6px;
+                    }
+                    QPushButton#emoji_category_btn:hover {
+                        background-color: #444;
+                    }
+                """)
+                
+                # Aplicar efecto de opacidad (empieza apagado)
+                opacity_effect = QGraphicsOpacityEffect(btn)
+                opacity_effect.setOpacity(0.4)
+                btn.setGraphicsEffect(opacity_effect)
+                
+                self._category_buttons.append(btn)
+                btn.clicked.connect(lambda checked, cat_name=category_name, cat_emojis=category_emojis, b=btn: 
+                                   self._toggle_emoji_category(cat_name, cat_emojis, b, emoji_font_name))
+                categories_grid.addWidget(btn, row, col)
+            
+            emoji_layout.addWidget(categories_widget)
+            emoji_layout.addWidget(self._emoji_category_content)
         
+        self.content_layout.insertWidget(0, emoji_container)
+    
+    def _toggle_emoji_category(self, category_name, emojis, btn, emoji_font_name):
+        """Expande o colapsa una categoría de emojis."""
+        # Si el mismo botón se clickea de nuevo, colapsar
+        if self._current_category_btn == btn and self._emoji_category_content.isVisible():
+            self._emoji_category_content.setVisible(False)
+            btn.setChecked(False)
+            # Restaurar opacidad baja al colapsar
+            effect = btn.graphicsEffect()
+            if effect:
+                effect.setOpacity(0.4)
+            btn.setStyleSheet("""
+                QPushButton#emoji_category_btn {
+                    background-color: #333;
+                    border: none;
+                    border-radius: 6px;
+                }
+                QPushButton#emoji_category_btn:hover {
+                    background-color: #444;
+                }
+            """)
+            self._current_category_btn = None
+            return
+        
+        # Actualizar opacidad y estilos de todos los botones
+        for cat_btn in getattr(self, '_category_buttons', []):
+            effect = cat_btn.graphicsEffect()
+            if cat_btn == btn:
+                # Botón activo: opacidad completa y borde azul
+                if effect:
+                    effect.setOpacity(1.0)
+                cat_btn.setStyleSheet("""
+                    QPushButton#emoji_category_btn {
+                        background-color: #505050;
+                        border: 2px solid #007AFF;
+                        border-radius: 6px;
+                    }
+                    QPushButton#emoji_category_btn:hover {
+                        background-color: #555;
+                    }
+                """)
+                cat_btn.setChecked(True)
+            else:
+                # Botones inactivos: opacidad baja
+                if effect:
+                    effect.setOpacity(0.4)
+                cat_btn.setStyleSheet("""
+                    QPushButton#emoji_category_btn {
+                        background-color: #333;
+                        border: none;
+                        border-radius: 6px;
+                    }
+                    QPushButton#emoji_category_btn:hover {
+                        background-color: #444;
+                    }
+                """)
+                cat_btn.setChecked(False)
+        
+        # Limpiar contenido anterior
+        while self._emoji_category_content_layout.count():
+            item = self._emoji_category_content_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        # Poblar con los emojis de la categoría
+        self._populate_emoji_grid(emojis, self._emoji_category_content_layout, emoji_font_name)
+        
+        # Mostrar y actualizar estado
+        self._emoji_category_content.setVisible(True)
+        self._current_category_btn = btn
+    
+    def _populate_emoji_grid(self, emojis, grid_layout, emoji_font_name):
+        """Puebla un grid con botones de emoji."""
         row, col = 0, 0
-        emoji_font_name = get_emoji_font()
-        
         for emoji in emojis:
-            # Asegurar presentación colorida del emoji
             display_emoji = ensure_emoji_presentation(emoji)
             btn = QPushButton(display_emoji)
             btn.setObjectName("emoji_button")
             btn.setFixedSize(50, 50)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            
-            # Aplicar fuente de emoji colorida si está disponible
             if emoji_font_name:
-                emoji_font = QFont(emoji_font_name, 24)
-                btn.setFont(emoji_font)
-            
+                btn.setFont(QFont(emoji_font_name, 24))
             btn.clicked.connect(lambda checked, e=emoji: self.insert_emoji(e))
-            grid.addWidget(btn, row, col)
+            grid_layout.addWidget(btn, row, col)
             col += 1
             if col > 7:
                 col = 0
                 row += 1
-        
-        # Si no hay resultados, mostrar mensaje según idioma
-        if not emojis and search_query:
-            lang = getattr(self, 'language', 'es')
-            if lang == 'es':
-                msg = f"No se encontraron emojis para '{search_query}'"
-            else:
-                msg = f"No emojis found for '{search_query}'"
-            no_results = QLabel(msg)
-            no_results.setStyleSheet("color: #888; font-size: 14px; padding: 20px;")
-            no_results.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            grid.addWidget(no_results, 0, 0, 1, 8)
-        
-        emoji_layout.addWidget(grid_widget)
-        self.content_layout.insertWidget(0, emoji_container)
 
     def insert_emoji(self, emoji):
         self.inserting_emoji = True
