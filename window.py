@@ -593,6 +593,12 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.current_filter = filter_id
         # Resetear selección de emoji reciente al cambiar filtro
         self.selected_recent_emoji_index = -1
+        # Resetear estado de selección de teclado para evitar resaltado incorrecto
+        self._selected_content = None
+        self._keyboard_selection_active = False
+        # Limpiar estado 'copied' de todos los clips para evitar que aparezcan destacados
+        for c in self.clips:
+            c['copied'] = False
         self.update_filter_styles()
         if filter_id == "emoji":
             self.show_emoji_picker()
@@ -1075,6 +1081,23 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                     self._handling_key = True
                 except Exception:
                     pass
+                
+                # Ignorar eventos de teclas modificadoras solas (Alt, Ctrl, etc.)
+                # para evitar activar la navegación por teclado durante Alt+Tab
+                from PyQt6.QtCore import Qt
+                key = event.key()
+                modifiers_only = key in (Qt.Key.Key_Alt, Qt.Key.Key_Control, Qt.Key.Key_Shift, 
+                                         Qt.Key.Key_Meta, Qt.Key.Key_Tab)
+                # También ignorar si Alt está presionado (Alt+Tab para cambiar ventana)
+                alt_pressed = event.modifiers() & Qt.KeyboardModifier.AltModifier
+                
+                if modifiers_only or alt_pressed:
+                    try:
+                        self._handling_key = False
+                    except Exception:
+                        pass
+                    return super().eventFilter(obj, event)
+                
                 # Activate keyboard-selection mode on the first keypress (unless
                 # the user is typing into the search bar). After activation,
                 # selection visuals (hover) will appear.

@@ -461,53 +461,56 @@ class ClipboardManager:
                 should_hide = True
 
             # Marcar el widget como copiado para cambiar su apariencia.
-            # Clear existing copied flags and set the clicked one to the string "true"
-            try:
-                # Clear previous 'copied' state from all ClipItem widgets first
-                for i in range(self.content_layout.count()):
-                    item = self.content_layout.itemAt(i)
-                    if item and item.widget():
-                        w = item.widget()
-                        # only clear widgets that are currently marked 'true'
-                        if w.property('copied') == 'true':
-                            w.setProperty('copied', 'false')
-                            w.style().unpolish(w)
-                            w.style().polish(w)
-                            try:
-                                if hasattr(w, '_update_background'):
-                                    w._update_background()
-                            except Exception:
-                                pass
+            # Solo marcar si la ventana NO está fijada (cuando se oculta, el usuario ve brevemente el estado)
+            # Si está fijada, no marcar para evitar el color de fondo persistente
+            if not getattr(self, 'window_pinned', False):
+                # Clear existing copied flags and set the clicked one to the string "true"
+                try:
+                    # Clear previous 'copied' state from all ClipItem widgets first
+                    for i in range(self.content_layout.count()):
+                        item = self.content_layout.itemAt(i)
+                        if item and item.widget():
+                            w = item.widget()
+                            # only clear widgets that are currently marked 'true'
+                            if w.property('copied') == 'true':
+                                w.setProperty('copied', 'false')
+                                w.style().unpolish(w)
+                                w.style().polish(w)
+                                try:
+                                    if hasattr(w, '_update_background'):
+                                        w._update_background()
+                                except Exception:
+                                    pass
 
-                # Set the clicked widget's copied property to the string 'true'
-                for i in range(self.content_layout.count()):
-                    item = self.content_layout.itemAt(i)
-                    if item and item.widget():
-                        widget = item.widget()
-                        if hasattr(widget, 'content') and widget.content == content:
-                            widget.setProperty('copied', 'true')
-                            # ensure pressed transient flag isn't left set
-                            try:
-                                widget.setProperty('pressed', 'false')
-                            except Exception:
-                                pass
-                            widget.style().unpolish(widget)
-                            widget.style().polish(widget)
-                            try:
-                                if hasattr(widget, '_update_background'):
-                                    widget._update_background()
-                            except Exception:
-                                pass
-                            break
-            except Exception as e:
-                print(f"Error marcando widget como copiado: {e}")
+                    # Set the clicked widget's copied property to the string 'true'
+                    for i in range(self.content_layout.count()):
+                        item = self.content_layout.itemAt(i)
+                        if item and item.widget():
+                            widget = item.widget()
+                            if hasattr(widget, 'content') and widget.content == content:
+                                widget.setProperty('copied', 'true')
+                                # ensure pressed transient flag isn't left set
+                                try:
+                                    widget.setProperty('pressed', 'false')
+                                except Exception:
+                                    pass
+                                widget.style().unpolish(widget)
+                                widget.style().polish(widget)
+                                try:
+                                    if hasattr(widget, '_update_background'):
+                                        widget._update_background()
+                                except Exception:
+                                    pass
+                                break
+                except Exception as e:
+                    print(f"Error marcando widget como copiado: {e}")
 
-            # Persist copied state in the underlying clip data model so it survives UI refreshes
-            try:
-                for c in self.clips:
-                    c['copied'] = (c.get('content') == content)
-            except Exception:
-                pass
+                # Persist copied state in the underlying clip data model so it survives UI refreshes
+                try:
+                    for c in self.clips:
+                        c['copied'] = (c.get('content') == content)
+                except Exception:
+                    pass
 
             # Guardar si es comando para usar el método de pegado correcto
             self._pending_paste_is_command = is_command

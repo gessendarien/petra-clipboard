@@ -8,6 +8,20 @@ class InputSimulator:
         self.detector = DisplayDetector()
         self.display_server = self.detector.get_display_server()
         self.key_tool = self.detector.get_recommended_tool('key_simulation')
+        self.is_flatpak = self.detector.is_flatpak
+    
+    def _run_command(self, cmd, **kwargs):
+        """Ejecutar comando, usando flatpak-spawn si estamos en Flatpak"""
+        if self.is_flatpak:
+            # Usar rutas absolutas para herramientas conocidas
+            tool = cmd[0]
+            if tool in ['xdotool', 'ydotool', 'wtype', 'xclip', 'xsel']:
+                cmd[0] = f'/usr/bin/{tool}'
+            cmd = ['flatpak-spawn', '--host'] + cmd
+            # Forzar CWD a /tmp para evitar error de directorio
+            if 'cwd' not in kwargs:
+                kwargs['cwd'] = '/tmp'
+        return subprocess.run(cmd, **kwargs)
         
     def simulate_key(self, key_combination):
         """Simular una combinación de teclas"""
@@ -27,8 +41,8 @@ class InputSimulator:
             
         try:
             # xdotool espera combinaciones como "ctrl+v" o "alt+Tab"
-            command = shlex.split(f'xdotool key --clearmodifiers {key_combination}')
-            result = subprocess.run(command, capture_output=True, text=True, timeout=5)
+            command = ['xdotool', 'key', '--clearmodifiers', key_combination]
+            result = self._run_command(command, capture_output=True, text=True, timeout=5)
             return result.returncode == 0
         except subprocess.TimeoutExpired:
             print("Timeout al simular tecla con xdotool")
@@ -51,8 +65,8 @@ class InputSimulator:
         """Simular teclas usando ydotool"""
         try:
             # ydotool usa formato similar: "ctrl+v" o "alt+tab"
-            command = shlex.split(f'ydotool key {key_combination}')
-            result = subprocess.run(command, capture_output=True, text=True, timeout=5)
+            command = ['ydotool', 'key', key_combination]
+            result = self._run_command(command, capture_output=True, text=True, timeout=5)
             return result.returncode == 0
         except subprocess.TimeoutExpired:
             print("Timeout al simular tecla con ydotool")
@@ -72,7 +86,7 @@ class InputSimulator:
                 command.extend(['-M', shlex.quote(key.lower())])
             command.extend(['-k', shlex.quote(keys[-1])])
             
-            result = subprocess.run(command, capture_output=True, text=True, timeout=5)
+            result = self._run_command(command, capture_output=True, text=True, timeout=5)
             return result.returncode == 0
         except subprocess.TimeoutExpired:
             print("Timeout al simular tecla con wtype")
@@ -102,13 +116,12 @@ class InputSimulator:
     def _paste_to_terminal_x11(self):
         """Pegar en terminal en X11 usando xdotool type."""
         try:
-            import subprocess
             text = None
             
             # Intentar obtener el contenido del portapapeles con diferentes métodos
             # Método 1: xclip
             try:
-                result = subprocess.run(['xclip', '-selection', 'clipboard', '-o'], 
+                result = self._run_command(['xclip', '-selection', 'clipboard', '-o'], 
                                       capture_output=True, text=True, timeout=2)
                 if result.returncode == 0:
                     text = result.stdout
@@ -118,7 +131,7 @@ class InputSimulator:
             # Método 2: xsel
             if not text:
                 try:
-                    result = subprocess.run(['xsel', '--clipboard', '--output'], 
+                    result = self._run_command(['xsel', '--clipboard', '--output'], 
                                           capture_output=True, text=True, timeout=2)
                     if result.returncode == 0:
                         text = result.stdout
@@ -138,7 +151,7 @@ class InputSimulator:
                 # Usar xdotool type para escribir el texto
                 # --clearmodifiers evita que modificadores afecten la escritura
                 cmd = ['xdotool', 'type', '--clearmodifiers', '--delay', '0', '--', text]
-                type_result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                type_result = self._run_command(cmd, capture_output=True, text=True, timeout=10)
                 return type_result.returncode == 0
             return False
         except Exception as e:

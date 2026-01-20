@@ -472,11 +472,15 @@ class SettingsDialog(QDialog):
             yes_text = "Yes"
             no_text = "No"
         
-        theme = self.themes_manager.get_current_theme() if hasattr(self, 'themes_manager') else {"icons_folder": "light"}
-        icons_folder = theme.get("icons_folder", "light").lower()
-
-        # Determinar el color del texto basado en icons_folder
-        text_color = "black" if icons_folder == "light" else "white"
+        # Obtener el themes_manager del padre (ventana principal) que tiene el tema actual
+        parent_win = self.parent()
+        if parent_win and hasattr(parent_win, 'themes_manager'):
+            theme = parent_win.themes_manager.get_current_theme()
+        else:
+            theme = self.themes_manager.get_current_theme() if hasattr(self, 'themes_manager') else {"colors": {"confirm_text": "#000000"}}
+        colors = theme.get("colors", {})
+        text_color = colors.get("confirm_text", "#000000")
+        print(f"DEBUG: confirm_text = {text_color}, theme_name = {theme.get('name', 'unknown')}, icons_folder = {theme.get('icons_folder', 'unknown')}")
 
         msg = QMessageBox(self)
         msg.setWindowTitle(title)
@@ -486,7 +490,7 @@ class SettingsDialog(QDialog):
         no_btn = msg.addButton(no_text, QMessageBox.ButtonRole.NoRole)
         msg.setDefaultButton(no_btn)
 
-        # Aplicar el color del texto
+        # Aplicar el color del texto usando la variable del tema
         msg.setStyleSheet(f"QLabel {{ color: {text_color}; }}")
         msg.exec()
 

@@ -38,7 +38,8 @@ class ThemesManager:
                     'header_buttons_click': '#505050',
                     'clear_button_border': '#606060',
                     'emoji_selection_border': '#707070',
-                    'emoji_selection_bg': '#2A2A2A'
+                    'emoji_selection_bg': '#2A2A2A',
+                    'confirm_text': '#FFFFFF'
                 }
             },
             
@@ -79,7 +80,8 @@ class ThemesManager:
                     'header_buttons_click': '#9A67EA',
                     'clear_button_border': '#9A67EA',
                     'emoji_selection_border': '#BB86FC',
-                    'emoji_selection_bg': '#2A2A2A'
+                    'emoji_selection_bg': '#2A2A2A',
+                    'confirm_text': '#FFFFFF'
                 }
             },
             
@@ -120,7 +122,8 @@ class ThemesManager:
                     'header_buttons_click': '#1F6FEB',
                     'clear_button_border': '#1F6FEB',
                     'emoji_selection_border': '#64B5F6',
-                    'emoji_selection_bg': '#2A2A2A'
+                    'emoji_selection_bg': '#2A2A2A',
+                    'confirm_text': '#FFFFFF'
                 }
             },
             
@@ -161,7 +164,8 @@ class ThemesManager:
                     'header_buttons_click': '#43A047',
                     'clear_button_border': '#43A047',
                     'emoji_selection_border': '#66BB6A',
-                    'emoji_selection_bg': '#2A2A2A'
+                    'emoji_selection_bg': '#2A2A2A',
+                    'confirm_text': '#FFFFFF'
                 }
             },
             
@@ -202,7 +206,8 @@ class ThemesManager:
                     'header_buttons_click': '#E53935',
                     'clear_button_border': '#E53935',
                     'emoji_selection_border': '#EF5350',
-                    'emoji_selection_bg': '#2A2A2A'
+                    'emoji_selection_bg': '#2A2A2A',
+                    'confirm_text': '#FFFFFF'
                 }
             },
             
@@ -243,7 +248,8 @@ class ThemesManager:
                     'header_buttons_click': '#C2185B',
                     'clear_button_border': '#C2185B',
                     'emoji_selection_border': '#E91E63',
-                    'emoji_selection_bg': '#2A2A2A'
+                    'emoji_selection_bg': '#2A2A2A',
+                    'confirm_text': '#FFFFFF'
                 }
             },
             
@@ -282,9 +288,10 @@ class ThemesManager:
                     'scrollbar_handle': '#CBD5E0',
                     'icon_bg': '#F7FAFC',
                     'header_buttons_click': '#4D9AD8',
-                    'clear_button_border': '#F35642',
+                    'clear_button_border': '#4597DF',
                     'emoji_selection_border': '#2E7D32',
-                    'emoji_selection_bg': '#E8F5E9'
+                    'emoji_selection_bg': '#E8F5E9',
+                    'confirm_text': '#000000'
                 }
             },
             
@@ -325,7 +332,8 @@ class ThemesManager:
                     'header_buttons_click': '#AB47BC',
                     'clear_button_border': '#E91E63',
                     'emoji_selection_border': '#9C27B0',
-                    'emoji_selection_bg': '#E8F5E9'
+                    'emoji_selection_bg': '#E8F5E9',
+                    'confirm_text': '#000000'
                 }
             },
             
@@ -364,9 +372,10 @@ class ThemesManager:
                     'scrollbar_handle': '#CBD5E0',
                     'icon_bg': '#F7FAFC',
                     'header_buttons_click': '#1E88E5',
-                    'clear_button_border': '#F44336',
+                    'clear_button_border': '#1976D2',
                     'emoji_selection_border': '#1976D2',
-                    'emoji_selection_bg': '#E8F5E9'
+                    'emoji_selection_bg': '#E8F5E9',
+                    'confirm_text': '#000000'
                 }
             },
             
@@ -405,9 +414,10 @@ class ThemesManager:
                     'scrollbar_handle': '#CBD5E0',
                     'icon_bg': '#F7FAFC',
                     'header_buttons_click': '#43A047',
-                    'clear_button_border': '#F44336',
+                    'clear_button_border': '#388E3C',
                     'emoji_selection_border': '#388E3C',
-                    'emoji_selection_bg': '#E8F5E9'
+                    'emoji_selection_bg': '#E8F5E9',
+                    'confirm_text': '#000000'
                 }
             },
             
@@ -448,7 +458,8 @@ class ThemesManager:
                     'header_buttons_click': '#E53935',
                     'clear_button_border': '#FF5722',
                     'emoji_selection_border': '#D32F2F',
-                    'emoji_selection_bg': '#E8F5E9'
+                    'emoji_selection_bg': '#E8F5E9',
+                    'confirm_text': '#000000'
                 }
             },
             
@@ -489,7 +500,8 @@ class ThemesManager:
                     'header_buttons_click': '#EC407A',
                     'clear_button_border': '#E91E63',
                     'emoji_selection_border': '#E91E63',
-                    'emoji_selection_bg': '#E8F5E9'
+                    'emoji_selection_bg': '#E8F5E9',
+                    'confirm_text': '#000000'
                 }
             },
             
@@ -506,7 +518,7 @@ class ThemesManager:
                     'card_text': '#F0F0F0',
                     'clip_hover_bg': '#E95420',
                     'element_click': '#C34113',
-                    'link_color': '#E95420',
+                    'link_color': '#77B5FE',
                     'search_input_focus': '#E95420',
                     'button_bg': '#333333',
                     'button_hover': '#444444',
@@ -530,7 +542,8 @@ class ThemesManager:
                     'header_buttons_click': '#C34113',
                     'clear_button_border': '#E95420',
                     'emoji_selection_border': '#E95420',
-                    'emoji_selection_bg': '#333333'
+                    'emoji_selection_bg': '#333333',
+                    'confirm_text': '#FFFFFF'
                 }
             },
             
@@ -571,7 +584,8 @@ class ThemesManager:
                     'header_buttons_click': '#6B7D5A',
                     'clear_button_border': '#8FA876',
                     'emoji_selection_border': '#8FA876',
-                    'emoji_selection_bg': '#2B2B2B'
+                    'emoji_selection_bg': '#2B2B2B',
+                    'confirm_text': '#FFFFFF'
                 }
             },
             
@@ -612,7 +626,8 @@ class ThemesManager:
                     'header_buttons_click': '#3689E6',
                     'clear_button_border': '#64BAFF',
                     'emoji_selection_border': '#64BAFF',
-                    'emoji_selection_bg': '#333333'
+                    'emoji_selection_bg': '#333333',
+                    'confirm_text': '#FFFFFF'
                 }
             },
             
@@ -653,7 +668,8 @@ class ThemesManager:
                     'header_buttons_click': '#108AC5',
                     'clear_button_border': '#15A6F0',
                     'emoji_selection_border': '#15A6F0',
-                    'emoji_selection_bg': '#2A2B30'
+                    'emoji_selection_bg': '#2A2B30',
+                    'confirm_text': '#FFFFFF'
                 }
             },
             
@@ -694,7 +710,8 @@ class ThemesManager:
                     'header_buttons_click': '#FF79C6',
                     'clear_button_border': '#FF79C6',
                     'emoji_selection_border': '#50FA7B',
-                    'emoji_selection_bg': '#44475A'
+                    'emoji_selection_bg': '#44475A',
+                    'confirm_text': '#FFFFFF'
                 }
             },
             
@@ -735,7 +752,8 @@ class ThemesManager:
                     'header_buttons_click': '#2AA198',
                     'clear_button_border': '#CB4B16',
                     'emoji_selection_border': '#859900',
-                    'emoji_selection_bg': '#073642'
+                    'emoji_selection_bg': '#073642',
+                    'confirm_text': '#FFFFFF'
                 }
             },
             
@@ -776,7 +794,8 @@ class ThemesManager:
                     'header_buttons_click': '#E05555',
                     'clear_button_border': '#FF6B6B',
                     'emoji_selection_border': '#FFB347',
-                    'emoji_selection_bg': '#2D2235'
+                    'emoji_selection_bg': '#2D2235',
+                    'confirm_text': '#FFFFFF'
                 }
             }
         }
@@ -894,10 +913,6 @@ class ThemesManager:
             QPushButton#clear_button:hover {{
                 background-color: {colors['button_hover']} !important;
                 border: none;
-            }}
-            QPushButton#clear_button:pressed {{
-                background-color: {colors['button_hover']} !important;
-                border: 3px solid {colors['primary']} !important;
             }}
             
             QPushButton#close_button {{
