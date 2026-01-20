@@ -2,6 +2,7 @@ from PyQt6.QtCore import QTimer, QSize
 from PyQt6.QtGui import QIcon
 from pathlib import Path
 import subprocess
+import shlex
 
 class HotkeyManager:
     def __init__(self):
@@ -60,8 +61,10 @@ fi
                 with open(xbindkeys_config, 'w') as f:
                     f.write(config_entry)
 
-            subprocess.run(['killall', 'xbindkeys'], check=False, stderr=subprocess.DEVNULL)
-            subprocess.run(['xbindkeys'], check=False, stderr=subprocess.DEVNULL)
+            command = shlex.split(f'bash {script_path}')
+            subprocess.run(command, check=False, stderr=subprocess.DEVNULL)
+            command = shlex.split('xbindkeys')
+            subprocess.run(command, check=False, stderr=subprocess.DEVNULL)
         except Exception as e:
             print(f"No se pudo configurar xbindkeys: {e}")
 

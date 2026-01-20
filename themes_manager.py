@@ -895,6 +895,10 @@ class ThemesManager:
                 background-color: {colors['button_hover']} !important;
                 border: none;
             }}
+            QPushButton#clear_button:pressed {{
+                background-color: {colors['button_hover']} !important;
+                border: 3px solid {colors['primary']} !important;
+            }}
             
             QPushButton#close_button {{
                 background-color: {colors['header_buttons']} !important;

@@ -17,10 +17,16 @@ finish-args:
   - --talk-name=org.kde.kglobalaccel
   # Home directory for config
   - --filesystem=xdg-config/petra:create
+  # Autostart directory access
+  - --filesystem=xdg-config/autostart:create
   # Access to host tools like xdotool, ydotool
   - --talk-name=org.freedesktop.Flatpak
-  # Device access for input simulation
+  # Device access for input simulation (required for ydotool and similar tools)
   - --device=dri
+  - --device=all
+  # Allow host command execution for xdotool/ydotool
+  - --talk-name=org.freedesktop.Flatpak.Development
+  - --filesystem=host
 
 build-options:
   build-args:

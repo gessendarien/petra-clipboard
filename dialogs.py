@@ -472,6 +472,12 @@ class SettingsDialog(QDialog):
             yes_text = "Yes"
             no_text = "No"
         
+        theme = self.themes_manager.get_current_theme() if hasattr(self, 'themes_manager') else {"icons_folder": "light"}
+        icons_folder = theme.get("icons_folder", "light").lower()
+
+        # Determinar el color del texto basado en icons_folder
+        text_color = "black" if icons_folder == "light" else "white"
+
         msg = QMessageBox(self)
         msg.setWindowTitle(title)
         msg.setText(text)
@@ -479,8 +485,11 @@ class SettingsDialog(QDialog):
         yes_btn = msg.addButton(yes_text, QMessageBox.ButtonRole.YesRole)
         no_btn = msg.addButton(no_text, QMessageBox.ButtonRole.NoRole)
         msg.setDefaultButton(no_btn)
+
+        # Aplicar el color del texto
+        msg.setStyleSheet(f"QLabel {{ color: {text_color}; }}")
         msg.exec()
-        
+
         if msg.clickedButton() == yes_btn:
             self.reject()
             if self.parent() and hasattr(self.parent(), 'quit_application'):

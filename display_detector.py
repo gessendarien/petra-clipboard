@@ -4,8 +4,13 @@ from pathlib import Path
 
 class DisplayDetector:
     def __init__(self):
+        self.is_flatpak = self._detect_flatpak()
         self.display_server = self.detect_display_server()
         self.available_tools = self.detect_available_tools()
+    
+    def _detect_flatpak(self):
+        """Detectar si estamos ejecutando dentro de Flatpak"""
+        return Path('/.flatpak-info').exists()
         
     def detect_display_server(self):
         """Detectar si estamos en X11 o Wayland"""
@@ -59,9 +64,37 @@ class DisplayDetector:
     def _check_tool(self, tool_name):
         """Verificar si una herramienta está disponible"""
         try:
-            subprocess.run(['which', tool_name], capture_output=True, check=True)
-            return True
-        except:
+            if self.is_flatpak:
+                # En Flatpak, la detección vía 'which' o 'command -v' está fallando por temas de PATH.
+                # Para evitar bloquear la funcionalidad, intentaremos una ejecución directa simple
+                # y si falla, asumiremos True de todos modos para dejar que el usuario reciba
+                # el error de ejecución real en lugar de desactivar la función silenciosamente.
+                print(f"DEBUG: Checking for {tool_name} inside Flatpak via host...")
+                
+                # Intentar ejecución directa
+                cmd = [tool_name, '--version']
+                if tool_name == 'wtype':
+                    cmd = [tool_name, '--help']
+                    
+                result = subprocess.run(
+                    ['flatpak-spawn', '--host'] + cmd,
+                    capture_output=True,
+                    timeout=2,
+                    cwd='/tmp' # CRÍTICO: Forzar CWD a /tmp
+                )
+                
+                if result.returncode == 0:
+                    return True
+                    
+                print(f"DEBUG: Could not verify {tool_name}, assuming available to avoid blocking.")
+                return True # Asumir disponible para no bloquear funcionalidad
+            else:
+                # Fuera de Flatpak, verificar normalmente
+                subprocess.run(['which', tool_name], capture_output=True, check=True, timeout=2)
+                return True
+        except Exception as e:
+            print(f"DEBUG: Error checking {tool_name}: {e}")
+            if self.is_flatpak: return True # Fallback permisivo en Flatpak
             return False
     
     def get_display_server(self):

@@ -19,54 +19,66 @@ class ConfigManager:
         self.language = 'es'
         self.config = {}
         self.show_clear_btn = True
-        self.show_pin_btn = False
-        self.shortcut = 'Control + Shift + v'
+        self.show_pin_btn = True
+        self.shortcut = 'Super + v'
         self.theme = 'dark'
         self.recent_emojis = []
         self.open_position = 'mouse'  # 'mouse', 'center', 'left', 'right'
         
         self.load_config()
 
+    def validate_config(self, config, default):
+        """Validate the structure and values of the configuration."""
+        for key, value in default.items():
+            if key not in config or not isinstance(config[key], type(value)):
+                config[key] = value
+        return config
+
     def load_config(self):
         default = {
             'language': 'es',
             'max_images': 10,
-            'shortcut': 'Control + Shift + v',
-            'show_clear_btn': True,
-            'show_pin_btn': False,
+            'shortcut': 'Alt + space',  # Default shortcut: Alt+Espacio
+            'show_clear_btn': True,  # Ensure this is enabled by default
+            'show_pin_btn': True,    # Ensure this is enabled by default
             'theme': 'dark',
             'recent_emojis': [],
             'open_position': 'mouse'
         }
-        
+
         try:
             if self.config_file.exists():
                 with open(self.config_file, 'r') as f:
                     self.config = json.load(f)
+                
+                # AUTO-MIGRATION: Force update if old shortcut is detected
+                current_shortcut = str(self.config.get('shortcut', '')).lower()
+                # Migrar desde Control+Shift+v O desde Super+v al nuevo Alt+space
+                if ('control' in current_shortcut and 'shift' in current_shortcut and 'v' in current_shortcut) or \
+                   ('super' in current_shortcut and 'v' in current_shortcut):
+                    print(f"DEBUG: Migrating old shortcut '{self.config.get('shortcut')}' to 'Alt + space'")
+                    self.config['shortcut'] = 'Alt + space'
+                    
+                # Validate the loaded configuration
+                self.config = self.validate_config(self.config, default)
             else:
                 self.config = default
-                try:
-                    with open(self.config_file, 'w') as f:
-                        json.dump(self.config, f, indent=2, ensure_ascii=False)
-                except Exception:
-                    pass
-
-            self.language = self.config.get('language', default['language'])
-            self.max_images = int(self.config.get('max_images', default['max_images']))
-            self.shortcut = self.config.get('shortcut', default['shortcut'])
-            self.show_clear_btn = bool(self.config.get('show_clear_btn', True))
-            self.show_pin_btn = bool(self.config.get('show_pin_btn', False))
-            self.theme = self.config.get('theme', default.get('theme', 'dark'))
-            self.recent_emojis = list(self.config.get('recent_emojis', []))[:16]
-            self.open_position = self.config.get('open_position', 'mouse')
-        except Exception:
+                with open(self.config_file, 'w') as f:
+                    json.dump(self.config, f, indent=2, ensure_ascii=False)
+        except (json.JSONDecodeError, IOError):
+            print("Archivo de configuración corrupto. Restaurando valores predeterminados.")
             self.config = default
-            self.language = default['language']
-            self.max_images = default['max_images']
-            self.shortcut = default['shortcut']
-            self.show_clear_btn = True
-            self.theme = 'dark'
-            self.recent_emojis = []
+            with open(self.config_file, 'w') as f:
+                json.dump(self.config, f, indent=2, ensure_ascii=False)
+
+        self.language = self.config.get('language', default['language'])
+        self.max_images = int(self.config.get('max_images', default['max_images']))
+        self.shortcut = self.config.get('shortcut', default['shortcut'])
+        self.show_clear_btn = bool(self.config.get('show_clear_btn', True))  # Default to True
+        self.show_pin_btn = bool(self.config.get('show_pin_btn', True))      # Default to True
+        self.theme = self.config.get('theme', default.get('theme', 'dark'))
+        self.recent_emojis = list(self.config.get('recent_emojis', []))[:16]
+        self.open_position = self.config.get('open_position', 'mouse')
 
     def save_config(self):
         try:
@@ -75,9 +87,9 @@ class ConfigManager:
                 
             self.config['language'] = getattr(self, 'language', 'es')
             self.config['max_images'] = getattr(self, 'max_images', 10)
-            self.config['shortcut'] = getattr(self, 'shortcut', 'Control + Shift + v')
+            self.config['shortcut'] = getattr(self, 'shortcut', 'Super + v')
             self.config['show_clear_btn'] = getattr(self, 'show_clear_btn', True)
-            self.config['show_pin_btn'] = getattr(self, 'show_pin_btn', False)
+            self.config['show_pin_btn'] = getattr(self, 'show_pin_btn', True)
             self.config['theme'] = getattr(self, 'theme', 'dark')
             self.config['recent_emojis'] = getattr(self, 'recent_emojis', [])[:16]
             self.config['open_position'] = getattr(self, 'open_position', 'mouse')

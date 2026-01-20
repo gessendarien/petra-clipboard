@@ -2,7 +2,7 @@
 
 Clipboard manager for Linux.
 
-**Version 1.0.0**
+**Version Beta 0.0.1**
 
 ## Features
 
@@ -22,12 +22,21 @@ Clipboard manager for Linux.
 ## Installation
 
 In a terminal, run these commands in the project folder:
+
+To build the Flatpak (for testing and direct installation):
 ```bash
 ./build-flatpak.sh
-./make-flatpak.sh
-./install-flatpak.sh
 ```
 
+To create a distributable .flatpak file:
+```bash
+./make-flatpak.sh
+```
+
+To install the newly created Flatpak:
+```bash
+./install-flatpak.sh
+```
 
 ## License
 

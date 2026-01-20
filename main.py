@@ -10,6 +10,7 @@ from window import PetraClipboard
 
 
 def main():
+    print("PETRA STARTUP - VERSION: ROBUST_FIX_V2_FUZZY_MIGRATION")
     # Enable faulthandler so Python prints stack traces on crashes (SIGSEGV)
     try:
         faulthandler.enable()
@@ -23,6 +24,8 @@ def main():
     args = parser.parse_args()
     
     app = QApplication(sys.argv)
+    # Importante: No cerrar la aplicación cuando se cierra la ventana (se minimiza)
+    app.setQuitOnLastWindowClosed(False)
     app.setStyle('Fusion')
     
     # Establecer el icono de la aplicación ANTES de configurar el nombre

@@ -1,5 +1,6 @@
 import subprocess
 import time
+import shlex
 from display_detector import DisplayDetector
 
 class InputSimulator:
@@ -26,7 +27,7 @@ class InputSimulator:
             
         try:
             # xdotool espera combinaciones como "ctrl+v" o "alt+Tab"
-            command = ['xdotool', 'key', '--clearmodifiers', key_combination]
+            command = shlex.split(f'xdotool key --clearmodifiers {key_combination}')
             result = subprocess.run(command, capture_output=True, text=True, timeout=5)
             return result.returncode == 0
         except subprocess.TimeoutExpired:
@@ -50,7 +51,7 @@ class InputSimulator:
         """Simular teclas usando ydotool"""
         try:
             # ydotool usa formato similar: "ctrl+v" o "alt+tab"
-            command = ['ydotool', 'key', key_combination]
+            command = shlex.split(f'ydotool key {key_combination}')
             result = subprocess.run(command, capture_output=True, text=True, timeout=5)
             return result.returncode == 0
         except subprocess.TimeoutExpired:
@@ -68,8 +69,8 @@ class InputSimulator:
             command = ['wtype']
             
             for key in keys[:-1]:
-                command.extend(['-M', key.lower()])
-            command.extend(['-k', keys[-1]])
+                command.extend(['-M', shlex.quote(key.lower())])
+            command.extend(['-k', shlex.quote(keys[-1])])
             
             result = subprocess.run(command, capture_output=True, text=True, timeout=5)
             return result.returncode == 0
