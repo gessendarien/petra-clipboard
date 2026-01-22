@@ -169,6 +169,9 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         main_layout.addWidget(header)
     
     def setup_search_bar(self, main_layout):
+        from PyQt6.QtGui import QAction, QPixmap, QPainter, QColor
+        from PyQt6.QtCore import QSize
+        
         search_container = QWidget()
         search_layout = QHBoxLayout(search_container)
         search_layout.setContentsMargins(12, 8, 12, 8)
@@ -179,9 +182,62 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.search_bar.setMinimumHeight(40)
         self.search_bar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.search_bar.textChanged.connect(self.filter_items)
-        search_layout.addWidget(self.search_bar)
+        self.search_bar.textChanged.connect(self._update_clear_action_visibility)
         
+        # Acción X para limpiar texto (se posiciona DENTRO del search_bar a la derecha)
+        self.search_clear_action = QAction(self.search_bar)
+        self.search_clear_action.triggered.connect(self._clear_search_text)
+        self.search_bar.addAction(self.search_clear_action, QLineEdit.ActionPosition.TrailingPosition)
+        # Ocultar la acción por defecto (se mostrará cuando haya texto)
+        self.search_clear_action.setVisible(False)
+        # Actualizar el ícono con el color del tema
+        self._update_search_clear_icon()
+        
+        search_layout.addWidget(self.search_bar)
         main_layout.addWidget(search_container)
+    
+    def _update_search_clear_icon(self):
+        """Actualiza el ícono X de limpiar búsqueda con el color del tema"""
+        from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont
+        from PyQt6.QtCore import Qt
+        
+        if not hasattr(self, 'search_clear_action'):
+            return
+        
+        # Obtener el color confirm_text del tema actual
+        try:
+            theme_colors = self.themes_manager.get_theme_colors()
+            text_color = theme_colors.get('confirm_text', '#FFFFFF')
+        except Exception:
+            text_color = '#FFFFFF'
+        
+        # Crear un pixmap con la X dibujada en el color del tema
+        size = 16
+        pixmap = QPixmap(size, size)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(QColor(text_color))
+        font = QFont()
+        font.setPixelSize(14)
+        font.setBold(True)
+        painter.setFont(font)
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "✕")
+        painter.end()
+        
+        self.search_clear_action.setIcon(QIcon(pixmap))
+    
+    def _update_clear_action_visibility(self, text):
+        """Mostrar u ocultar la acción X según si hay texto"""
+        if hasattr(self, 'search_clear_action'):
+            self.search_clear_action.setVisible(bool(text))
+    
+    def _clear_search_text(self):
+        """Limpiar el texto del buscador"""
+        if hasattr(self, 'search_bar'):
+            self.search_bar.clear()
+            self.search_bar.setFocus()
     
     def setup_filters(self, main_layout):
         filters_container = QWidget()
@@ -286,6 +342,10 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             
             # Update header icons according to theme
             self.update_header_icons()
+            
+            # Update search clear icon with theme color
+            if hasattr(self, '_update_search_clear_icon'):
+                self._update_search_clear_icon()
             
             self.update_filter_styles()
             self.update_styles_recursive(self)
@@ -1142,6 +1202,44 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                         print(f"[petra-debug] eventFilter key={k} mods={event.modifiers()} visible={self.isVisible()} active={QApplication.activeWindow() is self}")
                     except Exception:
                         pass
+                
+                # Escape -> comportamiento en 3 pasos para navegación por teclado:
+                # 1) Si hay texto en el buscador -> borrarlo
+                # 2) Si el buscador tiene foco (pero está vacío) -> quitar el foco
+                # 3) Si el buscador no tiene foco -> cerrar/ocultar la ventana
+                if k == Qt.Key.Key_Escape:
+                    try:
+                        focus = QApplication.focusWidget()
+                        search_has_focus = hasattr(self, 'search_bar') and focus is self.search_bar
+                        search_has_text = hasattr(self, 'search_bar') and self.search_bar.text()
+                        
+                        # Paso 1: Si hay texto en el buscador, borrarlo
+                        if search_has_text:
+                            self.search_bar.clear()
+                            try:
+                                self._handling_key = False
+                            except Exception:
+                                pass
+                            return True
+                        
+                        # Paso 2: Si el buscador tiene foco (pero está vacío), quitar el foco
+                        if search_has_focus:
+                            self.search_bar.clearFocus()
+                            try:
+                                self._handling_key = False
+                            except Exception:
+                                pass
+                            return True
+                        
+                        # Paso 3: El buscador no tiene foco -> cerrar la ventana
+                        self.hide()
+                        try:
+                            self._handling_key = False
+                        except Exception:
+                            pass
+                        return True
+                    except Exception:
+                        pass
                 mods = event.modifiers()
                 # emulate press-and-hold for Q -> pin button and W -> clear button
                 try:
@@ -1150,42 +1248,23 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                     if not (hasattr(self, 'search_bar') and focus is self.search_bar):
                         # Q down -> press clear button (visual down) until key release
                         # NOTE: 'Q' now performs the delete-all long-press behavior.
+                        # IMPORTANT: Do NOT return True here! We need the KeyRelease to arrive.
                         if k == Qt.Key.Key_Q and not is_repeat:
-                            try:
-                                if not getattr(self, '_key_q_down', False):
-                                    self._key_q_down = True
-                                    if hasattr(self, 'clear_btn') and self.clear_btn:
-                                        # visually depress the clear button and start
-                                        # long-press delete animation (same behavior as mouse)
-                                        self.clear_btn.setDown(True)
-                                        try:
-                                            self.clear_btn.is_actively_pressed = True
-                                            self.clear_btn.setProgress(0)
-                                        except Exception:
-                                            pass
-                                        try:
-                                            self.start_clear_animation()
-                                        except Exception:
-                                            pass
-                                    # consume the event
-                                    return True
-                            except Exception:
-                                pass
+                            if not getattr(self, '_key_q_down', False):
+                                self._key_q_down = True
+                                if hasattr(self, 'clear_btn') and self.clear_btn:
+                                    self.clear_btn.setDown(True)
+                                    self.clear_btn.is_actively_pressed = True
+                                    self.clear_btn.setProgress(0)
+                                    self.start_clear_animation()
                         # W down -> press pin button (visual down) until key release
                         # NOTE: 'W' now toggles pin on release (same as clicking pin)
+                        # IMPORTANT: Do NOT return True here! We need the KeyRelease to arrive.
                         if k == Qt.Key.Key_W and not is_repeat:
-                            try:
-                                if not getattr(self, '_key_w_down', False):
-                                    self._key_w_down = True
-                                    if hasattr(self, 'pin_window_btn') and self.pin_window_btn:
-                                        # visually depress pin button
-                                        self.pin_window_btn.setDown(True)
-                                        # pin press: only show visual 'down' state; do not
-                                        # start any clear animation here (that belongs to Q)
-                                    # consume the event
-                                    return True
-                            except Exception:
-                                pass
+                            if not getattr(self, '_key_w_down', False):
+                                self._key_w_down = True
+                                if hasattr(self, 'pin_window_btn') and self.pin_window_btn:
+                                    self.pin_window_btn.setDown(True)
                 except Exception:
                     pass
 
@@ -1251,21 +1330,6 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                     except Exception:
                         pass
 
-                # Escape -> if search has focus, clear it, otherwise hide
-                if k == Qt.Key.Key_Escape:
-                    try:
-                        focus = QApplication.focusWidget()
-                        if hasattr(self, 'search_bar') and focus is self.search_bar:
-                            try:
-                                self.search_bar.clearFocus()
-                                return True
-                            except Exception:
-                                pass
-                        # not focusing search -> hide the window
-                        self.hide()
-                        return True
-                    except Exception:
-                        pass
                 if k == Qt.Key.Key_Left:
                     # schedule the filter switch to avoid modifying UI mid-iteration
                     from PyQt6.QtCore import QTimer as _QTimer
@@ -1301,43 +1365,30 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                     if hasattr(self, 'search_bar') and focus is self.search_bar:
                         return super().eventFilter(obj, event)
 
-                    # Q release -> finalize pin button press (toggle on release)
-                    if k == Qt.Key.Key_Q and not is_repeat:
-                        try:
-                            if getattr(self, '_key_q_down', False):
-                                # Q acts as clear release -> stop animation / reset
-                                self._key_q_down = False
-                                if hasattr(self, 'clear_btn') and self.clear_btn:
-                                    try:
-                                        self.clear_btn.setDown(False)
-                                        self.cancel_clear_animation()
-                                        try:
-                                            self.clear_btn.is_actively_pressed = False
-                                            self.clear_btn.setProgress(0)
-                                        except Exception:
-                                            pass
-                                    except Exception:
-                                        pass
+                    # Q release -> finalize clear button press (cancel animation on release)
+                    from PyQt6.QtCore import Qt
+                    if k == Qt.Key.Key_Q:
+                        if not is_repeat and getattr(self, '_key_q_down', False):
+                            # Q acts as clear release -> stop animation / reset
+                            self._key_q_down = False
+                            if hasattr(self, 'clear_btn') and self.clear_btn:
+                                self.clear_btn.setDown(False)
+                                self.cancel_clear_animation()
+                                self.clear_btn.is_actively_pressed = False
+                                self.clear_btn.setProgress(0)
                             return True
-                        except Exception:
-                            pass
 
-                    # W release -> cancel visual and stop/complete clear as appropriate
+                    # W release -> cancel visual and toggle pin on release
                     if k == Qt.Key.Key_W and not is_repeat:
-                        try:
-                            if getattr(self, '_key_w_down', False):
-                                # W acts as pin release -> toggle on release
-                                self._key_w_down = False
-                                if hasattr(self, 'pin_window_btn') and self.pin_window_btn:
-                                    try:
-                                        self.pin_window_btn.setDown(False)
-                                        # toggling the pin on release
-                                        self.toggle_window_pin()
-                                    except Exception:
-                                        pass
+                        if getattr(self, '_key_w_down', False):
+                            # W acts as pin release -> toggle on release
+                            self._key_w_down = False
+                            if hasattr(self, 'pin_window_btn') and self.pin_window_btn:
+                                self.pin_window_btn.setDown(False)
+                                # toggling the pin on release
+                                self.toggle_window_pin()
+                            # Only consume event when we actually processed W release
                             return True
-                        except Exception:
-                            pass
                 except Exception:
                     pass
         except Exception:

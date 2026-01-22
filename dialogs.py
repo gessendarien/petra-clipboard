@@ -21,26 +21,47 @@ def is_autostart_enabled():
     return get_autostart_path().exists()
 
 
+def is_running_in_flatpak():
+    """Detectar si la aplicación está corriendo dentro de Flatpak"""
+    # Verificar la variable de entorno de Flatpak
+    if os.environ.get('FLATPAK_ID'):
+        return True
+    # Verificar si existe el archivo de información de Flatpak
+    if Path('/.flatpak-info').exists():
+        return True
+    # Verificar si estamos dentro de un directorio de Flatpak
+    if '/app/' in str(Path(__file__).resolve()):
+        return True
+    return False
+
+
 def enable_autostart():
     """Crear el archivo .desktop para autostart"""
     autostart_dir = Path.home() / ".config" / "autostart"
     autostart_dir.mkdir(parents=True, exist_ok=True)
     
-    # Obtener la ruta del ejecutable
-    if getattr(sys, 'frozen', False):
+    # Determinar el comando de ejecución según el entorno
+    if is_running_in_flatpak():
+        # En Flatpak, usar flatpak run con el ID de la aplicación
+        flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.petra')
+        exec_path = f"flatpak run {flatpak_id}"
+        icon_name = flatpak_id
+    elif getattr(sys, 'frozen', False):
         # Si es un ejecutable compilado
         exec_path = sys.executable
+        icon_name = "accessories-clipboard"
     else:
         # Si se ejecuta como script de Python
         main_script = Path(__file__).parent / "main.py"
         exec_path = f"python3 {main_script}"
+        icon_name = "accessories-clipboard"
     
     desktop_content = f"""[Desktop Entry]
 Type=Application
 Name=Petra Clipboard
 Comment=Clipboard manager with emoji support
 Exec={exec_path} --hidden
-Icon=accessories-clipboard
+Icon={icon_name}
 Terminal=false
 Categories=Utility;
 StartupNotify=false
