@@ -111,6 +111,7 @@ class ClipItem(QFrame):
     double_clicked = pyqtSignal(str)
     delete_requested = pyqtSignal()
     pin_toggled = pyqtSignal()
+    image_preview_requested = pyqtSignal(str)  # Señal para solicitar vista previa de imagen
     
     def __init__(self, content, item_type, timestamp, pinned=False, main_window=None):
         super().__init__()
@@ -143,13 +144,16 @@ class ClipItem(QFrame):
         layout.setSpacing(10)
         
         # Icono
-        icon_label = QLabel()
-        icon_label.setFixedSize(40, 40)
-        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.icon_label = QLabel()
+        self.icon_label.setFixedSize(40, 40)
+        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        # PARA IMÁGENES: mostrar preview en miniatura
+        # PARA IMÁGENES: mostrar preview en miniatura y hacer clickeable
         if self.item_type == "image" and self.main_window and self.content in self.main_window.clipboard_images:
-            self.setup_image_thumbnail(icon_label)
+            self.setup_image_thumbnail(self.icon_label)
+            # Hacer la miniatura clickeable para abrir vista previa
+            self.icon_label.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.icon_label.mousePressEvent = self._on_thumbnail_click
         else:
             # Para otros tipos, usar ícono normal
             icon_loaded = False
@@ -173,8 +177,8 @@ class ClipItem(QFrame):
                     if icon_path.exists():
                         pixmap = QPixmap(str(icon_path))
                         if not pixmap.isNull():
-                            icon_label.setPixmap(pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-                            icon_label.setStyleSheet("background-color: transparent;")
+                            self.icon_label.setPixmap(pixmap.scaled(24, 24, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                            self.icon_label.setStyleSheet("background-color: transparent;")
                             icon_loaded = True
             except Exception:
                 pass
@@ -182,13 +186,13 @@ class ClipItem(QFrame):
             if not icon_loaded:
                 if self.item_type == "color":
                     bg_color = self.content if self.content.startswith("#") else "#3d2a4d"
-                    icon_label.setStyleSheet(f"""
+                    self.icon_label.setStyleSheet(f"""
                         background-color: {bg_color};
                         border-radius: 6px;
                         border: 1px solid rgba(255, 255, 255, 0.2);
                     """)
                 else:
-                    icon_label.setStyleSheet("""
+                    self.icon_label.setStyleSheet("""
                         background-color: transparent;
                         border-radius: 6px;
                         border: none;
@@ -204,7 +208,7 @@ class ClipItem(QFrame):
         content_layout.addWidget(text_label)
         content_layout.addWidget(time_label)
         
-        layout.addWidget(icon_label)
+        layout.addWidget(self.icon_label)
         layout.addLayout(content_layout)
         layout.addStretch()
 
@@ -381,6 +385,18 @@ class ClipItem(QFrame):
                 self.set_default_icon_style(icon_label)
         except Exception as e:
             self.set_default_icon_style(icon_label)
+    
+    def _on_thumbnail_click(self, event):
+        """Maneja el clic en la miniatura de imagen para abrir vista previa.
+        
+        Emite la señal image_preview_requested y detiene la propagación del evento
+        para evitar que se active el clic del ClipItem.
+        """
+        if event.button() == Qt.MouseButton.LeftButton:
+            # Emitir señal para que la ventana principal abra el diálogo de preview
+            self.image_preview_requested.emit(self.content)
+            # Detener propagación para que no se copie el elemento
+            event.accept()
     
     def create_text_label(self):
         url_re = re.compile(r'((?:https?://|ftp://|www\.|\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?))', re.IGNORECASE)

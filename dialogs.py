@@ -525,3 +525,128 @@ class SettingsDialog(QDialog):
     def open_github(self):
         """Open the GitHub repository in the default browser"""
         QDesktopServices.openUrl(QUrl("https://github.com/gessendarien/petra-clipboard"))
+
+
+class ImagePreviewDialog(QDialog):
+    """Diálogo ligero para vista previa de imágenes.
+    
+    Características:
+    - Tamaño máximo: 400x400px
+    - Se cierra con: Escape, clic fuera, clic en la imagen
+    - Sin marco (frameless) para apariencia limpia
+    - Ligero en recursos
+    - Colores adaptados al tema actual
+    """
+    
+    MAX_SIZE = 400
+    
+    def __init__(self, image, parent=None):
+        """
+        Args:
+            image: QImage o QPixmap de la imagen a mostrar
+            parent: Widget padre (opcional)
+        """
+        super().__init__(parent)
+        
+        from PyQt6.QtGui import QPixmap
+        
+        # Obtener colores del tema actual desde el parent
+        bg_color = '#1A1A1A'  # fallback (header color)
+        try:
+            if parent and hasattr(parent, 'themes_manager'):
+                colors = parent.themes_manager.get_theme_colors()
+                bg_color = colors.get('header', bg_color)
+        except Exception:
+            pass
+        
+        # Configurar ventana sin marco
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint | 
+            Qt.WindowType.WindowStaysOnTopHint |
+            Qt.WindowType.Popup  # Popup se cierra al perder foco
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        
+        # Convertir QImage a QPixmap si es necesario
+        if hasattr(image, 'toImage'):  # Es un QPixmap
+            self.pixmap = image
+        else:  # Es un QImage
+            self.pixmap = QPixmap.fromImage(image)
+        
+        # Escalar la imagen manteniendo aspect ratio
+        scaled = self.pixmap.scaled(
+            self.MAX_SIZE, self.MAX_SIZE,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+        
+        # Layout principal
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 8, 8, 8)
+        
+        # Contenedor con fondo y borde redondeado (usando colores del tema)
+        container = QWidget()
+        container.setObjectName("image_preview_container")
+        container.setStyleSheet(f"""
+            QWidget#image_preview_container {{
+                background-color: {bg_color};
+                border: none;
+                border-radius: 12px;
+            }}
+        """)
+        
+        container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(8, 8, 8, 8)
+        
+        # Label para mostrar la imagen
+        self.image_label = QLabel()
+        self.image_label.setPixmap(scaled)
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_label.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.image_label.setStyleSheet("background-color: transparent;")
+        
+        container_layout.addWidget(self.image_label)
+        layout.addWidget(container)
+        
+        # Ajustar tamaño al contenido
+        self.adjustSize()
+        
+        # Centrar en pantalla o cerca del cursor
+        self._center_on_cursor()
+    
+    def _center_on_cursor(self):
+        """Posicionar el diálogo cerca del cursor del mouse."""
+        from PyQt6.QtWidgets import QApplication
+        from PyQt6.QtGui import QCursor
+        
+        cursor_pos = QCursor.pos()
+        screen = QApplication.primaryScreen().geometry()
+        
+        # Calcular posición centrada en el cursor
+        x = cursor_pos.x() - self.width() // 2
+        y = cursor_pos.y() - self.height() // 2
+        
+        # Asegurar que no salga de los bordes de la pantalla
+        if x < 10:
+            x = 10
+        elif x + self.width() > screen.width() - 10:
+            x = screen.width() - self.width() - 10
+            
+        if y < 10:
+            y = 10
+        elif y + self.height() > screen.height() - 10:
+            y = screen.height() - self.height() - 10
+        
+        self.move(x, y)
+    
+    def mousePressEvent(self, event):
+        """Cerrar el diálogo al hacer clic en cualquier parte."""
+        self.close()
+        super().mousePressEvent(event)
+    
+    def keyPressEvent(self, event):
+        """Cerrar con Escape."""
+        if event.key() == Qt.Key.Key_Escape:
+            self.close()
+        else:
+            super().keyPressEvent(event)

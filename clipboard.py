@@ -267,6 +267,24 @@ class ClipboardManager:
             if clip['content'] == content:
                 # Ya existe, no duplicar
                 return
+        
+        # Para imágenes, verificar también por hash para evitar duplicados visuales
+        # (mismo contenido de imagen pero diferente timestamp/unique_id)
+        if clip_type == "image" and hasattr(self, '_image_hashes'):
+            current_hash = self._image_hashes.get(content)
+            if current_hash:
+                # Buscar si ya existe una imagen con el mismo hash
+                for clip in self.clips:
+                    if clip['type'] == 'image':
+                        existing_hash = self._image_hashes.get(clip['content'])
+                        if existing_hash and existing_hash == current_hash:
+                            # Ya existe una imagen con el mismo contenido visual
+                            # Limpiar la imagen nueva del cache ya que no se usará
+                            if content in self.clipboard_images:
+                                del self.clipboard_images[content]
+                            if content in self._image_hashes:
+                                del self._image_hashes[content]
+                            return
             
         clip = {
             'content': content,

@@ -4,6 +4,7 @@ from input_simulator import InputSimulator
 # Nota: show_emoji_picker() se implementa en window.py con funcionalidad completa
 # Los emojis están centralizados en emoji_keywords.py
 
+
 class FilterManager:
     def __init__(self):
         self.current_filter = "all"

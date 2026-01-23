@@ -612,6 +612,9 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         widget.double_clicked.connect(self.paste_and_close)
         widget.delete_requested.connect(lambda: self.delete_clip(clip))
         widget.pin_toggled.connect(lambda: self.toggle_pin(clip))
+        # Conectar señal para vista previa de imagen
+        if clip['type'] == 'image':
+            widget.image_preview_requested.connect(self.show_image_preview)
         
         container_layout.addWidget(widget)
         self.content_layout.insertWidget(self.content_layout.count() - 1, container)
@@ -648,6 +651,30 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self._selected_content = None
         self._keyboard_selection_active = False
         self.refresh_ui()
+
+    def show_image_preview(self, content):
+        """Muestra el diálogo de vista previa de imagen.
+        
+        Args:
+            content: La clave del contenido de la imagen en clipboard_images
+        """
+        try:
+            # Verificar que la imagen existe en el cache
+            if content not in self.clipboard_images:
+                return
+            
+            # Importar el diálogo de vista previa
+            from dialogs import ImagePreviewDialog
+            
+            # Obtener la imagen original
+            image = self.clipboard_images[content]
+            
+            # Crear y mostrar el diálogo
+            preview_dialog = ImagePreviewDialog(image, self)
+            preview_dialog.exec()
+            
+        except Exception as e:
+            print(f"Error al mostrar vista previa de imagen: {e}")
 
     def set_filter(self, filter_id):
         self.current_filter = filter_id
@@ -1004,7 +1031,6 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         # only enable keyboard selection when a keypress is detected.
         try:
             self._keyboard_selection_active = False
-            self._first_nav_after_activation = False
             # Limpiar estado 'copied' del modelo de datos
             for c in getattr(self, 'clips', []):
                 c['copied'] = False
@@ -1159,32 +1185,14 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                     return super().eventFilter(obj, event)
                 
                 # Activate keyboard-selection mode on the first keypress (unless
-                # the user is typing into the search bar). After activation,
-                # selection visuals (hover) will appear.
+                # the user is typing into the search bar).
+                # Note: We don't pre-select any item here. navigate_down/up will
+                # handle the initial selection when called.
                 try:
                     focus = QApplication.focusWidget()
                     if not (hasattr(self, 'search_bar') and focus is self.search_bar):
                         if not getattr(self, '_keyboard_selection_active', False):
                             self._keyboard_selection_active = True
-                            # Mark that the next navigation is the first one after activation
-                            self._first_nav_after_activation = True
-                            # if we have a previously tracked selected content, try to restore it
-                            try:
-                                visible = self.get_visible_clip_widgets()
-                                if visible:
-                                    if getattr(self, '_selected_content', None):
-                                        for w in visible:
-                                            try:
-                                                if getattr(w, 'content', None) == self._selected_content:
-                                                    self._set_selected_clip_widget(w)
-                                                    break
-                                            except Exception:
-                                                pass
-                                    else:
-                                        # no prior selection - pick first visible
-                                        self._set_selected_clip_widget(visible[0])
-                            except Exception:
-                                pass
                 except Exception:
                     pass
                 k = event.key()
@@ -1519,14 +1527,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         if not visible:
             return
 
-        # If this is the first navigation after keyboard activation, the first
-        # item is already selected visually. Don't advance, just clear the flag.
-        if getattr(self, '_first_nav_after_activation', False):
-            self._first_nav_after_activation = False
-            # Ensure first item is selected and return without advancing
-            self._set_selected_clip_widget(visible[0])
-            return
-
+        # If no item is selected, select the first one
         current = None
         for i, w in enumerate(visible):
             if w.property('selected') == 'true':
@@ -1534,8 +1535,10 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 break
 
         if current is None:
+            # No selection yet - select first item
             new = 0
         else:
+            # Advance to next, wrap around to first
             new = (current + 1) if current < len(visible) - 1 else 0
 
         target = visible[new]
@@ -1634,10 +1637,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             current_index = filters.index(self.current_filter) if self.current_filter in filters else 0
             new_index = (current_index - 1) % len(filters)
             self.set_filter(filters[new_index])
-            # select first visible after filter change
-            visible = self.get_visible_clip_widgets()
-            if visible:
-                self._set_selected_clip_widget(visible[0])
+            # Clear any current selection - user can use ↓ to select when ready
+            self._clear_clip_selection()
         except Exception:
             pass
 
@@ -1649,8 +1650,24 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             current_index = filters.index(self.current_filter) if self.current_filter in filters else 0
             new_index = (current_index + 1) % len(filters)
             self.set_filter(filters[new_index])
-            visible = self.get_visible_clip_widgets()
-            if visible:
-                self._set_selected_clip_widget(visible[0])
+            # Clear any current selection - user can use ↓ to select when ready
+            self._clear_clip_selection()
+        except Exception:
+            pass
+
+    def _clear_clip_selection(self):
+        """Clear any currently selected clip widget."""
+        try:
+            self._selected_content = None
+            for w in self.get_visible_clip_widgets():
+                try:
+                    w.setProperty('selected', 'false')
+                    w.setProperty('hover', 'false')
+                    w.style().unpolish(w)
+                    w.style().polish(w)
+                    if hasattr(w, '_update_background'):
+                        w._update_background()
+                except Exception:
+                    pass
         except Exception:
             pass
