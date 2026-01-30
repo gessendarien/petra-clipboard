@@ -1,8 +1,8 @@
+![Version](https://img.shields.io/badge/Version-Beta%200.0.1-orange?style=for-the-badge) ![License](https://img.shields.io/badge/License-GPL%20v3-blue?style=for-the-badge) ![Platform](https://img.shields.io/badge/Platform-Linux-yellow?style=for-the-badge&logo=linux)
+
 # Petra
 
 Clipboard manager for Linux.
-
-**Version Beta 0.0.1**
 
 ## Features
 
@@ -17,7 +17,12 @@ Clipboard manager for Linux.
 
 ## Screenshots
 
-![Screenshot 1](screenshots/screenshot1.png)
+![Screenshot 1](screenshots/screenshot_1.png)
+![Screenshot 2](screenshots/screenshot_2.png)
+![Screenshot 3](screenshots/screenshot_3.png)
+![Screenshot 4](screenshots/screenshot_4.png)
+![Screenshot 5](screenshots/screenshot_5.png)
+![Screenshot 6](screenshots/screenshot_6.png)
 
 ## Installation
 

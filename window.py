@@ -627,6 +627,10 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 if hasattr(self, '_pinned_image_hashes'):
                     self._pinned_image_hashes.discard(image_hash)
         
+        # Eliminar selección si el elemento borrado estaba seleccionado
+        if hasattr(self, '_selected_content') and self._selected_content == clip['content']:
+            self._selected_content = None
+        
         self.clips.remove(clip)
         if clip['pinned']:
             self.save_pinned()

@@ -90,7 +90,11 @@ class ClipboardManager:
         self.clear_progress = 0
 
     def setup_clipboard_monitor(self):
-        self.timer.start(300)
+        # Usar señales en lugar de polling para detectar cambios inmediatamente
+        # Esto permite que el evento de "copiar" siempre intente agregar el clip,
+        # incluso si es el mismo contenido que antes (útil si se borró del historial).
+        clipboard = QApplication.clipboard()
+        clipboard.dataChanged.connect(self.check_clipboard)
 
     def initialize_clipboard_state(self):
         try:
@@ -201,8 +205,9 @@ class ClipboardManager:
                 return
             
             if current and current.strip():
-                if clip_type != "image" and current == self.last_clipboard:
-                    return
+                # Eliminado el chequeo de last_clipboard para permitir volver a copiar
+                # elementos que fueron borrados del historial.
+                # add_clip() ya se encarga de no duplicar si el elemento ya existe en la lista.
                 if clip_type != "image":
                     self.last_clipboard = current
                 # Pasar el tipo específico detectado
@@ -215,8 +220,8 @@ class ClipboardManager:
             if key in self.processing_keys:
                 self.processing_keys.discard(key)
 
-            if str(image_hash) == self.last_clipboard:
-                return
+            # Eliminado chequeo estricto de last_clipboard aquí también
+            # para permitir re-copiado de imágenes borradas
             
             # Verificar si este hash ya existe en imágenes fijadas (evita duplicados al reiniciar)
             if hasattr(self, '_pinned_image_hashes') and str(image_hash) in self._pinned_image_hashes:
@@ -606,6 +611,13 @@ class ClipboardManager:
     def clear_all_unpinned(self):
         """Borrar todos los elementos que no estén pinned"""
         self.clips = [c for c in self.clips if c['pinned']]
+        
+        # Verificar si la selección actual sigue existiendo en los elementos fijados
+        if hasattr(self, '_selected_content') and self._selected_content:
+            remaining_contents = {c['content'] for c in self.clips}
+            if self._selected_content not in remaining_contents:
+                self._selected_content = None
+
         pinned_images = [c['content'] for c in self.clips if c['type'] == 'image']
         self.clipboard_images = {k: v for k, v in self.clipboard_images.items() if k in pinned_images}
         if hasattr(self, 'refresh_ui'):
