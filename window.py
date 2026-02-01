@@ -100,6 +100,11 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
+        # Performance: debounce refresh_ui to batch updates
+        self._refresh_timer = QTimer(self)
+        self._refresh_timer.setSingleShot(True)
+        self._refresh_timer.timeout.connect(self._do_refresh_ui)
+        
         central = QWidget()
         central.setObjectName("main_window")
         self.setCentralWidget(central)
@@ -486,6 +491,15 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.drag_position = None
         
     def refresh_ui(self):
+        """Debounced refresh - batches rapid updates together"""
+        if hasattr(self, '_refresh_timer'):
+            self._refresh_timer.start(50)  # 50ms debounce
+        else:
+            # Fallback if called before init completes
+            self._do_refresh_ui()
+    
+    def _do_refresh_ui(self):
+        """Actual UI refresh logic"""
         # Si estamos en el filtro de emojis, mostrar el picker en lugar de clips
         if getattr(self, 'current_filter', None) == 'emoji':
             search_query = self.search_bar.text() if hasattr(self, 'search_bar') else ""
@@ -522,12 +536,16 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         pinned = [c for c in pinned if matches(c)]
         unpinned = [c for c in unpinned if matches(c)]
         
+        # Performance: limit visible items to 50
+        MAX_VISIBLE_ITEMS = 50
+        visible_unpinned = unpinned[:max(0, MAX_VISIBLE_ITEMS - len(pinned))]
+        
         if pinned:
             for clip in pinned:
                 self.add_clip_widget(clip)
         
-        if unpinned:
-            for clip in unpinned:
+        if visible_unpinned:
+            for clip in visible_unpinned:
                 self.add_clip_widget(clip)   
         # Ensure there is a selection among visible clips. If we had a
         # previously selected clip (self._selected_content) try to restore it.
@@ -626,10 +644,6 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 image_hash = self._image_hashes[clip['content']]
                 if hasattr(self, '_pinned_image_hashes'):
                     self._pinned_image_hashes.discard(image_hash)
-        
-        # Eliminar selección si el elemento borrado estaba seleccionado
-        if hasattr(self, '_selected_content') and self._selected_content == clip['content']:
-            self._selected_content = None
         
         self.clips.remove(clip)
         if clip['pinned']:

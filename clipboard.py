@@ -611,13 +611,6 @@ class ClipboardManager:
     def clear_all_unpinned(self):
         """Borrar todos los elementos que no estén pinned"""
         self.clips = [c for c in self.clips if c['pinned']]
-        
-        # Verificar si la selección actual sigue existiendo en los elementos fijados
-        if hasattr(self, '_selected_content') and self._selected_content:
-            remaining_contents = {c['content'] for c in self.clips}
-            if self._selected_content not in remaining_contents:
-                self._selected_content = None
-
         pinned_images = [c['content'] for c in self.clips if c['type'] == 'image']
         self.clipboard_images = {k: v for k, v in self.clipboard_images.items() if k in pinned_images}
         if hasattr(self, 'refresh_ui'):
