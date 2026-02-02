@@ -7,7 +7,7 @@ from pathlib import Path
 import os
 import sys
 
-from widgets import ShortcutEdit
+# from widgets import ShortcutEdit
 from themes_manager import ThemesManager
 
 
@@ -185,14 +185,26 @@ class SettingsDialog(QDialog):
         scl.setContentsMargins(0, 0, 0, 0)
         scl.setSpacing(8)
         
-        self.shortcut_label = QLabel("Shortcut (ej. Alt + v):")
+        self.shortcut_label = QLabel("Shortcut:")
         self.shortcut_label.setObjectName("settings_label")
         scl.addWidget(self.shortcut_label)
         
-        self.shortcut_edit = ShortcutEdit()
-        self.shortcut_edit.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.shortcut_edit.setMinimumWidth(140)
-        scl.addWidget(self.shortcut_edit)
+        self.shortcut_combo = QComboBox()
+        self.shortcut_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.shortcut_combo.setMinimumWidth(140)
+        
+        # Opciones comunes de atajos
+        common_shortcuts = [
+            "Alt + space",
+            "Alt + v",
+            "Alt + z",
+            "Alt + x",
+            "Alt + c",
+            "Super + v"
+        ]
+        self.shortcut_combo.addItems(common_shortcuts)
+        
+        scl.addWidget(self.shortcut_combo)
         layout.addWidget(sc_row)
 
         # Buttons
@@ -204,7 +216,7 @@ class SettingsDialog(QDialog):
         self.github_btn = QPushButton()
         self.github_btn.setFixedSize(36, 36)
         self.github_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.github_btn.setToolTip("GitHub")
+        self.github_btn.setToolTip("By Gessén Darién")
         self.github_btn.setStyleSheet("QPushButton { border: none; background: transparent; }")
         self.github_btn.clicked.connect(self.open_github)
         brl.addWidget(self.github_btn)
@@ -324,9 +336,17 @@ class SettingsDialog(QDialog):
                 # Verificar si autostart está habilitado
                 self.autostart_cb.setChecked(is_autostart_enabled())
                 
-                sc = getattr(parent, 'shortcut', 'Control + Shift + v')
+                sc = getattr(parent, 'shortcut', 'Alt + space')
                 if sc:
-                    self.shortcut_edit.setText(str(sc))
+                    # Normalizar string para coincidir con las opciones
+                    sc_str = str(sc).strip()
+                    index = self.shortcut_combo.findText(sc_str, Qt.MatchFlag.MatchFixedString)
+                    if index >= 0:
+                        self.shortcut_combo.setCurrentIndex(index)
+                    else:
+                        # Si es un atajo custom no en la lista, lo agregamos
+                        self.shortcut_combo.addItem(sc_str)
+                        self.shortcut_combo.setCurrentIndex(self.shortcut_combo.count() - 1)
         except Exception:
             pass
 
@@ -348,7 +368,8 @@ class SettingsDialog(QDialog):
                 'pos_left': "Izquierda de pantalla",
                 'pos_right': "Derecha de pantalla",
                 'autostart': "Iniciar con el sistema",
-                'shortcut': "Atajo (ej. Control+Shift+v):"
+                'shortcut': "⚠ Atajo:",
+                'shortcut_tooltip': "Algunos atajos pueden entrar en conflicto con otros programas y hacer que Petra no responda correctamente"
             },
             'en': {
                 'title': 'Settings',
@@ -366,7 +387,8 @@ class SettingsDialog(QDialog):
                 'pos_left': "Left of screen",
                 'pos_right': "Right of screen",
                 'autostart': "Start with system",
-                'shortcut': "Shortcut (e.g. Control+Shift+v):"
+                'shortcut': "⚠ Shortcut:",
+                'shortcut_tooltip': "Some shortcuts may conflict with other programs and cause Petra to become unresponsive"
             }
         }
 
@@ -411,7 +433,8 @@ class SettingsDialog(QDialog):
                 else:
                     disable_autostart()
                         
-                parent.shortcut = str(self.shortcut_edit.text()).strip() if hasattr(self, 'shortcut_edit') else getattr(parent, 'shortcut', 'Super + v')
+                parent.shortcut = self.shortcut_combo.currentText()
+
                 
                 parent.config['language'] = parent.language
                 parent.config['max_images'] = parent.max_images
@@ -443,6 +466,7 @@ class SettingsDialog(QDialog):
                 
             if hasattr(self, 'shortcut_label'):
                 self.shortcut_label.setText(t.get('shortcut', self.shortcut_label.text()))
+                self.shortcut_label.setToolTip(t.get('shortcut_tooltip', ''))
                 
             if hasattr(self, 'lang_label'):
                 self.lang_label.setText(t.get('language', self.lang_label.text()))

@@ -134,6 +134,12 @@ echo "toggle" > "{host_command_file}"
 
         # 4. Reiniciar xbindkeys en el HOST
         print(f"DEBUG: Reiniciando xbindkeys con config {host_config_path}")
+        
+        # Primero matamos la instancia anterior específica de esta config
+        kill_cmd = ['pkill', '-f', f'xbindkeys -f {host_config_path}']
+        self._run_command(kill_cmd, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
+        
+        # Iniciar nueva instancia
         command = ['xbindkeys', '-f', host_config_path]
         res = self._run_command(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         print(f"DEBUG: xbindkeys restart result: {res.returncode}")
