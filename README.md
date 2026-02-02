@@ -6,14 +6,18 @@ Clipboard manager for Linux.
 
 ## Features
 
-- Keyboard navigation
-- Filter grouping (text, images, links, commands)
-- Emoji insertion
-- Image preview
-- Linux command recognition
-- Pin items
+- Allows copying and pasting text, images, links, console commands, and emojis.
+- Filter by copied item type
+- General search, by type or emoji
+- Open links directly in the browser
+- Keyboard navigation (q, w, ctrl+f, esc, and arrow keys)
+- Preview copied image
 - Pin window
-- Clear items
+- Wide variety of themes and colors
+- Start on system boot
+- Save items and manually delete them or clear all
+- Open on the left or right of the screen or at mouse position
+- Choose keyboard shortcut
 
 ## Screenshots
 
@@ -26,7 +30,12 @@ Clipboard manager for Linux.
 
 ## Installation
 
-In a terminal, run these commands in the project folder:
+This application is currently in the testing phase to be uploaded to Flathub. Meanwhile, you can test it by running the following commands in your terminal, depending on what you want to do.
+
+First of all, verify that you have the necessary dependencies:
+```bash
+./check-dependencies.sh
+```
 
 To build the Flatpak (for testing and direct installation):
 ```bash
