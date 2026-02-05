@@ -36,7 +36,7 @@ modules:
   - name: python-deps
     buildsystem: simple
     build-commands:
-      - pip3 install --prefix=${FLATPAK_DEST} PyQt6
+      - pip3 install --prefix=${FLATPAK_DEST} PyQt6 --default-timeout=1000 --retries=10
     
   - name: petra
     buildsystem: simple
@@ -46,9 +46,10 @@ modules:
       - cp -r *.py icons ${FLATPAK_DEST}/share/petra/
       - install -Dm644 io.github.petra.desktop ${FLATPAK_DEST}/share/applications/io.github.petra.desktop
       - install -Dm644 io.github.petra.metainfo.xml ${FLATPAK_DEST}/share/metainfo/io.github.petra.metainfo.xml
-      # Instalar ícono SVG escalable
+      - install -Dm644 LICENSE.txt ${FLATPAK_DEST}/share/licenses/petra/LICENSE.txt
+      # Install scalable SVG icon
       - install -Dm644 icons/petra.svg ${FLATPAK_DEST}/share/icons/hicolor/scalable/apps/io.github.petra.svg
-      # Instalar ícono PNG en múltiples tamaños estándar para compatibilidad
+      # Install PNG icon in multiple standard sizes for compatibility
       - install -Dm644 icons/petra.png ${FLATPAK_DEST}/share/icons/hicolor/512x512/apps/io.github.petra.png
       - install -Dm644 icons/petra-256.png ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps/io.github.petra.png
       - install -Dm644 icons/petra-128.png ${FLATPAK_DEST}/share/icons/hicolor/128x128/apps/io.github.petra.png
