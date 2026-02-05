@@ -2,7 +2,9 @@
 
 # Petra
 
-Clipboard manager for Linux.
+<img src="icons/petra.png" width="100" height="100">
+
+A different clipboard for Linux, my way.
 
 ## Features
 
@@ -30,24 +32,8 @@ Clipboard manager for Linux.
 
 ## Installation
 
-This application is currently in the testing phase to be uploaded to Flathub. Meanwhile, you can test it by running the following commands in your terminal, depending on what you want to do.
+This application is currently in the testing phase to be uploaded to Flathub. Meanwhile, you can test it by running the following command in the project folder and choosing the desired option:
 
-First of all, verify that you have the necessary dependencies:
-```bash
-./check-dependencies.sh
-```
-
-To build the Flatpak (for testing and direct installation):
-```bash
-./build-flatpak.sh
-```
-
-To create a distributable .flatpak file:
-```bash
-./make-flatpak.sh
-```
-
-To install the newly created Flatpak:
 ```bash
 ./install-flatpak.sh
 ```
