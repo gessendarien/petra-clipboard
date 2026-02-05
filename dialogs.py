@@ -12,46 +12,46 @@ from themes_manager import ThemesManager
 
 
 def get_autostart_path():
-    """Obtener la ruta del archivo .desktop en autostart"""
+    """Get path to .desktop file in autostart"""
     return Path.home() / ".config" / "autostart" / "petra.desktop"
 
 
 def is_autostart_enabled():
-    """Verificar si el autostart está habilitado"""
+    """Check if autostart is enabled"""
     return get_autostart_path().exists()
 
 
 def is_running_in_flatpak():
-    """Detectar si la aplicación está corriendo dentro de Flatpak"""
-    # Verificar la variable de entorno de Flatpak
+    """Detect if application is running inside Flatpak"""
+    # Check Flatpak environment variable
     if os.environ.get('FLATPAK_ID'):
         return True
-    # Verificar si existe el archivo de información de Flatpak
+    # Check if Flatpak info file exists
     if Path('/.flatpak-info').exists():
         return True
-    # Verificar si estamos dentro de un directorio de Flatpak
+    # Check if running within a Flatpak directory
     if '/app/' in str(Path(__file__).resolve()):
         return True
     return False
 
 
 def enable_autostart():
-    """Crear el archivo .desktop para autostart"""
+    """Create .desktop file for autostart"""
     autostart_dir = Path.home() / ".config" / "autostart"
     autostart_dir.mkdir(parents=True, exist_ok=True)
     
-    # Determinar el comando de ejecución según el entorno
+    # Determine execution command based on environment
     if is_running_in_flatpak():
-        # En Flatpak, usar flatpak run con el ID de la aplicación
+        # In Flatpak, use 'flatpak run' with app ID
         flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.petra')
         exec_path = f"flatpak run {flatpak_id}"
         icon_name = flatpak_id
     elif getattr(sys, 'frozen', False):
-        # Si es un ejecutable compilado
+        # If compiled executable
         exec_path = sys.executable
         icon_name = "accessories-clipboard"
     else:
-        # Si se ejecuta como script de Python
+        # If running as Python script
         main_script = Path(__file__).parent / "main.py"
         exec_path = f"python3 {main_script}"
         icon_name = "accessories-clipboard"
@@ -72,12 +72,12 @@ X-GNOME-Autostart-enabled=true
     with open(desktop_file, 'w') as f:
         f.write(desktop_content)
     
-    # Hacer el archivo ejecutable
+    # Make file executable
     os.chmod(desktop_file, 0o755)
 
 
 def disable_autostart():
-    """Eliminar el archivo .desktop de autostart"""
+    """Remove .desktop file from autostart"""
     desktop_file = get_autostart_path()
     if desktop_file.exists():
         desktop_file.unlink()
@@ -87,7 +87,7 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.themes_manager = ThemesManager()
         self.setWindowTitle("Configuración")
-        self.setFixedSize(400, 420)  # Aumentado para incluir nueva opción
+        self.setFixedSize(400, 420)  # Increased to include new option
         self.setModal(True)
 
         self.apply_dark_theme()
@@ -134,7 +134,7 @@ class SettingsDialog(QDialog):
         self.theme_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.theme_combo.setMinimumWidth(160)
         
-        # Agregar temas disponibles
+        # Add available themes
         themes = self.themes_manager.get_theme_names()
         for theme_id, theme_name in themes:
             self.theme_combo.addItem(theme_name, theme_id)
@@ -193,7 +193,7 @@ class SettingsDialog(QDialog):
         self.shortcut_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.shortcut_combo.setMinimumWidth(140)
         
-        # Opciones comunes de atajos
+        # Common shortcuts options
         common_shortcuts = [
             "Alt + space",
             "Alt + v",
@@ -265,7 +265,7 @@ class SettingsDialog(QDialog):
         # Update GitHub icon based on current applied theme
         self.update_github_icon()
         
-        # Aplicar tema al diálogo
+        # Apply theme to dialog
         self.apply_dark_theme()
 
     def update_github_icon(self):
@@ -318,7 +318,7 @@ class SettingsDialog(QDialog):
                 if idx >= 0:
                     self.lang_combo.setCurrentIndex(idx)
                     
-                # Nuevo: cargar tema
+                # New: load theme
                 theme = getattr(parent, 'theme', 'dark')
                 theme_idx = self.theme_combo.findData(theme)
                 if theme_idx >= 0:
@@ -333,18 +333,18 @@ class SettingsDialog(QDialog):
                 if pos_idx >= 0:
                     self.open_pos_combo.setCurrentIndex(pos_idx)
                 
-                # Verificar si autostart está habilitado
+                # Check if autostart is enabled
                 self.autostart_cb.setChecked(is_autostart_enabled())
                 
                 sc = getattr(parent, 'shortcut', 'Alt + space')
                 if sc:
-                    # Normalizar string para coincidir con las opciones
+                    # Normalize string to match options
                     sc_str = str(sc).strip()
                     index = self.shortcut_combo.findText(sc_str, Qt.MatchFlag.MatchFixedString)
                     if index >= 0:
                         self.shortcut_combo.setCurrentIndex(index)
                     else:
-                        # Si es un atajo custom no en la lista, lo agregamos
+                        # If custom shortcut not in list, add it
                         self.shortcut_combo.addItem(sc_str)
                         self.shortcut_combo.setCurrentIndex(self.shortcut_combo.count() - 1)
         except Exception:
@@ -408,7 +408,7 @@ class SettingsDialog(QDialog):
                 parent.max_images = int(self.max_images_sb.value())
                 parent.language = self.lang_combo.currentData()
                 
-                # Nuevo: guardar tema
+                # New: save theme
                 parent.theme = self.theme_combo.currentData()
                 
                 parent.show_clear_btn = bool(self.show_clear_cb.isChecked())
@@ -427,7 +427,7 @@ class SettingsDialog(QDialog):
                 
                 parent.open_position = self.open_pos_combo.currentData()
                 
-                # Manejar autostart
+                # Handle autostart
                 if self.autostart_cb.isChecked():
                     enable_autostart()
                 else:
@@ -439,11 +439,11 @@ class SettingsDialog(QDialog):
                 parent.config['language'] = parent.language
                 parent.config['max_images'] = parent.max_images
                 parent.config['shortcut'] = getattr(parent, 'shortcut', 'Super + v')
-                parent.config['theme'] = parent.theme  # Nuevo
+                parent.config['theme'] = parent.theme  # New
                 
                 parent.save_config()
                 
-                # Aplicar el nuevo tema
+                # Apply new theme
                 if hasattr(parent, 'apply_theme'):
                     parent.apply_theme()
                 
@@ -471,7 +471,7 @@ class SettingsDialog(QDialog):
             if hasattr(self, 'lang_label'):
                 self.lang_label.setText(t.get('language', self.lang_label.text()))
                 
-            # Nuevo: traducir etiqueta de tema
+            # New: translate theme label
             if hasattr(self, 'theme_label'):
                 self.theme_label.setText(t.get('theme', self.theme_label.text()))
                 
@@ -517,7 +517,7 @@ class SettingsDialog(QDialog):
             yes_text = "Yes"
             no_text = "No"
         
-        # Obtener el themes_manager del padre (ventana principal) que tiene el tema actual
+        # Get themes_manager from parent (main window) which has current theme
         parent_win = self.parent()
         if parent_win and hasattr(parent_win, 'themes_manager'):
             theme = parent_win.themes_manager.get_current_theme()
@@ -535,7 +535,7 @@ class SettingsDialog(QDialog):
         no_btn = msg.addButton(no_text, QMessageBox.ButtonRole.NoRole)
         msg.setDefaultButton(no_btn)
 
-        # Aplicar el color del texto usando la variable del tema
+        # Apply text color using theme variable
         msg.setStyleSheet(f"QLabel {{ color: {text_color}; }}")
         msg.exec()
 
@@ -552,14 +552,14 @@ class SettingsDialog(QDialog):
 
 
 class ImagePreviewDialog(QDialog):
-    """Diálogo ligero para vista previa de imágenes.
+    """Lightweight dialog for image previews.
     
-    Características:
-    - Tamaño máximo: 400x400px
-    - Se cierra con: Escape, clic fuera, clic en la imagen
-    - Sin marco (frameless) para apariencia limpia
-    - Ligero en recursos
-    - Colores adaptados al tema actual
+    Features:
+    - Max size: 400x400px
+    - Closes with: Escape, click outside, click on image
+    - Frameless for clean appearance
+    - Lightweight on resources
+    - Colors adapted to current theme
     """
     
     MAX_SIZE = 400
@@ -567,14 +567,14 @@ class ImagePreviewDialog(QDialog):
     def __init__(self, image, parent=None):
         """
         Args:
-            image: QImage o QPixmap de la imagen a mostrar
-            parent: Widget padre (opcional)
+            image: QImage or QPixmap of the image to display
+            parent: Parent widget (optional)
         """
         super().__init__(parent)
         
         from PyQt6.QtGui import QPixmap
         
-        # Obtener colores del tema actual desde el parent
+        # Get current theme colors from parent
         bg_color = '#1A1A1A'  # fallback (header color)
         try:
             if parent and hasattr(parent, 'themes_manager'):
@@ -583,32 +583,32 @@ class ImagePreviewDialog(QDialog):
         except Exception:
             pass
         
-        # Configurar ventana sin marco
+        # Configure frameless window
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint | 
             Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.Popup  # Popup se cierra al perder foco
+            Qt.WindowType.Popup  # Popup closes on focus loss
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
-        # Convertir QImage a QPixmap si es necesario
-        if hasattr(image, 'toImage'):  # Es un QPixmap
+        # Convert QImage to QPixmap if necessary
+        if hasattr(image, 'toImage'):  # Is QPixmap
             self.pixmap = image
-        else:  # Es un QImage
+        else:  # Is QImage
             self.pixmap = QPixmap.fromImage(image)
         
-        # Escalar la imagen manteniendo aspect ratio
+        # Scale image maintaining aspect ratio
         scaled = self.pixmap.scaled(
             self.MAX_SIZE, self.MAX_SIZE,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         )
         
-        # Layout principal
+        # Main layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
         
-        # Contenedor con fondo y borde redondeado (usando colores del tema)
+        # Container with background and rounded border (using theme colors)
         container = QWidget()
         container.setObjectName("image_preview_container")
         container.setStyleSheet(f"""
@@ -622,7 +622,7 @@ class ImagePreviewDialog(QDialog):
         container_layout = QVBoxLayout(container)
         container_layout.setContentsMargins(8, 8, 8, 8)
         
-        # Label para mostrar la imagen
+        # Label to display image
         self.image_label = QLabel()
         self.image_label.setPixmap(scaled)
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -632,25 +632,25 @@ class ImagePreviewDialog(QDialog):
         container_layout.addWidget(self.image_label)
         layout.addWidget(container)
         
-        # Ajustar tamaño al contenido
+        # Adjust size to content
         self.adjustSize()
         
-        # Centrar en pantalla o cerca del cursor
+        # Center on screen or near cursor
         self._center_on_cursor()
     
     def _center_on_cursor(self):
-        """Posicionar el diálogo cerca del cursor del mouse."""
+        """Position dialog near mouse cursor."""
         from PyQt6.QtWidgets import QApplication
         from PyQt6.QtGui import QCursor
         
         cursor_pos = QCursor.pos()
         screen = QApplication.primaryScreen().geometry()
         
-        # Calcular posición centrada en el cursor
+        # Calculate position centered on cursor
         x = cursor_pos.x() - self.width() // 2
         y = cursor_pos.y() - self.height() // 2
         
-        # Asegurar que no salga de los bordes de la pantalla
+        # Ensure it doesn't go off screen edges
         if x < 10:
             x = 10
         elif x + self.width() > screen.width() - 10:
@@ -664,12 +664,12 @@ class ImagePreviewDialog(QDialog):
         self.move(x, y)
     
     def mousePressEvent(self, event):
-        """Cerrar el diálogo al hacer clic en cualquier parte."""
+        """Close dialog when clicking anywhere."""
         self.close()
         super().mousePressEvent(event)
     
     def keyPressEvent(self, event):
-        """Cerrar con Escape."""
+        """Close with Escape."""
         if event.key() == Qt.Key.Key_Escape:
             self.close()
         else:

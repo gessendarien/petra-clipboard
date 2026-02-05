@@ -111,7 +111,7 @@ class ClipItem(QFrame):
     double_clicked = pyqtSignal(str)
     delete_requested = pyqtSignal()
     pin_toggled = pyqtSignal()
-    image_preview_requested = pyqtSignal(str)  # Señal para solicitar vista previa de imagen
+    image_preview_requested = pyqtSignal(str)  # Signal to request image preview
     
     def __init__(self, content, item_type, timestamp, pinned=False, main_window=None):
         super().__init__()
@@ -143,19 +143,19 @@ class ClipItem(QFrame):
         layout.setContentsMargins(12, 12, 12, 12)
         layout.setSpacing(10)
         
-        # Icono
+        # Icon
         self.icon_label = QLabel()
         self.icon_label.setFixedSize(40, 40)
         self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        # PARA IMÁGENES: mostrar preview en miniatura y hacer clickeable
+        # FOR IMAGES: show thumbnail preview and make clickable
         if self.item_type == "image" and self.main_window and self.content in self.main_window.clipboard_images:
             self.setup_image_thumbnail(self.icon_label)
-            # Hacer la miniatura clickeable para abrir vista previa
+            # Make thumbnail clickable to open preview
             self.icon_label.setCursor(Qt.CursorShape.PointingHandCursor)
             self.icon_label.mousePressEvent = self._on_thumbnail_click
         else:
-            # Para otros tipos, usar ícono normal
+            # For other types, use normal icon
             icon_loaded = False
             try:
                 # Get icons folder from theme
@@ -393,38 +393,38 @@ class ClipItem(QFrame):
         para evitar que se active el clic del ClipItem.
         """
         if event.button() == Qt.MouseButton.LeftButton:
-            # Emitir señal para que la ventana principal abra el diálogo de preview
+            # Emit signal so main window opens preview dialog
             self.image_preview_requested.emit(self.content)
-            # Detener propagación para que no se copie el elemento
+            # Stop propagation so item is not copied
             event.accept()
     
     def create_text_label(self):
         url_re = re.compile(r'((?:https?://|ftp://|www\.|\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?))', re.IGNORECASE)
         render_as_link = False
         try:
-            # Solo renderizar como enlace si es tipo URL, nunca para imágenes
+            # Only render as link if URL type, never for images
             if self.item_type == "url" or (hasattr(self, 'main_window') and getattr(self.main_window, 'current_filter', None) == 'url'):
                 render_as_link = True
         except Exception:
             pass
             
-        # Obtener el color del enlace del tema actual
-        link_color = '#BB86FC'  # default morado
+        # Get link color from current theme
+        link_color = '#BB86FC'  # default purple
         if self.main_window and hasattr(self.main_window, 'themes_manager'):
             try:
                 link_color = self.main_window.themes_manager.get_current_theme()['colors']['link_color']
             except Exception:
                 pass
         
-        # Para imágenes, extraer solo el nombre del archivo (sin el timestamp interno)
+        # For images, extract only filename (without internal timestamp)
         display_content = self.content
         if self.item_type == "image":
-            # El content tiene formato: nombre_archivo.ext_YYYYMMDD_HHMMSS_ffffff
-            # Extraer solo la parte del nombre del archivo
-            parts = self.content.rsplit('_', 3)  # Separar por los últimos 3 underscores (timestamp)
+            # Content format: filename.ext_YYYYMMDD_HHMMSS_ffffff
+            # Extract only filename part
+            parts = self.content.rsplit('_', 3)  # Split by last 3 underscores (timestamp)
             if len(parts) >= 4:
-                display_content = parts[0]  # Solo el nombre del archivo con extensión
-            # Las imágenes nunca deben renderizarse como enlace
+                display_content = parts[0]  # Only filename with extension
+            # Images should never render as link
             render_as_link = False
             
         if render_as_link and url_re.search(display_content):
@@ -433,7 +433,7 @@ class ClipItem(QFrame):
                 href = u
                 if not re.match(r'^[a-zA-Z][a-zA-Z0-9+.-]*://', u):
                     href = 'http://' + u
-                # Truncar el texto visible del enlace a 45 caracteres
+                # Truncate visible link text to 45 characters
                 display_url = u if len(u) <= 45 else u[:42] + "..."
                 return f'<a href="{html.escape(href)}" style="color: {link_color}; text-decoration: none;">{html.escape(display_url)}</a>'
 
@@ -446,7 +446,7 @@ class ClipItem(QFrame):
             text_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextBrowserInteraction)
             text_label.setWordWrap(False)
         else:
-            # Para imágenes, truncar preservando la extensión del archivo
+            # For images, truncate preserving file extension
             if self.item_type == "image":
                 truncated_text = self.truncate_image_name(display_content, 40)
             else:
@@ -457,7 +457,7 @@ class ClipItem(QFrame):
             text_label.setTextFormat(Qt.TextFormat.PlainText)
             text_label.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
             
-        # Aplicar el tema al QLabel si el administrador de temas está disponible
+        # Apply theme to QLabel if theme manager is available
         if self.main_window and hasattr(self.main_window, 'themes_manager'):
             self.main_window.themes_manager.apply_theme_to_widget(text_label)
         
@@ -569,25 +569,25 @@ class ClipItem(QFrame):
         Ejemplo: 'nombre_muy_largo_de_imagen.png' -> 'nombre_muy_largo_de_imag..png'
         """
         filename = filename.replace('\n', ' ').strip()
-        if len(filename) <= max_len + 2:  # +2 por los ".."
+        if len(filename) <= max_len + 2:  # +2 for the ".."
             return filename
         
-        # Extraer la extensión
+        # Extract extension
         if '.' in filename:
             name_part, ext = filename.rsplit('.', 1)
-            ext = '.' + ext  # Incluye el punto de la extensión
+            ext = '.' + ext  # Includes extension dot
         else:
             name_part = filename
             ext = ''
         
-        # Calcular cuántos caracteres del nombre podemos mostrar
-        # Formato final: nombre_truncado..ext (dos puntos + extensión con su punto)
-        chars_for_name = max_len - len(ext) - 2  # -2 por los ".."
+        # Calculate how many name characters we can show
+        # Final format: truncated_name..ext (two dots + extension with its dot)
+        chars_for_name = max_len - len(ext) - 2  # -2 for the ".."
         
         if chars_for_name > 0:
             return name_part[:chars_for_name] + ".." + ext
         else:
-            # Si la extensión es muy larga, solo mostrar el inicio con ..
+            # If extension is too long, only show start with ..
             return filename[:max_len] + ".."
     
     def format_timestamp(self):

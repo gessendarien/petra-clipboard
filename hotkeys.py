@@ -66,7 +66,7 @@ fi
             command = shlex.split('xbindkeys')
             subprocess.run(command, check=False, stderr=subprocess.DEVNULL)
         except Exception as e:
-            print(f"No se pudo configurar xbindkeys: {e}")
+            print(f"Could not configure xbindkeys: {e}")
 
     def check_toggle_command(self):
         command_file = Path("/tmp/petra_command")

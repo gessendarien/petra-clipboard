@@ -887,7 +887,7 @@ class ThemesManager:
                 border-top-right-radius: 12px;
             }}
             
-            /* Botones del header */
+            /* Header buttons */
             QPushButton#settings_button {{
                 background-color: {colors['header_buttons']} !important;
                 border-radius: 8px;
@@ -902,7 +902,7 @@ class ThemesManager:
                 background-color: {colors['header_buttons_click']} !important;
             }}
             
-            /* Botón borrar todo */
+            /* Clear all button */
             QPushButton#clear_button {{
                 background-color: {colors['header_buttons']} !important;
                 border-radius: 19px;
@@ -944,7 +944,7 @@ class ThemesManager:
                 background-color: {colors['header_buttons_click']} !important;
             }}
             
-            /* ========== BARRA DE BÚSQUEDA ========== */
+            /* ========== SEARCH BAR ========== */
             QLineEdit#search_bar {{
                 background-color: {colors['filters_background']} !important;
                 color: {colors['text_primary']} !important;
@@ -958,7 +958,7 @@ class ThemesManager:
                 border: 2px solid {colors['search_input_focus']} !important;
             }}
             
-            /* ========== FILTROS ========== */
+            /* ========== FILTERS ========== */
             QPushButton#filter_button_active {{
                 background-color: {colors['filter_selected']} !important;
                 border-radius: 22px;
@@ -985,7 +985,7 @@ class ThemesManager:
                 background-color: {colors['filter_click']} !important;
             }}
             
-            /* ========== ÁREA DE SCROLL ========== */
+            /* ========== SCROLL AREA ========== */
             QScrollArea#main_scroll_area {{
                 border: none;
                 background-color: {colors['background']};
@@ -1041,7 +1041,7 @@ class ThemesManager:
                 background-color: {colors['element_click']} !important;
             }}
             
-            /* Card cuando está copiada/seleccionada */
+            /* Card when copied/selected */
 
             /* copied state: use existing clip_hover_bg for fill so it remains visible
                and keep a strong primary border. The old copied_* keys were unused. */
@@ -1068,7 +1068,7 @@ class ThemesManager:
                 background-color: {colors['element_click']} !important;
             }}
 
-            /* Texto de items */
+            /* Item text */
             QLabel#clip_text_normal {{
                 color: {colors['card_text']} !important;
                 font-size: 14px;
@@ -1119,7 +1119,7 @@ class ThemesManager:
                 background-color: transparent;
             }}
             
-            /* ========== BOTONES DE ACCIÓN EN ITEMS ========== */
+            /* ========== ITEM ACTION BUTTONS ========== */
             QPushButton#pin_action_button {{
                 background-color: {colors['pin_button']} !important;
                 border-radius: 6px;
@@ -1168,7 +1168,7 @@ class ThemesManager:
                 background-color: {colors['element_click']} !important;
             }}
             
-            /* ========== CONFIGURACIÓN - CORREGIDO COMPLETAMENTE ========== */
+            /* ========== CONFIGURATION - COMPLETELY FIXED ========== */
             QDialog#SettingsDialog {{
                 background-color: {colors['settings_window']} !important;
                 border-radius: 12px;
@@ -1231,7 +1231,7 @@ class ThemesManager:
                 padding-bottom: 7px;
             }}
             
-            /* ========== ELEMENTOS DE FORMULARIO ========== */
+            /* ========== FORM ELEMENTS ========== */
             QLineEdit, QSpinBox, QComboBox {{
                 background-color: {colors['icon_bg']} !important;
                 color: {colors['text_primary']} !important;
@@ -1244,7 +1244,7 @@ class ThemesManager:
                 border: 2px solid {colors['input_border']} !important;
             }}
             
-            /* ========== BOTÓN CLEAR CON BORDE ANIMADO ========== */
+            /* ========== CLEAR BUTTON WITH ANIMATED BORDER ========== */
             ProgressButton {{
                 background-color: {colors['header_buttons']} !important;
                 border-radius: 19px;

@@ -53,7 +53,7 @@ class ConfigManager:
                 
                 # AUTO-MIGRATION: Force update if old shortcut is detected
                 current_shortcut = str(self.config.get('shortcut', '')).lower()
-                # Migrar desde Control+Shift+v O desde Super+v al nuevo Alt+space
+                # Migrate from Control+Shift+v OR from Super+v to new Alt+space
                 if ('control' in current_shortcut and 'shift' in current_shortcut and 'v' in current_shortcut) or \
                    ('super' in current_shortcut and 'v' in current_shortcut):
                     print(f"DEBUG: Migrating old shortcut '{self.config.get('shortcut')}' to 'Alt + space'")
@@ -66,7 +66,7 @@ class ConfigManager:
                 with open(self.config_file, 'w') as f:
                     json.dump(self.config, f, indent=2, ensure_ascii=False)
         except (json.JSONDecodeError, IOError):
-            print("Archivo de configuración corrupto. Restaurando valores predeterminados.")
+            print("Configuration file corrupt. Restoring default values.")
             self.config = default
             with open(self.config_file, 'w') as f:
                 json.dump(self.config, f, indent=2, ensure_ascii=False)
@@ -110,7 +110,7 @@ class ConfigManager:
                     'pinned': True
                 }
                 
-                # Para imágenes, guardar el archivo en disco y el hash
+                # For images, save file to disk and hash
                 if c['type'] == 'image' and hasattr(self, 'clipboard_images'):
                     image_id = c['content']
                     if image_id in self.clipboard_images:
@@ -120,29 +120,29 @@ class ConfigManager:
                             img.save(str(image_path), "PNG")
                             item['image_file'] = f"{image_id}.png"
                             
-                            # Guardar el hash de la imagen para evitar duplicados al reiniciar
+                            # Save image hash to avoid duplicates on restart
                             if hasattr(self, '_image_hashes') and image_id in self._image_hashes:
                                 item['image_hash'] = self._image_hashes[image_id]
                         except Exception as e:
-                            print(f"Error guardando imagen fijada: {e}")
+                            print(f"Error saving pinned image: {e}")
                 
                 pinned.append(item)
         
         with open(self.pinned_file, 'w') as f:
             json.dump(pinned, f, indent=2)
         
-        # Limpiar imágenes huérfanas (que ya no están fijadas)
+        # Clean up orphan images (no longer pinned)
         self._cleanup_orphan_images(pinned)
     
     def _cleanup_orphan_images(self, pinned_items):
-        """Eliminar imágenes que ya no están fijadas"""
+        """Remove images that are no longer pinned"""
         try:
             pinned_files = {item.get('image_file') for item in pinned_items if item.get('image_file')}
             for img_file in self.pinned_images_dir.iterdir():
                 if img_file.name not in pinned_files:
                     img_file.unlink()
         except Exception as e:
-            print(f"Error limpiando imágenes huérfanas: {e}")
+            print(f"Error cleaning orphan images: {e}")
 
     def load_pinned(self):
         if self.pinned_file.exists():
@@ -161,7 +161,7 @@ class ConfigManager:
                     for item in pinned:
                         item['timestamp'] = datetime.fromisoformat(item['timestamp'])
                         
-                        # Para imágenes, cargar desde disco
+                        # For images, load from disk
                         if item['type'] == 'image' and item.get('image_file'):
                             try:
                                 from PyQt6.QtGui import QImage
@@ -172,8 +172,8 @@ class ConfigManager:
                                     if not img.isNull():
                                         self.clipboard_images[item['content']] = img
                                         
-                                        # Recalcular el hash usando el mismo método que ImageTask
-                                        # para garantizar consistencia (MD5 del PNG escalado a 1200px, calidad 50)
+                                        # Recalculate hash using same method as ImageTask
+                                        # to guarantee consistency (MD5 of PNG scaled to 1200px, quality 50)
                                         img_for_hash = img
                                         if img_for_hash.width() > 1200 or img_for_hash.height() > 1200:
                                             img_for_hash = img_for_hash.scaled(
@@ -190,13 +190,13 @@ class ConfigManager:
                                         self._image_hashes[item['content']] = calculated_hash
                                         self._pinned_image_hashes.add(calculated_hash)
                                     else:
-                                        # Imagen corrupta, saltar
+                                        # Corrupt image, skip
                                         continue
                                 else:
-                                    # Archivo no existe, saltar
+                                    # File does not exist, skip
                                     continue
                             except Exception as e:
-                                print(f"Error cargando imagen fijada: {e}")
+                                print(f"Error loading pinned image: {e}")
                                 continue
                         
                         self.clips.append(item)

@@ -18,15 +18,15 @@ class DisplayDetector:
         xdg_session_type = os.environ.get('XDG_SESSION_TYPE', '').lower()
         x11_display = os.environ.get('DISPLAY')
         
-        # Verificar variables de entorno específicas de Wayland
+        # Check Wayland specific environment variables
         if wayland_display or xdg_session_type == 'wayland':
             return 'wayland'
         elif x11_display:
             return 'x11'
         else:
-            # Fallback: intentar detectar mediante otros métodos
+            # Fallback: try detecting via other methods
             try:
-                # Verificar si estamos en un compositor de Wayland conocido
+                # Check if we are in a known Wayland compositor
                 result = subprocess.run(['pgrep', '-x', 'sway'], capture_output=True, text=True)
                 if result.returncode == 0:
                     return 'wayland'
@@ -37,13 +37,13 @@ class DisplayDetector:
                     
                 result = subprocess.run(['pgrep', '-x', 'gnome-shell'], capture_output=True, text=True)
                 if result.returncode == 0:
-                    # GNOME puede usar Wayland o X11
+                    # GNOME can use Wayland or X11
                     if 'wayland' in os.environ.get('XDG_CURRENT_DESKTOP', '').lower():
                         return 'wayland'
             except:
                 pass
                 
-            return 'x11'  # Fallback a X11 por compatibilidad
+            return 'x11'  # Fallback to X11 for compatibility
     
     def detect_available_tools(self):
         """Detectar qué herramientas están disponibles en el sistema"""
@@ -65,13 +65,13 @@ class DisplayDetector:
         """Verificar si una herramienta está disponible"""
         try:
             if self.is_flatpak:
-                # En Flatpak, la detección vía 'which' o 'command -v' está fallando por temas de PATH.
-                # Para evitar bloquear la funcionalidad, intentaremos una ejecución directa simple
-                # y si falla, asumiremos True de todos modos para dejar que el usuario reciba
-                # el error de ejecución real en lugar de desactivar la función silenciosamente.
+                # In Flatpak, detection via 'which' or 'command -v' is failing due to PATH issues.
+                # To avoid blocking functionality, we will try a simple direct execution
+                # and if it fails, we will assume True anyway to let the user receive
+                # the real execution error instead of silently disabling the feature.
                 print(f"DEBUG: Checking for {tool_name} inside Flatpak via host...")
                 
-                # Intentar ejecución directa
+                # Attempt direct execution
                 cmd = [tool_name, '--version']
                 if tool_name == 'wtype':
                     cmd = [tool_name, '--help']
@@ -80,21 +80,21 @@ class DisplayDetector:
                     ['flatpak-spawn', '--host'] + cmd,
                     capture_output=True,
                     timeout=2,
-                    cwd='/tmp' # CRÍTICO: Forzar CWD a /tmp
+                    cwd='/tmp' # CRITICAL: Force CWD to /tmp
                 )
                 
                 if result.returncode == 0:
                     return True
                     
                 print(f"DEBUG: Could not verify {tool_name}, assuming available to avoid blocking.")
-                return True # Asumir disponible para no bloquear funcionalidad
+                return True # Assume available to avoid blocking functionality
             else:
-                # Fuera de Flatpak, verificar normalmente
+                # Outside Flatpak, check normally
                 subprocess.run(['which', tool_name], capture_output=True, check=True, timeout=2)
                 return True
         except Exception as e:
             print(f"DEBUG: Error checking {tool_name}: {e}")
-            if self.is_flatpak: return True # Fallback permisivo en Flatpak
+            if self.is_flatpak: return True # Permissive fallback in Flatpak
             return False
     
     def get_display_server(self):
@@ -118,14 +118,14 @@ class DisplayDetector:
                 
         elif server == 'wayland':
             if action == 'key_simulation':
-                # Preferir ydotool, luego wtype
+                # Prefer ydotool, then wtype
                 if self.is_tool_available('ydotool'):
                     return 'ydotool'
                 elif self.is_tool_available('wtype'):
                     return 'wtype'
                 return None
             elif action == 'global_shortcut':
-                # Depende del compositor
+                # Depends on compositor
                 if self.is_tool_available('swaymsg'):
                     return 'swaymsg'
                 elif self.is_tool_available('hyprctl'):

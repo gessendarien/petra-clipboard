@@ -13,12 +13,12 @@ class InputSimulator:
     def _run_command(self, cmd, **kwargs):
         """Ejecutar comando, usando flatpak-spawn si estamos en Flatpak"""
         if self.is_flatpak:
-            # Usar rutas absolutas para herramientas conocidas
+            # Use absolute paths for known tools
             tool = cmd[0]
             if tool in ['xdotool', 'ydotool', 'wtype', 'xclip', 'xsel']:
                 cmd[0] = f'/usr/bin/{tool}'
             cmd = ['flatpak-spawn', '--host'] + cmd
-            # Forzar CWD a /tmp para evitar error de directorio
+            # Force CWD to /tmp to avoid directory error
             if 'cwd' not in kwargs:
                 kwargs['cwd'] = '/tmp'
         return subprocess.run(cmd, **kwargs)
@@ -30,25 +30,25 @@ class InputSimulator:
         elif self.display_server == 'wayland':
             return self._simulate_key_wayland(key_combination)
         else:
-            print(f"Servidor de display no soportado: {self.display_server}")
+            print(f"Unsupported display server: {self.display_server}")
             return False
     
     def _simulate_key_x11(self, key_combination):
         """Simular teclas en X11 usando xdotool"""
         if not self.detector.is_tool_available('xdotool'):
-            print("xdotool no disponible en X11")
+            print("xdotool not available in X11")
             return False
             
         try:
-            # xdotool espera combinaciones como "ctrl+v" o "alt+Tab"
+            # xdotool expects combinations like "ctrl+v" or "alt+Tab"
             command = ['xdotool', 'key', '--clearmodifiers', key_combination]
             result = self._run_command(command, capture_output=True, text=True, timeout=5)
             return result.returncode == 0
         except subprocess.TimeoutExpired:
-            print("Timeout al simular tecla con xdotool")
+            print("Timeout simulating key with xdotool")
             return False
         except Exception as e:
-            print(f"Error al simular tecla con xdotool: {e}")
+            print(f"Error simulating key with xdotool: {e}")
             return False
     
     def _simulate_key_wayland(self, key_combination):
@@ -58,27 +58,27 @@ class InputSimulator:
         elif self.key_tool == 'wtype':
             return self._simulate_key_wtype(key_combination)
         else:
-            print("No hay herramienta disponible para simular teclas en Wayland")
+            print("No tool available to simulate keys in Wayland")
             return False
     
     def _simulate_key_ydotool(self, key_combination):
         """Simular teclas usando ydotool"""
         try:
-            # ydotool usa formato similar: "ctrl+v" o "alt+tab"
+            # ydotool uses similar format: "ctrl+v" or "alt+tab"
             command = ['ydotool', 'key', key_combination]
             result = self._run_command(command, capture_output=True, text=True, timeout=5)
             return result.returncode == 0
         except subprocess.TimeoutExpired:
-            print("Timeout al simular tecla con ydotool")
+            print("Timeout simulating key with ydotool")
             return False
         except Exception as e:
-            print(f"Error al simular tecla con ydotool: {e}")
+            print(f"Error simulating key with ydotool: {e}")
             return False
     
     def _simulate_key_wtype(self, key_combination):
         """Simular teclas usando wtype"""
         try:
-            # wtype usa formato diferente: "-M ctrl v" o "-M alt Tab"
+            # wtype uses different format: "-M ctrl v" or "-M alt Tab"
             keys = key_combination.split('+')
             command = ['wtype']
             
@@ -89,10 +89,10 @@ class InputSimulator:
             result = self._run_command(command, capture_output=True, text=True, timeout=5)
             return result.returncode == 0
         except subprocess.TimeoutExpired:
-            print("Timeout al simular tecla con wtype")
+            print("Timeout simulating key with wtype")
             return False
         except Exception as e:
-            print(f"Error al simular tecla con wtype: {e}")
+            print(f"Error simulating key with wtype: {e}")
             return False
     
     def simulate_paste(self):
@@ -118,8 +118,8 @@ class InputSimulator:
         try:
             text = None
             
-            # Intentar obtener el contenido del portapapeles con diferentes métodos
-            # Método 1: xclip
+            # Try to get clipboard content with different methods
+            # Method 1: xclip
             try:
                 result = self._run_command(['xclip', '-selection', 'clipboard', '-o'], 
                                       capture_output=True, text=True, timeout=2)
@@ -128,7 +128,7 @@ class InputSimulator:
             except FileNotFoundError:
                 pass
             
-            # Método 2: xsel
+            # Method 2: xsel
             if not text:
                 try:
                     result = self._run_command(['xsel', '--clipboard', '--output'], 
@@ -138,7 +138,7 @@ class InputSimulator:
                 except FileNotFoundError:
                     pass
             
-            # Método 3: Obtener de PyQt directamente (más lento pero siempre funciona)
+            # Method 3: Get from PyQt directly (slower but always works)
             if not text:
                 try:
                     from PyQt6.QtWidgets import QApplication
@@ -148,21 +148,21 @@ class InputSimulator:
                     pass
             
             if text:
-                # Usar xdotool type para escribir el texto
-                # --clearmodifiers evita que modificadores afecten la escritura
+                # Use xdotool type to write text
+                # --clearmodifiers prevents modifiers from affecting typing
                 cmd = ['xdotool', 'type', '--clearmodifiers', '--delay', '0', '--', text]
                 type_result = self._run_command(cmd, capture_output=True, text=True, timeout=10)
                 return type_result.returncode == 0
             return False
         except Exception as e:
-            print(f"Error al pegar en terminal X11: {e}")
+            print(f"Error pasting to terminal X11: {e}")
             return False
     
     def _paste_to_terminal_ydotool(self):
         """Pegar en terminal usando ydotool."""
         try:
             import subprocess
-            # Obtener contenido del portapapeles con wl-paste
+            # Get clipboard content with wl-paste
             result = subprocess.run(['wl-paste'], capture_output=True, text=True, timeout=2)
             if result.returncode == 0 and result.stdout:
                 text = result.stdout
@@ -171,14 +171,14 @@ class InputSimulator:
                 return type_result.returncode == 0
             return False
         except Exception as e:
-            print(f"Error con ydotool: {e}")
+            print(f"Error with ydotool: {e}")
             return False
     
     def _paste_to_terminal_wtype(self):
         """Pegar en terminal usando wtype."""
         try:
             import subprocess
-            # Obtener contenido del portapapeles
+            # Get clipboard content
             result = subprocess.run(['wl-paste'], capture_output=True, text=True, timeout=2)
             if result.returncode == 0 and result.stdout:
                 text = result.stdout
@@ -187,7 +187,7 @@ class InputSimulator:
                 return type_result.returncode == 0
             return False
         except Exception as e:
-            print(f"Error con wtype: {e}")
+            print(f"Error with wtype: {e}")
             return False
     
     def simulate_alt_tab(self):
@@ -216,14 +216,14 @@ class InputSimulator:
     def _get_active_window_wayland(self):
         """Obtener información de ventana activa en Wayland"""
         try:
-            # Intentar con diferentes compositors
+            # Try with different compositors
             if self.detector.is_tool_available('swaymsg'):
                 result = subprocess.run(['swaymsg', '-t', 'get_tree'], 
                                       capture_output=True, text=True, timeout=2)
                 if result.returncode == 0:
                     import json
                     tree = json.loads(result.stdout)
-                    # Buscar ventana enfocada (función recursiva)
+                    # Find focused window (recursive function)
                     def find_focused(node):
                         if node.get('focused'):
                             return node
@@ -245,7 +245,7 @@ class InputSimulator:
                     return str(window.get('address', '')) if window else None
                     
         except Exception as e:
-            print(f"Error obteniendo ventana activa en Wayland: {e}")
+            print(f"Error getting active window in Wayland: {e}")
         
         return None
     

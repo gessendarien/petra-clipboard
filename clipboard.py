@@ -74,8 +74,8 @@ class ClipboardManager:
         self.thread_pool = QThreadPool.globalInstance()
         self.last_active_window = None
         self.window_pinned = False
-        self._image_hashes = {}  # Almacena hashes de imágenes para persistencia
-        self._pinned_image_hashes = set()  # Hashes de imágenes fijadas para evitar duplicados
+        self._image_hashes = {}  # Stores image hashes for persistence
+        self._pinned_image_hashes = set()  # Pinned image hashes to prevent duplicates
         
         # Input simulator multi-backend
         self.input_simulator = InputSimulator()
@@ -90,9 +90,9 @@ class ClipboardManager:
         self.clear_progress = 0
 
     def setup_clipboard_monitor(self):
-        # Usar señales en lugar de polling para detectar cambios inmediatamente
-        # Esto permite que el evento de "copiar" siempre intente agregar el clip,
-        # incluso si es el mismo contenido que antes (útil si se borró del historial).
+        # Use signals instead of polling to detect changes immediately
+        # This allows the "copy" event to always try adding the clip,
+        # even if it is the same content as before (useful if it was deleted from history).
         clipboard = QApplication.clipboard()
         clipboard.dataChanged.connect(self.check_clipboard)
 
@@ -104,8 +104,8 @@ class ClipboardManager:
             if mime_data.hasImage():
                 img = clipboard.image()
                 if not img.isNull():
-                    # Usar el mismo proceso de escalado y compresión que ImageTask
-                    # para que el hash sea consistente y se detecten duplicados
+                    # Use the same scaling and compression process as ImageTask
+                    # so the hash is consistent and duplicates are detected
                     if img.width() > 1200 or img.height() > 1200:
                         img = img.scaled(1200, 1200, Qt.AspectRatioMode.KeepAspectRatio,
                                          Qt.TransformationMode.FastTransformation)
@@ -113,15 +113,15 @@ class ClipboardManager:
                     from PyQt6.QtCore import QBuffer, QIODevice
                     buffer = QBuffer()
                     buffer.open(QIODevice.OpenModeFlag.WriteOnly)
-                    img.save(buffer, "PNG", 50)  # Misma calidad que ImageTask
+                    img.save(buffer, "PNG", 50)  # Same quality as ImageTask
                     image_data = buffer.data()
                     image_hash = hashlib.md5(bytes(image_data)).hexdigest()
                     self.last_clipboard = image_hash
                     
-                    # Si la imagen actual del portapapeles ya está en los pins,
-                    # añadir su hash a _pinned_image_hashes para evitar duplicados
+                    # If the current clipboard image is already pinned,
+                    # add its hash to _pinned_image_hashes to prevent duplicates
                     if hasattr(self, '_pinned_image_hashes') and image_hash in self._pinned_image_hashes:
-                        # Ya está marcado, no hacer nada extra
+                        # Already marked, do nothing extra
                         pass
             elif mime_data.hasText():
                 self.last_clipboard = mime_data.text()
@@ -138,7 +138,7 @@ class ClipboardManager:
             mime_data = clipboard.mimeData()
             
             current = None
-            clip_type = "text"  # Por defecto
+            clip_type = "text"  # Default
             
             if mime_data.hasImage():
                 img = clipboard.image()
@@ -164,7 +164,7 @@ class ClipboardManager:
                     qurl = urls[0]
                     local_path = qurl.toLocalFile()
                     if local_path and local_path.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp')):
-                        # Es una imagen local - procesarla
+                        # It is a local image - process it
                         try:
                             img = QImage(local_path)
                             if img.isNull():
@@ -186,17 +186,17 @@ class ClipboardManager:
                         except Exception as e:
                             print(f"Error al cargar imagen desde archivo: {e}")
                     elif qurl.toString().startswith('file:///'):
-                        # Es un archivo local (no imagen) - ignorar
-                        # Los archivos copiados desde el explorador generan file:///
-                        # y no queremos guardarlos como URLs
+                        # It is a local file (not image) - ignore
+                        # Files copied from explorer generate file:///
+                        # and we don't want to save them as URLs
                         return
                     else:
-                        # Es una URL real (http://, https://, etc.)
+                        # It is a real URL (http://, https://, etc.)
                         current = qurl.toString()
                         clip_type = "url"
             elif mime_data.hasText():
                 current = mime_data.text()
-                # Detectar el tipo correcto
+                # Detect the correct type
                 clip_type = self.detect_type(current)
             
             if self.inserting_emoji or (self.last_emoji_inserted and current == self.last_emoji_inserted):
@@ -205,12 +205,12 @@ class ClipboardManager:
                 return
             
             if current and current.strip():
-                # Eliminado el chequeo de last_clipboard para permitir volver a copiar
-                # elementos que fueron borrados del historial.
-                # add_clip() ya se encarga de no duplicar si el elemento ya existe en la lista.
+                # Removed last_clipboard check to allow re-copying
+                # items that were deleted from history.
+                # add_clip() already handles not duplicating if the item exists in the list.
                 if clip_type != "image":
                     self.last_clipboard = current
-                # Pasar el tipo específico detectado
+                # Pass the specific detected type
                 self.add_clip(current, clip_type)
         except Exception as e:
             print(f"Error al detectar portapapeles: {e}")
@@ -220,20 +220,20 @@ class ClipboardManager:
             if key in self.processing_keys:
                 self.processing_keys.discard(key)
 
-            # Eliminado chequeo estricto de last_clipboard aquí también
-            # para permitir re-copiado de imágenes borradas
+            # Removed strict last_clipboard check here too
+            # to allow re-copying deleted images
             
-            # Verificar si este hash ya existe en imágenes fijadas (evita duplicados al reiniciar)
+            # Check if this hash already exists in pinned images (avoids duplicates on restart)
             if hasattr(self, '_pinned_image_hashes') and str(image_hash) in self._pinned_image_hashes:
                 self.last_clipboard = str(image_hash)
                 return
 
             current = unique_id
-            clip_type = "image"  # Específicamente imagen
+            clip_type = "image"  # Specifically image
             self.clipboard_images[unique_id] = img
             self.last_clipboard = str(image_hash)
             
-            # Guardar el hash de la imagen para poder persistirlo si se fija
+            # Save the image hash to persist it if pinned
             if not hasattr(self, '_image_hashes'):
                 self._image_hashes = {}
             self._image_hashes[unique_id] = str(image_hash)
@@ -249,7 +249,7 @@ class ClipboardManager:
             except Exception as e:
                 print(f"Error al convertir thumb en main thread: {e}")
 
-            # Pasar el tipo específico
+            # Pass the specific type
             self.add_clip(current, clip_type)
         except Exception as e:
             print(f"Error en on_image_processed: {e}")
@@ -259,32 +259,32 @@ class ClipboardManager:
         if not content or len(content) > 5000:
             return
         
-        # Detectar tipo si no se proporciona
+        # Detect type if not provided
         if clip_type is None:
             clip_type = self.detect_type(content)
         
-        # NO agregar emojis a la lista de clips - solo se insertan y van a recientes
+        # DO NOT add emojis to the clips list - they are only inserted and go to recents
         if clip_type == "emoji":
             return
         
-        # Verificar si ya existe este contenido en CUALQUIER clip (fijado o no)
+        # Check if this content already exists in ANY clip (pinned or not)
         for clip in self.clips:
             if clip['content'] == content:
-                # Ya existe, no duplicar
+                # Already exists, do not duplicate
                 return
         
-        # Para imágenes, verificar también por hash para evitar duplicados visuales
-        # (mismo contenido de imagen pero diferente timestamp/unique_id)
+        # For images, also check by hash to avoid visual duplicates
+        # (same image content but different timestamp/unique_id)
         if clip_type == "image" and hasattr(self, '_image_hashes'):
             current_hash = self._image_hashes.get(content)
             if current_hash:
-                # Buscar si ya existe una imagen con el mismo hash
+                # Search if an image with the same hash already exists
                 for clip in self.clips:
                     if clip['type'] == 'image':
                         existing_hash = self._image_hashes.get(clip['content'])
                         if existing_hash and existing_hash == current_hash:
-                            # Ya existe una imagen con el mismo contenido visual
-                            # Limpiar la imagen nueva del cache ya que no se usará
+                            # An image with the same visual content already exists
+                            # Clear the new image from cache since it won't be used
                             if content in self.clipboard_images:
                                 del self.clipboard_images[content]
                             if content in self._image_hashes:
@@ -324,17 +324,17 @@ class ClipboardManager:
             self.refresh_ui()
 
     def detect_type(self, content):
-        # Primero verificar si es un comando de terminal (tiene prioridad sobre URLs ambiguas)
+        # First check if it is a terminal command (has priority over ambiguous URLs)
         if self.is_terminal_command(content):
             return "command"
         
-        # Si tiene espacios y NO empieza con un protocolo explícito, no es URL
-        # Esto evita que "cat archivo.txt" sea detectado como URL
+        # If it has spaces and DOES NOT start with an explicit protocol, it is not a URL
+        # This prevents "cat archivo.txt" from being detected as a URL
         has_spaces = ' ' in content.strip()
         has_explicit_protocol = bool(re.match(r'^(https?://|ftp://)', content.strip(), re.IGNORECASE))
         
         if not has_spaces or has_explicit_protocol:
-            # Solo buscar URLs si no hay espacios O si tiene protocolo explícito
+            # Only search for URLs if there are no spaces OR if it has an explicit protocol
             url_regex = re.compile(r'(https?://|ftp://|www\.|\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?)', re.IGNORECASE)
             if url_regex.search(content):
                 return "url"
@@ -350,54 +350,54 @@ class ClipboardManager:
         """Detectar si el texto parece ser un comando de terminal Linux."""
         text = text.strip()
         
-        # No detectar comandos muy largos o multi-línea compleja
+        # Do not detect very long commands or complex multi-line
         if len(text) > 500 or text.count('\n') > 5:
             return False
         
-        # Lista de comandos comunes de Linux/Unix
+        # List of common Linux/Unix commands
         common_commands = [
-            # Navegación y archivos
+            # Navigation and files
             'ls', 'cd', 'pwd', 'mkdir', 'rmdir', 'rm', 'cp', 'mv', 'touch', 'cat',
             'head', 'tail', 'less', 'more', 'find', 'locate', 'which', 'whereis',
             'file', 'stat', 'du', 'df', 'ln', 'readlink', 'tree', 'basename', 'dirname',
-            # Permisos y usuarios
+            # Permissions and users
             'chmod', 'chown', 'chgrp', 'sudo', 'su', 'whoami', 'id', 'groups',
             'useradd', 'userdel', 'usermod', 'passwd', 'adduser',
-            # Procesos
+            # Processes
             'ps', 'top', 'htop', 'kill', 'killall', 'pkill', 'pgrep', 'bg', 'fg',
             'jobs', 'nohup', 'nice', 'renice', 'watch', 'timeout',
-            # Red
+            # Network
             'ping', 'curl', 'wget', 'ssh', 'scp', 'rsync', 'netstat', 'ss', 'ip',
             'ifconfig', 'dig', 'nslookup', 'host', 'traceroute', 'nc', 'telnet',
-            # Paquetes
+            # Packages
             'apt', 'apt-get', 'aptitude', 'dpkg', 'yum', 'dnf', 'pacman', 'snap',
             'flatpak', 'pip', 'pip3', 'npm', 'yarn', 'cargo', 'gem', 'brew',
-            # Texto
+            # Text
             'grep', 'awk', 'sed', 'cut', 'sort', 'uniq', 'wc', 'tr', 'diff',
             'comm', 'tee', 'xargs', 'printf', 'echo', 'read',
-            # Compresión
+            # Compression
             'tar', 'gzip', 'gunzip', 'zip', 'unzip', 'bzip2', 'xz', '7z',
-            # Sistema
+            # System
             'systemctl', 'service', 'journalctl', 'dmesg', 'uname', 'hostname',
             'uptime', 'free', 'lscpu', 'lsblk', 'lsusb', 'lspci', 'mount', 'umount',
             'fdisk', 'parted', 'mkfs', 'fsck',
             # Git
             'git', 'gh',
-            # Docker/Contenedores
+            # Docker/Containers
             'docker', 'docker-compose', 'podman', 'kubectl', 'minikube',
-            # Desarrollo
+            # Development
             'python', 'python3', 'node', 'java', 'javac', 'gcc', 'g++', 'make',
             'cmake', 'go', 'rustc', 'ruby', 'perl', 'php',
-            # Editores/herramientas
+            # Editors/tools
             'vim', 'nvim', 'nano', 'emacs', 'code', 'subl',
-            # Otros comunes
+            # Other common
             'man', 'info', 'help', 'alias', 'export', 'source', 'env', 'printenv',
             'history', 'clear', 'reset', 'exit', 'logout', 'shutdown', 'reboot',
             'date', 'cal', 'bc', 'expr', 'seq', 'yes', 'true', 'false', 'test',
             'xdg-open', 'open', 'xclip', 'xsel', 'notify-send',
         ]
         
-        # Obtener primera palabra (comando principal)
+        # Get first word (main command)
         first_line = text.split('\n')[0].strip()
         words = first_line.split()
         if not words:
@@ -405,24 +405,24 @@ class ClipboardManager:
         
         first_word = words[0]
         
-        # Quitar sudo/env si está al inicio
+        # Remove sudo/env if at the beginning
         if first_word in ['sudo', 'env', 'nohup', 'time']:
             if len(words) > 1:
                 first_word = words[1]
             else:
                 return False
         
-        # Verificar si es un comando conocido
+        # Check if it is a known command
         if first_word in common_commands:
             return True
         
-        # Detectar patrones comunes de comandos
+        # Detect common command patterns
         command_patterns = [
             r'^\./[\w.-]+',  # ./script.sh
-            r'^\|',  # Pipe al inicio (continuación)
-            r'\|\s*\w+',  # Comandos con pipe
-            r'^[\w.-]+\s+--?[\w-]',  # comando --opcion o comando -o
-            r'^\$\s*\w+',  # $VAR o $ comando (prompt)
+            r'^\|',  # Pipe at the start (continuation)
+            r'\|\s*\w+',  # Commands with pipe
+            r'^[\w.-]+\s+--?[\w-]',  # command --option or command -o
+            r'^\$\s*\w+',  # $VAR or $ command (prompt)
         ]
         
         for pattern in command_patterns:
@@ -433,10 +433,10 @@ class ClipboardManager:
 
     def is_emoji(self, text):
         emoji_pattern = re.compile("["
-            u"\U0001F600-\U0001F64F"  # emoticones
-            u"\U0001F300-\U0001F5FF"  # símbolos & pictogramas
-            u"\U0001F680-\U0001F6FF"  # transporte & símbolos de mapa
-            u"\U0001F1E0-\U0001F1FF"  # banderas
+            u"\U0001F600-\U0001F64F"  # emoticons
+            u"\U0001F300-\U0001F5FF"  # symbols & pictograms
+            u"\U0001F680-\U0001F6FF"  # transport & map symbols
+            u"\U0001F1E0-\U0001F1FF"  # flags
             u"\U00002702-\U000027B0"
             u"\U000024C2-\U0001F251"
             "]+", flags=re.UNICODE)
@@ -448,7 +448,7 @@ class ClipboardManager:
         try:
             clipboard = QApplication.clipboard()
             
-            # Detectar si es un comando para usar pegado de terminal
+            # Detect if it is a command to use terminal paste
             clip_type = None
             for c in self.clips:
                 if c.get('content') == content:
@@ -461,8 +461,8 @@ class ClipboardManager:
                 image = self.clipboard_images[content]
                 clipboard.setImage(image)
                 
-                # Actualizar last_clipboard con el hash de la imagen para evitar duplicados
-                # cuando el monitor detecte esta misma imagen en el portapapeles
+                # Update last_clipboard with the image hash to prevent duplicates
+                # when the monitor detects this same image in the clipboard
                 if hasattr(self, '_image_hashes') and content in self._image_hashes:
                     self.last_clipboard = self._image_hashes[content]
                 
@@ -483,9 +483,9 @@ class ClipboardManager:
             except Exception:
                 should_hide = True
 
-            # Marcar el widget como copiado para cambiar su apariencia.
-            # Solo marcar si la ventana NO está fijada (cuando se oculta, el usuario ve brevemente el estado)
-            # Si está fijada, no marcar para evitar el color de fondo persistente
+            # Mark the widget as copied to change its appearance.
+            # Only mark if the window is NOT pinned (when hidden, the user briefly sees the state)
+            # If pinned, do not mark to avoid persistent background color
             if not getattr(self, 'window_pinned', False):
                 # Clear existing copied flags and set the clicked one to the string "true"
                 try:
@@ -535,7 +535,7 @@ class ClipboardManager:
                 except Exception:
                     pass
 
-            # Guardar si es comando para usar el método de pegado correcto
+            # Save if it is a command to use the correct paste method
             self._pending_paste_is_command = is_command
 
             # hide after marking if appropriate (keeps marking visible for pinned windows)
@@ -544,10 +544,10 @@ class ClipboardManager:
                     self.hide()
 
                 if getattr(self, 'window_pinned', False):
-                    # Guardar ventana activa usando el nuevo método multi-backend
+                    # Save active window using the new multi-backend method
                     self.last_active_window = self.input_simulator.get_active_window()
                     
-                    # Intentar cambiar de ventana usando el nuevo simulador
+                    # Try switching window using the new simulator
                     self.input_simulator.simulate_alt_tab()
                         
                     QTimer.singleShot(250, self.simulate_paste)
@@ -574,7 +574,7 @@ class ClipboardManager:
 
     def reactivate_petra(self):
         """Reactivar la ventana de Petra después de pegar (multi-backend)"""
-        # En Wayland, la reactivación puede no ser necesaria o funcionar diferente
+        # In Wayland, reactivation may not be necessary or work differently
         if self.input_simulator.display_server == 'x11':
             try:
                 proc = subprocess.run(['xdotool', 'search', '--classname', 'petra'], 
@@ -605,7 +605,7 @@ class ClipboardManager:
         if self.clear_progress >= 100:
             self.clear_timer.stop()
             self.clear_all_unpinned()
-            # Resetear el botón después de completar
+            # Reset the button after completion
             if hasattr(self, 'clear_btn'):
                 self.clear_btn.setProgress(0)
     def clear_all_unpinned(self):

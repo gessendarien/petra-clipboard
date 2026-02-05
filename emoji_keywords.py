@@ -1,8 +1,8 @@
-# Archivo centralizado de emojis para Petra
-# Este es el ÚNICO lugar donde se definen los emojis y sus keywords
-# Para agregar más emojis, añádelos a EMOJI_CATEGORIES y opcionalmente a EMOJI_KEYWORDS
+# Centralized emoji file for Petra
+# This is the ONLY place where emojis and their keywords are defined
+# To add more emojis, add them to EMOJI_CATEGORIES and optionally to EMOJI_KEYWORDS
 
-# Diccionario de emojis agrupados por categoría (para carga diferida/lazy loading)
+# Dictionary of emojis grouped by category (for lazy loading)
 EMOJI_CATEGORIES = {
     "😊 Faces": [
         "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃",
@@ -47,13 +47,13 @@ EMOJI_CATEGORIES = {
         "🍁", "🍂", "🍃", "🍄", "🌰",
     ],
     "🍎 Food": [
-        # Frutas
+        # Fruits
         "🍇", "🍈", "🍉", "🍊", "🍋", "🍌", "🍍", "🥭", "🍎", "🍏",
         "🍐", "🍑", "🍒", "🍓", "🫐", "🥝", "🍅", "🫒", "🥥", "🥑",
-        # Verduras
+        # Vegetables
         "🍆", "🥔", "🥕", "🌽", "🌶️", "🫑", "🥒", "🥬", "🥦", "🧄",
         "🧅", "🥜", "🫘", "🌰",
-        # Comida preparada
+        # Prepared food
         "🍞", "🥐", "🥖", "🫓", "🥨", "🥯", "🥞", "🧇", "🧀", "🍖",
         "🍗", "🥩", "🥓", "🍔", "🍟", "🍕", "🌭", "🥪", "🌮", "🌯",
         "🫔", "🥙", "🧆", "🥚", "🍳", "🥘", "🍲", "🫕", "🥣", "🥗",
@@ -143,15 +143,15 @@ EMOJI_CATEGORIES = {
     ],
 }
 
-# Lista maestra de todos los emojis disponibles (generada de EMOJI_CATEGORIES para compatibilidad)
+# Master list of all available emojis (generated from EMOJI_CATEGORIES for compatibility)
 ALL_EMOJIS = []
 for category_emojis in EMOJI_CATEGORIES.values():
     ALL_EMOJIS.extend(category_emojis)
 
-# Diccionario de emojis con palabras clave para búsqueda
-# Los emojis sin keywords aquí aún aparecerán en la lista, solo no serán buscables por keyword
+# Dictionary of emojis with search keywords
+# Emojis without keywords here will still appear in the list, just won't be searchable by keyword
 EMOJI_KEYWORDS = {
-    # Caras felices
+    # Happy faces
     "😀": ["grinning", "face", "happy", "smile"],
     "😃": ["grinning", "big eyes", "happy", "smile", "joy"],
     "😄": ["grinning", "smiling eyes", "happy", "laugh"],
@@ -163,7 +163,7 @@ EMOJI_KEYWORDS = {
     "🙂": ["slightly smiling", "smile", "ok", "fine"],
     "🙃": ["upside down", "sarcasm", "silly", "ironic"],
     
-    # Caras afectuosas
+    # Affectionate faces
     "😉": ["wink", "flirt", "playful"],
     "😊": ["blush", "smiling", "happy", "shy", "cute"],
     "😇": ["angel", "innocent", "halo", "blessed"],
@@ -177,7 +177,7 @@ EMOJI_KEYWORDS = {
     "😙": ["kissing", "smiling eyes", "kiss"],
     "🥲": ["happy cry", "grateful", "touched", "emotional"],
     
-    # Caras con lengua
+    # Faces with tongue
     "😋": ["yummy", "delicious", "food", "tasty", "savoring"],
     "😛": ["tongue", "playful", "silly", "bleh"],
     "😜": ["wink", "tongue", "crazy", "playful", "joking"],
@@ -185,13 +185,13 @@ EMOJI_KEYWORDS = {
     "😝": ["squinting", "tongue", "playful", "silly"],
     "🤑": ["money", "rich", "dollar", "greedy", "cash"],
     
-    # Caras con manos
+    # Faces with hands
     "🤗": ["hug", "hugging", "embrace", "warm"],
     "🤭": ["giggle", "covering mouth", "oops", "shy"],
     "🤫": ["shush", "quiet", "secret", "silence"],
     "🤔": ["thinking", "hmm", "consider", "wondering"],
     
-    # Caras neutrales
+    # Neutral faces
     "🤐": ["zipper mouth", "secret", "quiet", "mute"],
     "🤨": ["raised eyebrow", "suspicious", "skeptical"],
     "😐": ["neutral", "expressionless", "meh", "blank"],
@@ -201,7 +201,7 @@ EMOJI_KEYWORDS = {
     "😒": ["unamused", "annoyed", "side eye", "meh"],
     "🙄": ["eye roll", "annoyed", "whatever", "bored"],
     
-    # Caras durmientes/cansadas
+    # Sleeping/tired faces
     "😬": ["grimacing", "awkward", "nervous", "cringe"],
     "🤥": ["lying", "pinocchio", "lie", "liar"],
     "😌": ["relieved", "peaceful", "content", "calm"],
@@ -210,7 +210,7 @@ EMOJI_KEYWORDS = {
     "🤤": ["drooling", "hungry", "want", "desire"],
     "😴": ["sleeping", "zzz", "asleep", "tired"],
     
-    # Caras enfermas
+    # Sick faces
     "😷": ["mask", "sick", "medical", "covid", "flu"],
     "🤒": ["thermometer", "fever", "sick", "ill"],
     "🤕": ["bandage", "hurt", "injured", "head"],
@@ -223,7 +223,7 @@ EMOJI_KEYWORDS = {
     "😵": ["dizzy", "dead", "knocked out", "spiral"],
     "🤯": ["mind blown", "exploding", "shocked", "amazed"],
     
-    # Caras con accesorios
+    # Faces with accessories
     "🤠": ["cowboy", "yeehaw", "western", "hat"],
     "🥳": ["party", "celebration", "birthday", "celebrate"],
     "🥸": ["disguised", "glasses", "mustache", "incognito"],
@@ -231,7 +231,7 @@ EMOJI_KEYWORDS = {
     "🤓": ["nerd", "geek", "glasses", "smart"],
     "🧐": ["monocle", "thinking", "inspect", "curious"],
     
-    # Caras preocupadas
+    # Worried faces
     "😕": ["confused", "puzzled", "unsure"],
     "😟": ["worried", "concerned", "anxious"],
     "🙁": ["frowning", "sad", "disappointed"],
@@ -257,13 +257,13 @@ EMOJI_KEYWORDS = {
     "😫": ["tired", "exhausted", "fed up"],
     "🥱": ["yawning", "tired", "sleepy", "bored"],
     
-    # Caras enojadas
+    # Angry faces
     "😤": ["huffing", "angry", "frustrated", "triumph"],
     "😡": ["angry", "mad", "rage", "furious"],
     "😠": ["angry", "mad", "annoyed", "grumpy"],
     "🤬": ["cursing", "swearing", "angry", "mad", "symbols"],
     
-    # Caras negativas/fantasía
+    # Negative/fantasy faces
     "😈": ["devil", "evil", "smiling", "mischief", "naughty"],
     "👿": ["angry devil", "evil", "imp", "mad"],
     "💀": ["skull", "dead", "death", "skeleton"],
@@ -273,14 +273,14 @@ EMOJI_KEYWORDS = {
     "👹": ["ogre", "monster", "japanese", "demon"],
     "👺": ["goblin", "tengu", "japanese", "mask"],
     
-    # Manos saludando
+    # Waving hands
     "👋": ["wave", "hello", "hi", "bye", "goodbye"],
     "🤚": ["raised back", "hand", "stop"],
     "🖐️": ["hand", "fingers", "five", "high five"],
     "✋": ["raised hand", "stop", "high five"],
     "🖖": ["vulcan", "spock", "star trek", "live long"],
     
-    # Gestos con manos
+    # Hand gestures
     "👌": ["ok", "okay", "perfect", "good"],
     "🤌": ["pinched fingers", "italian", "chef kiss"],
     "🤏": ["pinching", "small", "tiny", "little"],
@@ -290,7 +290,7 @@ EMOJI_KEYWORDS = {
     "🤘": ["rock", "metal", "horns", "devil"],
     "🤙": ["call me", "shaka", "hang loose", "phone"],
     
-    # Direcciones
+    # Directions
     "👈": ["pointing left", "left", "direction"],
     "👉": ["pointing right", "right", "direction"],
     "👆": ["pointing up", "up", "direction"],
@@ -298,17 +298,17 @@ EMOJI_KEYWORDS = {
     "👇": ["pointing down", "down", "direction"],
     "☝️": ["index up", "one", "point", "attention"],
     
-    # Pulgares
+    # Thumbs
     "👍": ["thumbs up", "like", "good", "yes", "ok", "approve"],
     "👎": ["thumbs down", "dislike", "bad", "no", "disapprove"],
     
-    # Puños
+    # Fists
     "✊": ["raised fist", "power", "solidarity", "punch"],
     "👊": ["fist bump", "punch", "bro"],
     "🤛": ["left fist", "fist bump"],
     "🤜": ["right fist", "fist bump"],
     
-    # Aplausos y manos juntas
+    # Applause and joined hands
     "👏": ["clap", "applause", "bravo", "congrats"],
     "🙌": ["raising hands", "celebration", "praise", "hooray"],
     "👐": ["open hands", "hug", "jazz hands"],
@@ -316,12 +316,12 @@ EMOJI_KEYWORDS = {
     "🤝": ["handshake", "deal", "agreement", "partnership"],
     "🙏": ["pray", "please", "thank you", "hope", "namaste"],
     
-    # Manos haciendo cosas
+    # Hands doing things
     "✍️": ["writing", "pen", "signature", "author"],
     "💅": ["nail polish", "nails", "beauty", "sassy"],
     "🤳": ["selfie", "phone", "photo", "camera"],
     
-    # Cuerpo
+    # Body
     "💪": ["muscle", "strong", "flex", "bicep", "strength"],
     "🦾": ["mechanical arm", "robot", "prosthetic", "bionic"],
     "🦿": ["mechanical leg", "prosthetic", "bionic"],
@@ -340,7 +340,7 @@ EMOJI_KEYWORDS = {
     "👅": ["tongue", "lick", "taste"],
     "👄": ["mouth", "lips", "kiss"],
     
-    # Personas
+    # People
     "👶": ["baby", "infant", "child", "newborn"],
     "🧒": ["child", "kid", "young"],
     "👦": ["boy", "male", "child", "kid"],
@@ -351,7 +351,7 @@ EMOJI_KEYWORDS = {
     "🧔": ["beard", "man", "bearded"],
     "👨‍🦰": ["man", "red hair", "ginger", "redhead"],
     
-    # Corazones
+    # Hearts
     "❤️": ["red heart", "love", "like", "romance"],
     "🧡": ["orange heart", "love", "friendship"],
     "💛": ["yellow heart", "love", "friendship", "happy"],
@@ -372,7 +372,7 @@ EMOJI_KEYWORDS = {
     "💝": ["heart ribbon", "gift", "love", "present"],
     "💟": ["heart decoration", "love", "ornament"],
     
-    # Animales - Mamíferos
+    # Animals - Mammals
     "🐶": ["dog", "perro", "puppy", "pet", "cachorro"],
     "🐕": ["dog", "perro", "pet"],
     "🐩": ["poodle", "dog", "perro", "fancy"],
@@ -426,7 +426,7 @@ EMOJI_KEYWORDS = {
     "🦡": ["badger", "tejon"],
     "🐾": ["paw", "huella", "prints", "pet"],
     
-    # Animales - Aves
+    # Animals - Birds
     "🦃": ["turkey", "pavo", "thanksgiving"],
     "🐔": ["chicken", "pollo", "gallina", "hen"],
     "🐓": ["rooster", "gallo", "cock"],
@@ -444,7 +444,7 @@ EMOJI_KEYWORDS = {
     "🦚": ["peacock", "pavo real"],
     "🦜": ["parrot", "loro", "tropical"],
     
-    # Animales - Reptiles y anfibios
+    # Animals - Reptiles and amphibians
     "🐸": ["frog", "rana", "sapo", "ribbit"],
     "🐊": ["crocodile", "cocodrilo", "alligator"],
     "🐢": ["turtle", "tortuga", "slow"],
@@ -455,7 +455,7 @@ EMOJI_KEYWORDS = {
     "🦕": ["dinosaur", "dinosaurio", "sauropod", "brontosaurus"],
     "🦖": ["t-rex", "dinosaur", "dinosaurio", "tyrannosaurus"],
     
-    # Animales - Marinos
+    # Animals - Marine
     "🐳": ["whale", "ballena", "spouting"],
     "🐋": ["whale", "ballena"],
     "🐬": ["dolphin", "delfin"],
@@ -471,7 +471,7 @@ EMOJI_KEYWORDS = {
     "🦐": ["shrimp", "camaron", "gamba"],
     "🦑": ["squid", "calamar"],
     
-    # Animales - Insectos
+    # Animals - Insects
     "🐌": ["snail", "caracol", "slow"],
     "🦋": ["butterfly", "mariposa", "pretty"],
     "🐛": ["bug", "gusano", "caterpillar", "oruga"],
@@ -486,7 +486,7 @@ EMOJI_KEYWORDS = {
     "🦂": ["scorpion", "escorpion", "alacran"],
     "🦟": ["mosquito", "zancudo"],
     
-    # Plantas y flores
+    # Plants and flowers
     "💐": ["bouquet", "flowers", "ramo", "flores"],
     "🌸": ["cherry blossom", "sakura", "flower", "pink"],
     "💮": ["white flower", "flor", "japanese"],
@@ -513,7 +513,7 @@ EMOJI_KEYWORDS = {
     "🍄": ["mushroom", "hongo", "champiñon", "seta"],
     "🌰": ["chestnut", "castaña", "nut"],
     
-    # Frutas
+    # Fruits
     "🍇": ["grapes", "uvas", "wine", "fruit"],
     "🍈": ["melon", "melon", "fruit"],
     "🍉": ["watermelon", "sandia", "summer", "fruit"],
@@ -535,7 +535,7 @@ EMOJI_KEYWORDS = {
     "🥥": ["coconut", "coco", "tropical"],
     "🥑": ["avocado", "aguacate", "palta", "guacamole"],
     
-    # Verduras
+    # Vegetables
     "🍆": ["eggplant", "berenjena", "vegetable"],
     "🥔": ["potato", "papa", "patata"],
     "🥕": ["carrot", "zanahoria", "vegetable"],
@@ -550,7 +550,7 @@ EMOJI_KEYWORDS = {
     "🥜": ["peanuts", "mani", "cacahuate"],
     "🫘": ["beans", "frijoles", "porotos"],
     
-    # Comida preparada
+    # Prepared food
     "🍞": ["bread", "pan", "food"],
     "🥐": ["croissant", "cuernito", "french", "breakfast"],
     "🥖": ["baguette", "bread", "pan", "french"],
@@ -604,7 +604,7 @@ EMOJI_KEYWORDS = {
     "🥡": ["takeout", "chinese", "box"],
     "🦪": ["oyster", "ostra", "seafood"],
     
-    # Postres
+    # Desserts
     "🍦": ["ice cream", "helado", "soft serve"],
     "🍧": ["shaved ice", "raspado"],
     "🍨": ["ice cream", "helado", "dessert"],
@@ -620,7 +620,7 @@ EMOJI_KEYWORDS = {
     "🍮": ["custard", "flan", "pudding", "dessert"],
     "🍯": ["honey", "miel", "pot"],
     
-    # Bebidas
+    # Drinks
     "🍼": ["baby bottle", "biberon", "milk"],
     "🥛": ["milk", "leche", "glass"],
     "☕": ["coffee", "cafe", "hot", "drink"],
@@ -642,7 +642,7 @@ EMOJI_KEYWORDS = {
     "🧉": ["mate", "argentina", "drink"],
     "🧊": ["ice", "hielo", "cold", "cube"],
     
-    # Objetos cotidianos
+    # Everyday objects
     "💻": ["laptop", "computer", "computadora", "portatil"],
     "🖥️": ["desktop", "computer", "pc", "monitor"],
     "📱": ["phone", "telefono", "celular", "mobile", "smartphone"],
@@ -804,7 +804,7 @@ EMOJI_KEYWORDS = {
     "🪧": ["placard", "sign", "letrero"],
     "🏧": ["atm", "cajero", "bank"],
     
-    # Transporte
+    # Transport
     "🚗": ["car", "carro", "coche", "auto"],
     "🚕": ["taxi", "cab", "yellow"],
     "🚙": ["suv", "car", "truck"],
@@ -854,7 +854,7 @@ EMOJI_KEYWORDS = {
     "🚀": ["rocket", "cohete", "space", "launch"],
     "🛸": ["ufo", "alien", "flying saucer"],
     
-    # Lugares y edificios
+    # Places and buildings
     "🏠": ["house", "casa", "home"],
     "🏡": ["house garden", "casa", "home"],
     "🏢": ["office", "oficina", "building"],
@@ -893,7 +893,7 @@ EMOJI_KEYWORDS = {
     "🎡": ["ferris wheel", "rueda", "fair"],
     "🎢": ["roller coaster", "montaña rusa", "thrill"],
     
-    # Deportes
+    # Sports
     "🏀": ["basketball", "basquetbol", "ball"],
     "🏈": ["football", "american", "nfl"],
     "⚾": ["baseball", "ball", "mlb"],
@@ -942,7 +942,7 @@ EMOJI_KEYWORDS = {
     "🎟️": ["admission ticket", "boleto", "entry"],
     "🎪": ["circus", "circo", "tent"],
     
-    # Música y entretenimiento
+    # Music and entertainment
     "🎭": ["theater", "teatro", "drama", "masks"],
     "🎨": ["art", "arte", "palette", "paint"],
     "🎬": ["clapper", "movie", "film", "cine"],
@@ -964,7 +964,7 @@ EMOJI_KEYWORDS = {
     "🕹️": ["joystick", "game", "arcade"],
     "🎰": ["slot machine", "casino", "gamble"],
     
-    # Celebraciones
+    # Celebrations
     "🎀": ["ribbon", "lazo", "gift", "bow"],
     "🎁": ["gift", "regalo", "present", "birthday"],
     "🎄": ["christmas tree", "arbol navidad", "holiday"],
@@ -990,7 +990,7 @@ EMOJI_KEYWORDS = {
     "🦌": ["deer", "venado", "reindeer", "christmas"],
     "🎴": ["flower cards", "hanafuda", "japanese"],
     
-    # Clima y cielo
+    # Weather and sky
     "🌍": ["earth", "tierra", "globe", "europe", "africa"],
     "🌎": ["earth", "tierra", "globe", "americas"],
     "🌏": ["earth", "tierra", "globe", "asia"],
@@ -1029,7 +1029,7 @@ EMOJI_KEYWORDS = {
     "🏜️": ["desert", "desierto", "sand"],
     "🏝️": ["island", "isla", "tropical", "palm"],
     
-    # Símbolos religiosos
+    # Religious symbols
     "☮️": ["peace", "peace symbol", "hippie"],
     "✝️": ["cross", "christian", "religion", "jesus"],
     "☪️": ["star crescent", "islam", "muslim", "religion"],
@@ -1042,7 +1042,7 @@ EMOJI_KEYWORDS = {
     "☦️": ["orthodox cross", "christian", "religion"],
     "🛐": ["place worship", "pray", "religion"],
     
-    # Zodíaco
+    # Zodiac
     "⛎": ["ophiuchus", "zodiac", "astrology"],
     "♈": ["aries", "zodiac", "astrology", "ram"],
     "♉": ["taurus", "zodiac", "astrology", "bull"],
@@ -1057,7 +1057,7 @@ EMOJI_KEYWORDS = {
     "♒": ["aquarius", "zodiac", "astrology", "water"],
     "♓": ["pisces", "zodiac", "astrology", "fish"],
     
-    # Símbolos varios
+    # Miscellaneous symbols
     "🆔": ["id", "identity", "identification"],
     "⚛️": ["atom", "science", "physics", "nuclear"],
     "🉑": ["accept", "japanese", "ok"],
@@ -1066,7 +1066,7 @@ EMOJI_KEYWORDS = {
     "📴": ["mobile off", "phone off", "silent"],
     "📳": ["vibration", "phone", "mobile"],
     
-    # Relojes
+    # Clocks
     "🕛": ["twelve oclock", "clock", "time", "12"],
     "🕧": ["twelve thirty", "clock", "time", "12:30"],
     "🕐": ["one oclock", "clock", "time", "1"],
@@ -1099,7 +1099,7 @@ EMOJI_KEYWORDS = {
     "⏲️": ["timer clock", "time", "countdown", "cooking"],
     "🕰️": ["mantelpiece clock", "time", "antique"],
     
-    # Clima
+    # Weather
     "🌡️": ["thermometer", "temperature", "weather", "fever"],
     "⛈️": ["thunderstorm", "rain", "weather", "lightning"],
     "🌩️": ["lightning", "thunder", "storm", "weather"],
@@ -1110,7 +1110,7 @@ EMOJI_KEYWORDS = {
     "🌥️": ["sun behind cloud", "cloudy", "weather"],
     "☁️": ["cloud", "cloudy", "weather", "overcast"],
     
-    # Flechas y símbolos
+    # Arrows and symbols
     "↩️": ["back arrow", "return", "undo"],
     "↪️": ["forward arrow", "redo", "next"],
     "⚡": ["lightning", "bolt", "electricity", "power", "fast", "zap"],
@@ -1141,14 +1141,14 @@ EMOJI_KEYWORDS = {
     "🔷": ["blue diamond", "large"],
     "🔸": ["orange diamond", "small"],
     "🔹": ["blue diamond", "small"],
-    # Emojis de transporte (faltantes)
+    # Transport emojis (missing)
     "🚂": ["locomotive", "train", "steam", "locomotora", "tren", "vapor"],
     "🚃": ["railway car", "train", "wagon", "vagon", "tren"],
     "🚄": ["high speed train", "bullet train", "tren alta velocidad", "shinkansen"],
-    # Emojis de clima (faltantes)
+    # Weather emojis (missing)
     "🔥": ["fire", "flame", "hot", "fuego", "llama", "caliente", "lit"],
     "🌈": ["rainbow", "arcoiris", "arco iris", "colors", "colores"],
-    # Emojis de símbolos (faltantes)
+    # Symbol emojis (missing)
     "💫": ["dizzy", "star", "estrella", "mareado", "sparkle"],
     "💥": ["collision", "boom", "explosion", "bang", "colision", "choque"],
     "💢": ["anger", "angry", "enojo", "enfado", "ira"],
@@ -1168,8 +1168,8 @@ EMOJI_KEYWORDS = {
 
 def search_emojis(query, emoji_list):
     """
-    Busca emojis que coincidan con la query.
-    Retorna una lista de emojis que coinciden.
+    Search for emojis matching the query.
+    Return a list of matching emojis.
     """
     if not query:
         return emoji_list
@@ -1178,7 +1178,7 @@ def search_emojis(query, emoji_list):
     results = []
     
     for emoji in emoji_list:
-        # Buscar en keywords
+        # Search in keywords
         keywords = EMOJI_KEYWORDS.get(emoji, [])
         if any(query in keyword.lower() for keyword in keywords):
             results.append(emoji)

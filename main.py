@@ -17,35 +17,35 @@ def main():
     except Exception:
         pass
     
-    # Parsear argumentos de línea de comandos
+    # Parse command line arguments
     parser = argparse.ArgumentParser(description='Petra Clipboard Manager')
     parser.add_argument('--hidden', action='store_true', 
-                        help='Iniciar con la ventana oculta (para autostart)')
+                        help='Start with hidden window (for autostart)')
     args = parser.parse_args()
     
     app = QApplication(sys.argv)
-    # Importante: No cerrar la aplicación cuando se cierra la ventana (se minimiza)
+    # Important: Do not close application when window is closed (it is minimized)
     app.setQuitOnLastWindowClosed(False)
     app.setStyle('Fusion')
     
-    # Establecer el icono de la aplicación ANTES de configurar el nombre
-    # Esto es importante para que algunos entornos de escritorio lo detecten correctamente
+    # Set application icon BEFORE configuring name
+    # This is important for some desktop environments to detect it correctly
     icon = QIcon()
     icon_base = Path(__file__).parent / "icons"
     flatpak_base = Path("/app/share/icons/hicolor")
     
-    # Añadir múltiples tamaños al ícono para mejor compatibilidad
+    # Add multiple icon sizes for better compatibility
     icon_sizes = [16, 32, 48, 64, 128, 256]
     icon_loaded = False
     
-    # Primero intentar cargar desde la carpeta local de desarrollo
+    # First try loading from local development folder
     for size in icon_sizes:
         png_path = icon_base / f"petra-{size}.png"
         if png_path.exists():
             icon.addFile(str(png_path), QSize(size, size))
             icon_loaded = True
     
-    # Si no se encontraron los tamaños específicos, usar el PNG o SVG general
+    # If no specific sizes found, use general PNG or SVG
     if not icon_loaded:
         if (icon_base / "petra.png").exists():
             icon.addFile(str(icon_base / "petra.png"))
@@ -54,7 +54,7 @@ def main():
             icon.addFile(str(icon_base / "petra.svg"))
             icon_loaded = True
     
-    # Si no se encontró localmente, buscar en rutas de Flatpak
+    # If not found locally, search in Flatpak paths
     if not icon_loaded:
         flatpak_paths = [
             flatpak_base / "scalable/apps/io.github.petra.svg",
@@ -66,22 +66,22 @@ def main():
                 icon_loaded = True
                 break
     
-    # Establecer el ícono en la aplicación
+    # Set the icon in the application
     if icon_loaded:
         app.setWindowIcon(icon)
     
-    # Establecer el nombre de la aplicación y el archivo desktop para asociación de iconos
-    # Esto es crítico para que el sistema de escritorio muestre el ícono correcto
+    # Set application name and desktop file for icon association
+    # This is critical for the desktop system to show the correct icon
     app.setApplicationName("Petra")
     app.setDesktopFileName("io.github.petra")
     
-    # Manejar Ctrl+C correctamente
+    # Handle Ctrl+C correctly
     import signal
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
     window = PetraClipboard()
     
-    # Solo mostrar la ventana si no se inició con --hidden
+    # Only show window if not started with --hidden
     if not args.hidden:
         window.show()
     

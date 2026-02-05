@@ -40,11 +40,11 @@ def ensure_emoji_presentation(emoji):
     Asegura que el emoji use presentación gráfica (colorida) en lugar de texto.
     Agrega el selector de variación U+FE0F si es necesario.
     """
-    # Si ya termina con el selector de variación emoji, retornar como está
+    # If it already ends with emoji variation selector, return as is
     if emoji.endswith('\uFE0F'):
         return emoji
     
-    # Lista de emojis que comúnmente se renderizan como texto sin el selector
+    # List of emojis that commonly render as text without the selector
     text_style_emojis = {
         '☺', '☹', '☠', '✋', '✌', '☝', '✍', '❤', '♈', '♉', '♊', '♋',
         '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '⛎', '☮', '✝', '☪',
@@ -54,10 +54,10 @@ def ensure_emoji_presentation(emoji):
         '❗', '▪', '▫', '◾', '◽', '◼', '◻', '⬛', '⬜', '⭐', '⭕',
     }
     
-    # Obtener el primer carácter base (sin modificadores)
+    # Get the first base character (without modifiers)
     base_char = emoji[0] if emoji else ''
     
-    # Si es un emoji que tiende a mostrarse como texto, agregar selector
+    # If it is an emoji that tends to show as text, add selector
     if base_char in text_style_emojis:
         return emoji + '\uFE0F'
     
@@ -110,7 +110,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.setCentralWidget(central)
         
         main_layout = QVBoxLayout(central)
-        # Margen inferior para que las esquinas redondeadas del main_window sean visibles
+        # Bottom margin so main_window rounded corners are visible
         main_layout.setContentsMargins(0, 0, 0, 12)
         main_layout.setSpacing(0)
         
@@ -152,7 +152,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.clear_btn.pressed.connect(self.start_clear_animation)
         self.clear_btn.released.connect(self.cancel_clear_animation)
         
-        # Botón cerrar CON "X"
+        # Close button WITH "X"
         close_btn = QPushButton("✕")
         close_btn.setObjectName("close_button")
         close_btn.setFixedSize(38, 38)
@@ -189,13 +189,13 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.search_bar.textChanged.connect(self.filter_items)
         self.search_bar.textChanged.connect(self._update_clear_action_visibility)
         
-        # Acción X para limpiar texto (se posiciona DENTRO del search_bar a la derecha)
+        # X action to clear text (positioned INSIDE search_bar on the right)
         self.search_clear_action = QAction(self.search_bar)
         self.search_clear_action.triggered.connect(self._clear_search_text)
         self.search_bar.addAction(self.search_clear_action, QLineEdit.ActionPosition.TrailingPosition)
-        # Ocultar la acción por defecto (se mostrará cuando haya texto)
+        # Hide action by default (will show when there is text)
         self.search_clear_action.setVisible(False)
-        # Actualizar el ícono con el color del tema
+        # Update icon with theme color
         self._update_search_clear_icon()
         
         search_layout.addWidget(self.search_bar)
@@ -209,14 +209,14 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         if not hasattr(self, 'search_clear_action'):
             return
         
-        # Obtener el color confirm_text del tema actual
+        # Get confirm_text color from current theme
         try:
             theme_colors = self.themes_manager.get_theme_colors()
             text_color = theme_colors.get('confirm_text', '#FFFFFF')
         except Exception:
             text_color = '#FFFFFF'
         
-        # Crear un pixmap con la X dibujada en el color del tema
+        # Create a pixmap with X drawn in theme color
         size = 16
         pixmap = QPixmap(size, size)
         pixmap.fill(Qt.GlobalColor.transparent)
@@ -419,7 +419,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         """Posicionar la ventana a la izquierda de la pantalla con margen"""
         try:
             screen = QApplication.primaryScreen().geometry()
-            margin = 200  # Margen desde el borde izquierdo
+            margin = 200  # Margin from left edge
             x = margin
             y = (screen.height() - self.height()) // 2
             self.move(x, y)
@@ -430,7 +430,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         """Posicionar la ventana a la derecha de la pantalla con margen"""
         try:
             screen = QApplication.primaryScreen().geometry()
-            margin = 200  # Margen desde el borde derecho
+            margin = 200  # Margin from right edge
             x = screen.width() - self.width() - margin
             y = (screen.height() - self.height()) // 2
             self.move(x, y)
@@ -444,11 +444,11 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             cursor_pos = QCursor.pos()
             screen = QApplication.primaryScreen().geometry()
             
-            # Calcular posición para que la ventana no salga de la pantalla
+            # Calculate position so window does not go off screen
             x = cursor_pos.x() - self.width() // 2
-            y = cursor_pos.y() - 20  # Un poco arriba del cursor
+            y = cursor_pos.y() - 20  # A little above the cursor
             
-            # Asegurar que no salga de los bordes
+            # Ensure it does not go off edges
             if x < 0:
                 x = 0
             elif x + self.width() > screen.width():
@@ -461,7 +461,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             
             self.move(x, y)
         except Exception:
-            # Fallback al centro si hay error
+            # Fallback to center if error
             self.center_window()
     
     def closeEvent(self, event):
@@ -500,7 +500,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     
     def _do_refresh_ui(self):
         """Actual UI refresh logic"""
-        # Si estamos en el filtro de emojis, mostrar el picker en lugar de clips
+        # If we are in emoji filter, show picker instead of clips
         if getattr(self, 'current_filter', None) == 'emoji':
             search_query = self.search_bar.text() if hasattr(self, 'search_bar') else ""
             self.show_emoji_picker(search_query)
@@ -630,7 +630,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         widget.double_clicked.connect(self.paste_and_close)
         widget.delete_requested.connect(lambda: self.delete_clip(clip))
         widget.pin_toggled.connect(lambda: self.toggle_pin(clip))
-        # Conectar señal para vista previa de imagen
+        # Connect signal for image preview
         if clip['type'] == 'image':
             widget.image_preview_requested.connect(self.show_image_preview)
         
@@ -638,7 +638,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.content_layout.insertWidget(self.content_layout.count() - 1, container)
     
     def delete_clip(self, clip):
-        # Si es una imagen fijada, remover su hash del set
+        # If it is a pinned image, remove its hash from set
         if clip['type'] == 'image' and clip['pinned']:
             if hasattr(self, '_image_hashes') and clip['content'] in self._image_hashes:
                 image_hash = self._image_hashes[clip['content']]
@@ -653,7 +653,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     def toggle_pin(self, clip):
         clip['pinned'] = not clip['pinned']
         
-        # Si es una imagen, actualizar el set de hashes fijados
+        # If it is an image, update pinned hashes set
         if clip['type'] == 'image' and hasattr(self, '_image_hashes'):
             image_hash = self._image_hashes.get(clip['content'])
             if image_hash:
@@ -677,17 +677,17 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             content: La clave del contenido de la imagen en clipboard_images
         """
         try:
-            # Verificar que la imagen existe en el cache
+            # Verify image exists in cache
             if content not in self.clipboard_images:
                 return
             
-            # Importar el diálogo de vista previa
+            # Import preview dialog
             from dialogs import ImagePreviewDialog
             
-            # Obtener la imagen original
+            # Get original image
             image = self.clipboard_images[content]
             
-            # Crear y mostrar el diálogo
+            # Create and show dialog
             preview_dialog = ImagePreviewDialog(image, self)
             preview_dialog.exec()
             
@@ -696,12 +696,12 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
 
     def set_filter(self, filter_id):
         self.current_filter = filter_id
-        # Resetear selección de emoji reciente al cambiar filtro
+        # Reset recent emoji selection when changing filter
         self.selected_recent_emoji_index = -1
-        # Resetear estado de selección de teclado para evitar resaltado incorrecto
+        # Reset keyboard selection state to avoid incorrect highlighting
         self._selected_content = None
         self._keyboard_selection_active = False
-        # Limpiar estado 'copied' de todos los clips para evitar que aparezcan destacados
+        # Clear 'copied' state from all clips to avoid them appearing highlighted
         for c in self.clips:
             c['copied'] = False
         self.update_filter_styles()
@@ -720,7 +720,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.themes_manager.apply_theme_to_widget(self)
 
     def filter_items(self):
-        # Si estamos en el filtro de emojis, actualizar el picker con la búsqueda
+        # If we are in emoji filter, update picker with search
         if getattr(self, 'current_filter', None) == 'emoji':
             search_query = self.search_bar.text() if hasattr(self, 'search_bar') else ""
             self.show_emoji_picker(search_query)
@@ -740,17 +740,17 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         
         emoji_font_name = get_emoji_font()
         
-        # === TABLA PEQUEÑA DE RECIENTES (2 filas x 8 columnas) ===
+        # === SMALL RECENT TABLE (2 rows x 8 columns) ===
         recent_widget = QWidget()
         recent_grid = QGridLayout(recent_widget)
         recent_grid.setSpacing(8)
         recent_grid.setContentsMargins(0, 0, 0, 0)
         
-        # Crear 16 slots vacíos (2 filas x 8 columnas)
+        # Create 16 empty slots (2 rows x 8 columns)
         recent_emojis = getattr(self, 'recent_emojis', [])[:16]
-        self.recent_emoji_buttons = []  # Guardar referencia a los botones
-        self.selected_recent_emoji_index = -1  # Índice del emoji seleccionado (-1 = ninguno)
-        self._emoji_keyboard_nav_active = False  # Flag para detectar navegación por teclado
+        self.recent_emoji_buttons = []  # Save reference to buttons
+        self.selected_recent_emoji_index = -1  # Selected emoji index (-1 = none)
+        self._emoji_keyboard_nav_active = False  # Flag to detect keyboard navigation
         
         for i in range(16):
             row = i // 8
@@ -766,12 +766,12 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 display_emoji = ensure_emoji_presentation(emoji)
                 btn.setText(display_emoji)
                 btn.clicked.connect(lambda checked, e=emoji: self.insert_emoji(e))
-                # Detectar mouse enter para desactivar resaltado de teclado
+                # Detect mouse enter to disable keyboard highlight
                 btn.enterEvent = lambda event, idx=i: self._on_emoji_mouse_enter(event, idx)
                 if emoji_font_name:
                     btn.setFont(QFont(emoji_font_name, 24))
             else:
-                # Slot vacío con estilo más tenue
+                # Empty slot with dimmer style
                 btn.setEnabled(False)
                 btn.setStyleSheet("QPushButton { background-color: #2a2a2a; border: 1px dashed #444; }")
             
@@ -780,16 +780,16 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         
         emoji_layout.addWidget(recent_widget)
         
-        # Separador visual
+        # Visual separator
         separator = QWidget()
         separator.setFixedHeight(1)
         separator.setStyleSheet("background-color: #444;")
         emoji_layout.addWidget(separator)
         emoji_layout.addSpacing(8)
         
-        # === SECCIÓN PRINCIPAL DE EMOJIS ===
+        # === MAIN EMOJIS SECTION ===
         if search_query:
-            # Si hay búsqueda, mostrar resultados en grid simple (sin acordeones)
+            # If there is search, show results in simple grid (no accordions)
             emojis = search_emojis(search_query, ALL_EMOJIS)
             if emojis:
                 grid_widget = QWidget()
@@ -798,7 +798,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 self._populate_emoji_grid(emojis, grid, emoji_font_name)
                 emoji_layout.addWidget(grid_widget)
             else:
-                # Si no hay resultados, mostrar mensaje según idioma
+                # If no results, show message according to language
                 lang = getattr(self, 'language', 'es')
                 if lang == 'es':
                     msg = f"No se encontraron emojis para '{search_query}'"
@@ -809,13 +809,13 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 no_results.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 emoji_layout.addWidget(no_results)
         else:
-            # Sin búsqueda: mostrar cuadrícula de categorías (2 filas x 8 columnas)
+            # No search: show category grid (2 rows x 8 columns)
             categories_widget = QWidget()
             categories_grid = QGridLayout(categories_widget)
             categories_grid.setSpacing(8)
             categories_grid.setContentsMargins(0, 0, 0, 0)
             
-            # Contenedor para el contenido expandido de la categoría seleccionada
+            # Container for expanded content of selected category
             self._emoji_category_content = QWidget()
             self._emoji_category_content.setVisible(False)
             self._emoji_category_content_layout = QGridLayout(self._emoji_category_content)
@@ -824,15 +824,15 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             self._current_category_btn = None
             self._category_populated = {}
             
-            # Crear botones de categoría en cuadrícula 2x8
+            # Create category buttons in 2x8 grid
             category_items = list(EMOJI_CATEGORIES.items())
-            self._category_buttons = []  # Guardar referencia a los botones
+            self._category_buttons = []  # Save reference to buttons
             
             for i, (category_name, category_emojis) in enumerate(category_items[:16]):
                 row = i // 8
                 col = i % 8
                 
-                # Extraer el emoji representativo del nombre de la categoría
+                # Extract representative emoji from category name
                 representative_emoji = category_name.split()[0]
                 display_emoji = ensure_emoji_presentation(representative_emoji)
                 
@@ -841,7 +841,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 btn.setFixedSize(50, 50)
                 btn.setCursor(Qt.CursorShape.PointingHandCursor)
                 btn.setCheckable(True)
-                # Usar la misma fuente de emoji colorida
+                # Use the same colorful emoji font
                 if emoji_font_name:
                     btn.setFont(QFont(emoji_font_name, 16))
                 btn.setStyleSheet("""
@@ -855,7 +855,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                     }
                 """)
                 
-                # Aplicar efecto de opacidad (empieza apagado)
+                # Apply opacity effect (starts off)
                 opacity_effect = QGraphicsOpacityEffect(btn)
                 opacity_effect.setOpacity(0.4)
                 btn.setGraphicsEffect(opacity_effect)
@@ -872,11 +872,11 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     
     def _toggle_emoji_category(self, category_name, emojis, btn, emoji_font_name):
         """Expande o colapsa una categoría de emojis."""
-        # Si el mismo botón se clickea de nuevo, colapsar
+        # If the same button is clicked again, collapse
         if self._current_category_btn == btn and self._emoji_category_content.isVisible():
             self._emoji_category_content.setVisible(False)
             btn.setChecked(False)
-            # Restaurar opacidad baja al colapsar
+            # Restore low opacity when collapsing
             effect = btn.graphicsEffect()
             if effect:
                 effect.setOpacity(0.4)
@@ -893,11 +893,11 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             self._current_category_btn = None
             return
         
-        # Actualizar opacidad y estilos de todos los botones
+        # Update opacity and styles of all buttons
         for cat_btn in getattr(self, '_category_buttons', []):
             effect = cat_btn.graphicsEffect()
             if cat_btn == btn:
-                # Botón activo: opacidad completa y borde azul
+                # Active button: full opacity and blue border
                 if effect:
                     effect.setOpacity(1.0)
                 cat_btn.setStyleSheet("""
@@ -912,7 +912,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 """)
                 cat_btn.setChecked(True)
             else:
-                # Botones inactivos: opacidad baja
+                # Inactive buttons: low opacity
                 if effect:
                     effect.setOpacity(0.4)
                 cat_btn.setStyleSheet("""
@@ -927,16 +927,16 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 """)
                 cat_btn.setChecked(False)
         
-        # Limpiar contenido anterior
+        # Clear previous content
         while self._emoji_category_content_layout.count():
             item = self._emoji_category_content_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
         
-        # Poblar con los emojis de la categoría
+        # Populate with category emojis
         self._populate_emoji_grid(emojis, self._emoji_category_content_layout, emoji_font_name)
         
-        # Mostrar y actualizar estado
+        # Show and update status
         self._emoji_category_content.setVisible(True)
         self._current_category_btn = btn
     
@@ -965,7 +965,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         clipboard = QApplication.clipboard()
         clipboard.setText(emoji)
         
-        # Agregar a recientes
+        # Add to recent
         if not hasattr(self, 'recent_emojis'):
             self.recent_emojis = []
         if emoji in self.recent_emojis:
@@ -992,13 +992,13 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             icon = QIcon()
             icon_base = Path(__file__).parent / "icons"
             
-            # Añadir múltiples tamaños
+            # Add multiple sizes
             for size in [16, 32, 48, 64, 128, 256]:
                 png_path = icon_base / f"petra-{size}.png"
                 if png_path.exists():
                     icon.addFile(str(png_path), QSize(size, size))
             
-            # Si no hay tamaños específicos, usar el general
+            # If no specific sizes, use general
             if icon.isNull():
                 if (icon_base / "petra.png").exists():
                     icon.addFile(str(icon_base / "petra.png"))
@@ -1015,11 +1015,11 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
 
     def show_window(self):
         """Mostrar ventana centrada o en posición del mouse según configuración"""
-        # Re-establecer el ícono antes de mostrar la ventana
+        # Restore icon before showing window
         self._ensure_window_icon()
         
         try:
-            # Guardar ventana activa actual
+            # Save current active window
             if self.display_server == 'x11' and self.detector.is_tool_available('xdotool'):
                 proc = subprocess.run(['xdotool', 'getactivewindow'], 
                                     capture_output=True, text=True, timeout=0.2)
@@ -1028,7 +1028,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         except Exception:
             self.last_active_window = None
 
-        # Posicionar ventana según configuración
+        # Position window according to configuration
         open_pos = getattr(self, 'open_position', 'mouse')
         if open_pos == 'mouse':
             self.position_at_mouse()
@@ -1042,17 +1042,17 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.activateWindow()
         self.raise_()
         
-        # Re-establecer el ícono después de mostrar (algunos compositores lo requieren)
+        # Restore icon after showing (some compositors require it)
         QTimer.singleShot(50, self._ensure_window_icon)
         # Keyboard selection mode should be inactive when window first appears
         # (no item highlighted). We'll clear visual selection hints here and
         # only enable keyboard selection when a keypress is detected.
         try:
             self._keyboard_selection_active = False
-            # Limpiar estado 'copied' del modelo de datos
+            # Clear 'copied' state from data model
             for c in getattr(self, 'clips', []):
                 c['copied'] = False
-            # Resetear todos los estados visuales de los widgets
+            # Reset all widget visual states
             for w in self.findChildren(ClipItem):
                 try:
                     w.setProperty('selected', 'false')
@@ -1078,7 +1078,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             pass
         # self.search_bar.setFocus()  # Removed autofocus from search bar
         
-        # Crear archivo de estado de visibilidad
+        # Create visibility state file
         try:
             visibility_file = Path("/tmp/petra_visible")
             visibility_file.touch()
@@ -1186,13 +1186,13 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 except Exception:
                     pass
                 
-                # Ignorar eventos de teclas modificadoras solas (Alt, Ctrl, etc.)
-                # para evitar activar la navegación por teclado durante Alt+Tab
+                # Ignore modifier key events alone (Alt, Ctrl, etc.)
+                # to avoid activating keyboard navigation during Alt+Tab
                 from PyQt6.QtCore import Qt
                 key = event.key()
                 modifiers_only = key in (Qt.Key.Key_Alt, Qt.Key.Key_Control, Qt.Key.Key_Shift, 
                                          Qt.Key.Key_Meta, Qt.Key.Key_Tab)
-                # También ignorar si Alt está presionado (Alt+Tab para cambiar ventana)
+                # Also ignore if Alt is pressed (Alt+Tab to switch window)
                 alt_pressed = event.modifiers() & Qt.KeyboardModifier.AltModifier
                 
                 if modifiers_only or alt_pressed:
@@ -1229,17 +1229,17 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                     except Exception:
                         pass
                 
-                # Escape -> comportamiento en 3 pasos para navegación por teclado:
-                # 1) Si hay texto en el buscador -> borrarlo
-                # 2) Si el buscador tiene foco (pero está vacío) -> quitar el foco
-                # 3) Si el buscador no tiene foco -> cerrar/ocultar la ventana
+                # Escape -> 3-step behavior for keyboard navigation:
+                # 1) If there is text in the search -> clear it
+                # 2) If search has focus (but is empty) -> clear focus
+                # 3) If search does not have focus -> close/hide window
                 if k == Qt.Key.Key_Escape:
                     try:
                         focus = QApplication.focusWidget()
                         search_has_focus = hasattr(self, 'search_bar') and focus is self.search_bar
                         search_has_text = hasattr(self, 'search_bar') and self.search_bar.text()
                         
-                        # Paso 1: Si hay texto en el buscador, borrarlo
+                        # Step 1: If there is text in search, clear it
                         if search_has_text:
                             self.search_bar.clear()
                             try:
@@ -1248,7 +1248,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                                 pass
                             return True
                         
-                        # Paso 2: Si el buscador tiene foco (pero está vacío), quitar el foco
+                        # Step 2: If search has focus (but is empty), clear focus
                         if search_has_focus:
                             self.search_bar.clearFocus()
                             try:
@@ -1257,7 +1257,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                                 pass
                             return True
                         
-                        # Paso 3: El buscador no tiene foco -> cerrar la ventana
+                        # Step 3: Search does not have focus -> close window
                         self.hide()
                         try:
                             self._handling_key = False
@@ -1306,7 +1306,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 # Enter/Return -> copy selected clip if any
                 if k == Qt.Key.Key_Return or k == Qt.Key.Key_Enter:
                     try:
-                        # Si estamos en filtro emoji con un emoji reciente seleccionado
+                        # If we are in emoji filter with a recent emoji selected
                         if getattr(self, 'current_filter', None) == 'emoji':
                             selected_idx = getattr(self, 'selected_recent_emoji_index', -1)
                             recent_emojis = getattr(self, 'recent_emojis', [])[:16]
@@ -1492,7 +1492,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         if not getattr(self, 'isVisible', None) or not self.isVisible():
             return
 
-        # Si estamos en el filtro de emoji, navegar por los emojis recientes
+        # If we are in emoji filter, navigate recent emojis
         if getattr(self, 'current_filter', None) == 'emoji':
             self._navigate_recent_emojis(-1)
             return
@@ -1533,7 +1533,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         if not getattr(self, 'isVisible', None) or not self.isVisible():
             return
 
-        # Si estamos en el filtro de emoji, navegar por los emojis recientes
+        # If we are in emoji filter, navigate recent emojis
         if getattr(self, 'current_filter', None) == 'emoji':
             self._navigate_recent_emojis(1)
             return
@@ -1578,19 +1578,19 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         if not recent_emojis:
             return
         
-        # Activar navegación por teclado
+        # Activate keyboard navigation
         self._emoji_keyboard_nav_active = True
         
-        # Número de emojis disponibles (no vacíos)
+        # Number of available emojis (not empty)
         num_available = len(recent_emojis)
         
         current_idx = getattr(self, 'selected_recent_emoji_index', -1)
         
         if current_idx == -1:
-            # No hay selección, seleccionar el primero
+            # No selection, select first
             new_idx = 0
         else:
-            # Mover en la dirección indicada
+            # Move in indicated direction
             new_idx = current_idx + direction
             # Wrap around
             if new_idx < 0:
@@ -1602,7 +1602,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     
     def _on_emoji_mouse_enter(self, event, index):
         """Detectar cuando el mouse entra en un botón de emoji reciente."""
-        # Desactivar navegación por teclado y quitar resaltado
+        # Disable keyboard navigation and remove highlight
         if getattr(self, '_emoji_keyboard_nav_active', False):
             self._emoji_keyboard_nav_active = False
             self._clear_emoji_selection()
@@ -1620,23 +1620,23 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         if not hasattr(self, 'recent_emoji_buttons'):
             return
         
-        # Si no está activa la navegación por teclado, no mostrar selección
+        # If keyboard navigation is not active, do not show selection
         if not getattr(self, '_emoji_keyboard_nav_active', False):
             self.selected_recent_emoji_index = index
             return
         
-        # Obtener colores del tema
+        # Get theme colors
         colors = self.themes_manager.get_theme_colors()
         border_color = colors.get('emoji_selection_border', '#4CAF50')
         bg_color = colors.get('emoji_selection_bg', '#3a3a3a')
         
-        # Quitar selección anterior
+        # Remove previous selection
         old_idx = getattr(self, 'selected_recent_emoji_index', -1)
         if old_idx >= 0 and old_idx < len(self.recent_emoji_buttons):
             old_btn = self.recent_emoji_buttons[old_idx]
-            old_btn.setStyleSheet("")  # Restaurar estilo normal
+            old_btn.setStyleSheet("")  # Restore normal style
         
-        # Aplicar nueva selección
+        # Apply new selection
         if index >= 0 and index < len(self.recent_emoji_buttons):
             btn = self.recent_emoji_buttons[index]
             if btn.isEnabled():
