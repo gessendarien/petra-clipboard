@@ -595,8 +595,9 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     def update_styles_recursive(self, widget):
         try:
             self.themes_manager.apply_theme_to_widget(widget)
+            # findChildren finds all descendants recursively, so we just need to iterate once
             for child in widget.findChildren(QWidget):
-                self.update_styles_recursive(child)
+                self.themes_manager.apply_theme_to_widget(child)
         except Exception:
             pass
     
