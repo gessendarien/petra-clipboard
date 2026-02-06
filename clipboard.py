@@ -609,9 +609,26 @@ class ClipboardManager:
             if hasattr(self, 'clear_btn'):
                 self.clear_btn.setProgress(0)
     def clear_all_unpinned(self):
-        """Borrar todos los elementos que no estén pinned"""
-        self.clips = [c for c in self.clips if c['pinned']]
-        pinned_images = [c['content'] for c in self.clips if c['type'] == 'image']
-        self.clipboard_images = {k: v for k, v in self.clipboard_images.items() if k in pinned_images}
+        """Borrar todos los elementos que no estén pinned respetando el filtro actual"""
+        current_filter = getattr(self, 'current_filter', 'all')
+        
+        # Filter logic:
+        # Keep clip IF:
+        # 1. It is pinned
+        # 2. OR (Filter is NOT 'all' AND clip type != filter)
+        
+        new_clips = []
+        for c in self.clips:
+            if c['pinned']:
+                new_clips.append(c)
+            elif current_filter != 'all' and c['type'] != current_filter:
+                new_clips.append(c)
+        
+        self.clips = new_clips
+        
+        # Cleanup images dict to only keep images that are still in self.clips
+        valid_images = {c['content'] for c in self.clips if c['type'] == 'image'}
+        self.clipboard_images = {k: v for k, v in self.clipboard_images.items() if k in valid_images}
+        
         if hasattr(self, 'refresh_ui'):
             self.refresh_ui()
