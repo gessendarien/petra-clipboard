@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLineEdit, QPushButton, QScrollArea, QLabel, 
                              QGridLayout, QSizePolicy, QApplication, QGraphicsOpacityEffect)
-from PyQt6.QtCore import Qt, QTimer, QThreadPool, QSize, QEvent
-from PyQt6.QtGui import QIcon, QPixmap, QFont, QFontDatabase
+from PyQt6.QtCore import Qt, QTimer, QThreadPool, QSize, QEvent, pyqtSignal, QRectF
+from PyQt6.QtGui import QIcon, QPixmap, QFont, QFontDatabase, QPainter, QColor, QBrush, QPen, QRadialGradient, QLinearGradient
 from pathlib import Path
 import os
 import subprocess
@@ -61,7 +61,198 @@ def ensure_emoji_presentation(emoji):
     if base_char in text_style_emojis:
         return emoji + '\uFE0F'
     
+
     return emoji
+
+
+class EmojiCarousel(QWidget):
+    categorySelected = pyqtSignal(str, list)
+
+    def __init__(self, categories, emoji_font_name=None, parent=None):
+        super().__init__(parent)
+        self.categories = categories  # List of (name, emojis)
+        self.current_index = 0
+        self.emoji_font_name = emoji_font_name
+        self.setFixedHeight(50)
+        self.setMouseTracking(True)
+        # Calculate item positions
+        self.item_width = 44
+        self.spacing = 6
+        self.spacing = 6
+        # Animation
+        self.anim_offset = 0.0
+        self.anim_timer = QTimer(self)
+        self.anim_timer.setInterval(16)  # ~60 FPS
+        self.anim_timer.timeout.connect(self._update_animation)
+        
+        # Scroll Sensitivity
+        self._scroll_accumulator = 0
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Draw container background (pill shape)
+        width = self.width()
+        height = self.height()
+        
+        # Draw items
+        center_x = width / 2
+        center_y = height / 2
+        
+        # We show 5 items: current, 2 left, 2 right
+        # But we need to handle cyclic scrolling logic visually if possible, 
+        # or just clamp. The requirement says "scrollable", so let's assume cyclic or bounded.
+        # Given 16 categories, cyclic is nice.
+        
+        num_items = len(self.categories)
+        if num_items == 0:
+            return
+
+        visible_range = 2  # 2 on each side
+        
+        for i in range(-visible_range, visible_range + 1):
+            idx = (self.current_index + i) % num_items
+            category_name, category_emojis = self.categories[idx]
+            
+            # Position relative to center
+            # Apply animation offset
+            # When moving next (anim_offset goes 1 -> 0), items shift left.
+            # When moving prev (anim_offset goes -1 -> 0), items shift right.
+            visual_i = i + self.anim_offset
+            
+            offset_x = visual_i * (self.item_width + self.spacing)
+            x = center_x + offset_x
+            y = center_y
+            
+            # Scale and opacity based on distance from center
+            dist = abs(visual_i)
+            
+            scale = max(0.8, 1.0 - 0.2 * dist)
+            opacity = max(0.6, 1.0 - 0.4 * dist)
+            
+            if dist < 0.5:
+                # Center item (or transitioning to/from it)
+                bg_color = QColor("#A855F7")
+                bg_color.setAlpha(int(255 * (1.0 - dist)))
+                icon_color = QColor("#FFFFFF")
+            else:
+                bg_color = Qt.GlobalColor.transparent
+                icon_color = QColor("#CCCCCC")
+                
+            # Draw Item
+            painter.save()
+            painter.translate(x, y)
+            painter.scale(scale, scale)
+            
+            # Draw background for center item
+            if dist < 0.9: # Show background only when near center
+                path = QRectF(-18, -18, 36, 36)
+                painter.setBrush(QBrush(bg_color))
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawRoundedRect(path, 12, 12)
+                
+                # Add a subtle glow
+                if dist < 0.2:
+                    gradient = QRadialGradient(0, 0, 24)
+                    gradient.setColorAt(0, QColor(168, 85, 247, int(100 * (1.0 - dist*5))))
+                    gradient.setColorAt(1, Qt.GlobalColor.transparent)
+                    # painter.setBrush(QBrush(gradient))
+                    # painter.drawEllipse(-40, -40, 80, 80)
+
+            # Draw Icons/Emoji
+            # Since we don't have separate icons for categories in the description,
+            # we use the first emoji of the category as the icon.
+            representative_emoji = category_name.split()[0] # Name is like "🍔 Comida"
+            display_emoji = ensure_emoji_presentation(representative_emoji)
+            
+            painter.setOpacity(opacity)
+            font = QFont(self.emoji_font_name) if self.emoji_font_name else self.font()
+            font.setPixelSize(22)
+            painter.setFont(font)
+            painter.setPen(QColor("#FFFFFF") if dist < 0.5 else QColor("#888888"))
+
+            # Text rect
+            # Text rect - Apply slight offset to center visually (fonts often display left-heavy)
+            text_rect = QRectF(-16, -18, 36, 36)
+            painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, display_emoji)
+
+            painter.restore()
+
+    def mousePressEvent(self, event):
+        # Allow clicking on side items to select them
+        center_x = self.width() / 2
+        click_x = event.position().x()
+        
+        # Simplified navigation: Click Right -> Next, Click Left -> Prev
+        # Center deadzone to avoid accidental clicks on the selected item
+        deadzone = 20
+        
+        if click_x > center_x + deadzone:
+            self.scroll_next()
+        elif click_x < center_x - deadzone:
+            self.scroll_prev()
+
+    def wheelEvent(self, event):
+        angle = event.angleDelta().y()
+        self._scroll_accumulator += angle
+        
+        # Threshold for scrolling (standard wheel notch is 120)
+        # We require at least one notch or significant touchpad movement
+        threshold = 120
+        
+        if self._scroll_accumulator >= threshold:
+            self.scroll_prev()
+            self._scroll_accumulator = 0
+            # Optional: Keep remainder if you want "momentum" logic, 
+            # but resetting is safer for reducing sensitivity.
+        elif self._scroll_accumulator <= -threshold:
+            self.scroll_next()
+            self._scroll_accumulator = 0
+
+    def start_animation(self, direction):
+        # direction: 1 (next, come from right), -1 (prev, come from left)
+        # We update index immediately, but set offset to visually 'undo' the change
+        # If we go next (idx + 1), we want to appear as if we are at idx, so offset = 1 
+        # (center is at visual 1, which puts it to the right, wait...)
+        
+        # If we move index +1 (Next), the old center is now at -1.
+        # We want to animate from Old Center (now -1) to New Center (0).
+        # So we start offset at 1.0? 
+        # visual_pos = index + offset. 
+        # At start: new_index + offset = old_index
+        # offset = old_index - new_index
+        
+        if direction > 0: # Next
+             self.anim_offset = 1.0
+             self.current_index = (self.current_index + 1) % len(self.categories)
+        else: # Prev
+             self.anim_offset = -1.0
+             self.current_index = (self.current_index - 1) % len(self.categories)
+             
+        self.anim_timer.start()
+        self._emit_selection()
+        self.update()
+
+    def _update_animation(self):
+        # Interpolate anim_offset towards 0
+        if abs(self.anim_offset) < 0.05:
+            self.anim_offset = 0.0
+            self.anim_timer.stop()
+        else:
+            self.anim_offset *= 0.6
+        self.update()
+
+    def scroll_next(self):
+        self.start_animation(1)
+
+    def scroll_prev(self):
+        self.start_animation(-1)
+        
+    def _emit_selection(self):
+        name, emojis = self.categories[self.current_index]
+        self.categorySelected.emit(name, emojis)
+
 
 class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager, GlobalShortcutManager):
     def __init__(self):
@@ -810,123 +1001,42 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 emoji_layout.addWidget(no_results)
         else:
             # No search: show category grid (2 rows x 8 columns)
-            categories_widget = QWidget()
-            categories_grid = QGridLayout(categories_widget)
-            categories_grid.setSpacing(8)
-            categories_grid.setContentsMargins(0, 0, 0, 0)
+            # Custom Carousel
+            categories = list(EMOJI_CATEGORIES.items())
+            self.carousel = EmojiCarousel(categories, emoji_font_name, self)
             
-            # Container for expanded content of selected category
+            # Container for content
             self._emoji_category_content = QWidget()
-            self._emoji_category_content.setVisible(False)
             self._emoji_category_content_layout = QGridLayout(self._emoji_category_content)
             self._emoji_category_content_layout.setSpacing(8)
             self._emoji_category_content_layout.setContentsMargins(5, 10, 5, 10)
-            self._current_category_btn = None
-            self._category_populated = {}
             
-            # Create category buttons in 2x8 grid
-            category_items = list(EMOJI_CATEGORIES.items())
-            self._category_buttons = []  # Save reference to buttons
+            # Nested Scroll Area
+            self.emoji_scroll = QScrollArea()
+            self.emoji_scroll.setWidgetResizable(True)
+            self.emoji_scroll.setWidget(self._emoji_category_content)
+            self.emoji_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            # Remove border/background from scroll area to blend in
+            self.emoji_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
             
-            for i, (category_name, category_emojis) in enumerate(category_items[:16]):
-                row = i // 8
-                col = i % 8
-                
-                # Extract representative emoji from category name
-                representative_emoji = category_name.split()[0]
-                display_emoji = ensure_emoji_presentation(representative_emoji)
-                
-                btn = QPushButton(display_emoji)
-                btn.setObjectName("emoji_category_btn")
-                btn.setFixedSize(50, 50)
-                btn.setCursor(Qt.CursorShape.PointingHandCursor)
-                btn.setCheckable(True)
-                # Use the same colorful emoji font
-                if emoji_font_name:
-                    btn.setFont(QFont(emoji_font_name, 16))
-                btn.setStyleSheet("""
-                    QPushButton#emoji_category_btn {
-                        background-color: #333;
-                        border: none;
-                        border-radius: 6px;
-                    }
-                    QPushButton#emoji_category_btn:hover {
-                        background-color: #444;
-                    }
-                """)
-                
-                # Apply opacity effect (starts off)
-                opacity_effect = QGraphicsOpacityEffect(btn)
-                opacity_effect.setOpacity(0.4)
-                btn.setGraphicsEffect(opacity_effect)
-                
-                self._category_buttons.append(btn)
-                btn.clicked.connect(lambda checked, cat_name=category_name, cat_emojis=category_emojis, b=btn: 
-                                   self._toggle_emoji_category(cat_name, cat_emojis, b, emoji_font_name))
-                categories_grid.addWidget(btn, row, col)
+            # Connect
+            self.carousel.categorySelected.connect(
+                lambda name, emojis: self._on_emoji_category_selected(name, emojis, emoji_font_name)
+            )
             
-            emoji_layout.addWidget(categories_widget)
-            emoji_layout.addWidget(self._emoji_category_content)
+            emoji_layout.addWidget(self.emoji_scroll)
+            emoji_layout.addWidget(self.carousel)
+            
+            # Trigger first selection
+            if categories:
+                 # Populate first category initially
+                 name, emojis = categories[0]
+                 self._on_emoji_category_selected(name, emojis, emoji_font_name)
         
         self.content_layout.insertWidget(0, emoji_container)
     
-    def _toggle_emoji_category(self, category_name, emojis, btn, emoji_font_name):
-        """Expande o colapsa una categoría de emojis."""
-        # If the same button is clicked again, collapse
-        if self._current_category_btn == btn and self._emoji_category_content.isVisible():
-            self._emoji_category_content.setVisible(False)
-            btn.setChecked(False)
-            # Restore low opacity when collapsing
-            effect = btn.graphicsEffect()
-            if effect:
-                effect.setOpacity(0.4)
-            btn.setStyleSheet("""
-                QPushButton#emoji_category_btn {
-                    background-color: #333;
-                    border: none;
-                    border-radius: 6px;
-                }
-                QPushButton#emoji_category_btn:hover {
-                    background-color: #444;
-                }
-            """)
-            self._current_category_btn = None
-            return
-        
-        # Update opacity and styles of all buttons
-        for cat_btn in getattr(self, '_category_buttons', []):
-            effect = cat_btn.graphicsEffect()
-            if cat_btn == btn:
-                # Active button: full opacity and blue border
-                if effect:
-                    effect.setOpacity(1.0)
-                cat_btn.setStyleSheet("""
-                    QPushButton#emoji_category_btn {
-                        background-color: #505050;
-                        border: 2px solid #007AFF;
-                        border-radius: 6px;
-                    }
-                    QPushButton#emoji_category_btn:hover {
-                        background-color: #555;
-                    }
-                """)
-                cat_btn.setChecked(True)
-            else:
-                # Inactive buttons: low opacity
-                if effect:
-                    effect.setOpacity(0.4)
-                cat_btn.setStyleSheet("""
-                    QPushButton#emoji_category_btn {
-                        background-color: #333;
-                        border: none;
-                        border-radius: 6px;
-                    }
-                    QPushButton#emoji_category_btn:hover {
-                        background-color: #444;
-                    }
-                """)
-                cat_btn.setChecked(False)
-        
+    def _on_emoji_category_selected(self, category_name, emojis, emoji_font_name):
+        """Maneja la selección de categoría en el carrusel."""
         # Clear previous content
         while self._emoji_category_content_layout.count():
             item = self._emoji_category_content_layout.takeAt(0)
@@ -936,9 +1046,10 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         # Populate with category emojis
         self._populate_emoji_grid(emojis, self._emoji_category_content_layout, emoji_font_name)
         
-        # Show and update status
-        self._emoji_category_content.setVisible(True)
-        self._current_category_btn = btn
+        # Ensure scroll to top of content
+        if hasattr(self, 'emoji_scroll'):
+            self.emoji_scroll.verticalScrollBar().setValue(0)
+
     
     def _populate_emoji_grid(self, emojis, grid_layout, emoji_font_name):
         """Puebla un grid con botones de emoji."""
