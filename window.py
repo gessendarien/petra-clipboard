@@ -173,8 +173,8 @@ class EmojiCarousel(QWidget):
             painter.setPen(QColor("#FFFFFF") if dist < 0.5 else QColor("#888888"))
 
             # Text rect
-            # Text rect - Apply slight offset to center visually (fonts often display left-heavy)
-            text_rect = QRectF(-16, -18, 36, 36)
+            # Adjusted to center aesthetically (moved Left 1px, Down 2px from original)
+            text_rect = QRectF(-17, -16, 36, 36)
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, display_emoji)
 
             painter.restore()

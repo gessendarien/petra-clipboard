@@ -1121,7 +1121,7 @@ class ThemesManager:
             
             /* ========== ITEM ACTION BUTTONS ========== */
             QPushButton#pin_action_button {{
-                background-color: {colors['pin_button']} !important;
+                background-color: transparent !important;
                 border-radius: 6px;
                 color: {colors['text_primary']} !important;
                 font-size: 16px;
@@ -1129,7 +1129,7 @@ class ThemesManager:
             }}
             
             QPushButton#pin_action_button:hover {{
-                background-color: {colors['pin_hover']} !important;
+                background-color: transparent !important;
             }}
             
             QPushButton#delete_action_button {{

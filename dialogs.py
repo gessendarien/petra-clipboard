@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QSpinBox, QCheckBox, QPushButton, QWidget, QComboBox, QSizePolicy)
+from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, 
+                             QSpinBox, QCheckBox, QPushButton, QWidget, QComboBox, QSizePolicy, QAbstractSpinBox)
 from PyQt6.QtCore import Qt, QSize
 from PyQt6.QtGui import QIcon, QDesktopServices
 from PyQt6.QtCore import QUrl
@@ -101,47 +101,108 @@ class SettingsDialog(QDialog):
         title.setObjectName("settings_title")
         layout.addWidget(title)
 
-        # Language selector
-        lang_row = QWidget()
-        lhl = QHBoxLayout(lang_row)
-        lhl.setContentsMargins(0, 0, 0, 0)
-        lhl.setSpacing(8)
-        
+        # Grid Layout for aligned selects (Language, Theme, Open from, Shortcut)
+        grid_layout = QGridLayout()
+        grid_layout.setSpacing(10)
+        grid_layout.setColumnStretch(1, 0) # Don't stretch input column excessively, use fixed width widgets
+
+        # 1. Language
         self.lang_label = QLabel("")
         self.lang_label.setObjectName("settings_label")
-        lhl.addWidget(self.lang_label)
+        grid_layout.addWidget(self.lang_label, 0, 0)
         
         self.lang_combo = QComboBox()
-        self.lang_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.lang_combo.setMinimumWidth(160)
+        self.lang_combo.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.lang_combo.setFixedWidth(180)
         self.lang_combo.addItem("Español", 'es')
         self.lang_combo.addItem("English", 'en')
-        lhl.addWidget(self.lang_combo)
-        lhl.addStretch()
-        layout.addWidget(lang_row)
+        grid_layout.addWidget(self.lang_combo, 0, 1)
 
-        # Theme selector (NUEVO)
-        theme_row = QWidget()
-        thl = QHBoxLayout(theme_row)
-        thl.setContentsMargins(0, 0, 0, 0)
-        thl.setSpacing(8)
-        
+        # 2. Theme
         self.theme_label = QLabel("Tema:")
         self.theme_label.setObjectName("settings_label")
-        thl.addWidget(self.theme_label)
+        grid_layout.addWidget(self.theme_label, 1, 0)
         
         self.theme_combo = QComboBox()
-        self.theme_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.theme_combo.setMinimumWidth(160)
+        self.theme_combo.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.theme_combo.setFixedWidth(180)
         
         # Add available themes
         themes = self.themes_manager.get_theme_names()
         for theme_id, theme_name in themes:
             self.theme_combo.addItem(theme_name, theme_id)
-            
-        thl.addWidget(self.theme_combo)
-        thl.addStretch()
-        layout.addWidget(theme_row)
+        grid_layout.addWidget(self.theme_combo, 1, 1)
+
+        # 3. Open Position
+        self.open_pos_label = QLabel("Abrir desde:")
+        self.open_pos_label.setObjectName("settings_label")
+        grid_layout.addWidget(self.open_pos_label, 2, 0)
+        
+        self.open_pos_combo = QComboBox()
+        self.open_pos_combo.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.open_pos_combo.setFixedWidth(180)
+        self.open_pos_combo.addItem("Posición del mouse", 'mouse')
+        self.open_pos_combo.addItem("Centro de pantalla", 'center')
+        self.open_pos_combo.addItem("Izquierda de pantalla", 'left')
+        self.open_pos_combo.addItem("Derecha de pantalla", 'right')
+        grid_layout.addWidget(self.open_pos_combo, 2, 1)
+
+        # 4. Shortcut
+        self.shortcut_label = QLabel("Shortcut:")
+        self.shortcut_label.setObjectName("settings_label")
+        grid_layout.addWidget(self.shortcut_label, 3, 0)
+        
+        self.shortcut_combo = QComboBox()
+        self.shortcut_combo.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.shortcut_combo.setFixedWidth(180)
+        
+        # Common shortcuts options
+        common_shortcuts = [
+            "Alt + space",
+            "Alt + v",
+            "Alt + z",
+            "Alt + x",
+            "Alt + c",
+            "Super + v"
+        ]
+        self.shortcut_combo.addItems(common_shortcuts)
+        grid_layout.addWidget(self.shortcut_combo, 3, 1)
+
+        # Align grid to the left
+        grid_container = QWidget()
+        gcl = QHBoxLayout(grid_container)
+        gcl.setContentsMargins(0, 0, 0, 0)
+        gcl.addLayout(grid_layout)
+        gcl.addStretch() # Push everything to the left
+        
+        layout.addWidget(grid_container)
+
+        # 5. Max Images (Row 4)
+        h = QWidget()
+        hl = QHBoxLayout(h)
+        hl.setContentsMargins(0, 0, 0, 0)
+        hl.setSpacing(4) # Tighter spacing for this specific one per request, or standard? 
+                         # User said "el mismo que hay entre Max images... con su input" implies others should match THIS.
+                         # This uses 4px. Others use 10px. 
+                         # Wait, "el espacio... debe ser el mismo que hay entre Max images...". 
+                         # The red line in user image showed a TIGHT gap for Max Images.
+                         # User wants OTHERS to be like Max Images.
+                         # So I should use spacing=4 for ALL.
+
+        self.max_images_label = QLabel("Máx. imágenes en caché:")
+        self.max_images_label.setObjectName("settings_label")
+        hl.addWidget(self.max_images_label)
+        
+        self.max_images_sb = QSpinBox()
+        self.max_images_sb.setRange(1, 100)
+        self.max_images_sb.setFixedWidth(50)
+        self.max_images_sb.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
+        self.max_images_sb.setStyleSheet("padding: 2px;") 
+        
+        hl.addWidget(self.max_images_sb)
+        hl.addStretch()
+
+        layout.addWidget(h)
 
         # Show/Hide clear-all button
         self.show_clear_cb = QCheckBox("Mostrar botón 'Borrar todo' en la cabecera")
@@ -157,55 +218,7 @@ class SettingsDialog(QDialog):
         self.autostart_cb = QCheckBox("Iniciar con el sistema")
         self.autostart_cb.setObjectName("settings_checkbox")
         layout.addWidget(self.autostart_cb)
-
-        # Open position selector
-        open_pos_row = QWidget()
-        ophl = QHBoxLayout(open_pos_row)
-        ophl.setContentsMargins(0, 0, 0, 0)
-        ophl.setSpacing(8)
-        
-        self.open_pos_label = QLabel("Abrir desde:")
-        self.open_pos_label.setObjectName("settings_label")
-        ophl.addWidget(self.open_pos_label)
-        
-        self.open_pos_combo = QComboBox()
-        self.open_pos_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.open_pos_combo.setMinimumWidth(160)
-        self.open_pos_combo.addItem("Posición del mouse", 'mouse')
-        self.open_pos_combo.addItem("Centro de pantalla", 'center')
-        self.open_pos_combo.addItem("Izquierda de pantalla", 'left')
-        self.open_pos_combo.addItem("Derecha de pantalla", 'right')
-        ophl.addWidget(self.open_pos_combo)
-        ophl.addStretch()
-        layout.addWidget(open_pos_row)
-
-        # Shortcut input
-        sc_row = QWidget()
-        scl = QHBoxLayout(sc_row)
-        scl.setContentsMargins(0, 0, 0, 0)
-        scl.setSpacing(8)
-        
-        self.shortcut_label = QLabel("Shortcut:")
-        self.shortcut_label.setObjectName("settings_label")
-        scl.addWidget(self.shortcut_label)
-        
-        self.shortcut_combo = QComboBox()
-        self.shortcut_combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.shortcut_combo.setMinimumWidth(140)
-        
-        # Common shortcuts options
-        common_shortcuts = [
-            "Alt + space",
-            "Alt + v",
-            "Alt + z",
-            "Alt + x",
-            "Alt + c",
-            "Super + v"
-        ]
-        self.shortcut_combo.addItems(common_shortcuts)
-        
-        scl.addWidget(self.shortcut_combo)
-        layout.addWidget(sc_row)
+        layout.addStretch()
 
         # Buttons
         btn_row = QWidget()
@@ -239,22 +252,6 @@ class SettingsDialog(QDialog):
         brl.addWidget(self.close_btn)
         brl.addWidget(self.quit_btn)
 
-        # Max images spinbox (added last before buttons)
-        h = QWidget()
-        hl = QHBoxLayout(h)
-        hl.setContentsMargins(0, 0, 0, 0)
-        hl.setSpacing(8)
-        
-        self.max_images_label = QLabel("Máx. imágenes en caché:")
-        self.max_images_label.setObjectName("settings_label")
-        hl.addWidget(self.max_images_label)
-        
-        self.max_images_sb = QSpinBox()
-        self.max_images_sb.setRange(1, 100)
-        hl.addWidget(self.max_images_sb)
-
-        layout.addWidget(h)
-        layout.addStretch()
         layout.addWidget(btn_row)
 
         self.initialize_values()
