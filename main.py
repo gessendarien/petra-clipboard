@@ -1,12 +1,67 @@
 #!/usr/bin/env python3
 import sys
+import os
 import argparse
 import faulthandler
+import socket
+import threading
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtGui import QIcon
-from PyQt6.QtCore import QSize
+from PyQt6.QtCore import QSize, QTimer
 from window import PetraClipboard
+
+
+# Socket path for single-instance communication
+SOCKET_PATH = os.path.join(
+    os.environ.get('XDG_RUNTIME_DIR', '/tmp'),
+    'petra-clipboard.sock'
+)
+
+
+def send_show_command():
+    """Try to send a SHOW command to an already-running instance.
+    Returns True if the command was sent successfully."""
+    try:
+        client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        client.settimeout(2)
+        client.connect(SOCKET_PATH)
+        client.sendall(b'SHOW')
+        client.close()
+        return True
+    except (ConnectionRefusedError, FileNotFoundError, OSError):
+        return False
+
+
+def start_socket_server(window):
+    """Start a Unix socket server that listens for commands from new instances."""
+    # Clean up stale socket
+    if os.path.exists(SOCKET_PATH):
+        os.unlink(SOCKET_PATH)
+
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server.bind(SOCKET_PATH)
+    server.listen(1)
+    server.settimeout(1)  # Allow periodic checks for app exit
+
+    def listen():
+        while True:
+            try:
+                conn, _ = server.accept()
+                data = conn.recv(1024).decode('utf-8', errors='ignore')
+                conn.close()
+                if data == 'SHOW':
+                    # Use QTimer to safely interact with GUI from this thread
+                    QTimer.singleShot(0, window.show)
+                    QTimer.singleShot(50, window.activateWindow)
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+
+    thread = threading.Thread(target=listen, daemon=True)
+    thread.start()
+    return server
 
 
 def main():
@@ -22,6 +77,11 @@ def main():
     parser.add_argument('--hidden', action='store_true', 
                         help='Start with hidden window (for autostart)')
     args = parser.parse_args()
+    
+    # Single-instance check: try to connect to an existing instance
+    if send_show_command():
+        print("Petra is already running. Bringing existing window to front.")
+        sys.exit(0)
     
     app = QApplication(sys.argv)
     # Important: Do not close application when window is closed (it is minimized)
@@ -80,6 +140,23 @@ def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
     window = PetraClipboard()
+    
+    # Start socket server for single-instance communication
+    sock_server = start_socket_server(window)
+    
+    # Clean up socket on exit
+    def cleanup():
+        try:
+            sock_server.close()
+        except Exception:
+            pass
+        try:
+            if os.path.exists(SOCKET_PATH):
+                os.unlink(SOCKET_PATH)
+        except Exception:
+            pass
+    
+    app.aboutToQuit.connect(cleanup)
     
     # Only show window if not started with --hidden
     if not args.hidden:

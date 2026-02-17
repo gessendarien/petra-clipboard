@@ -124,7 +124,9 @@ class ClipboardManager:
                         # Already marked, do nothing extra
                         pass
             elif mime_data.hasText():
-                self.last_clipboard = mime_data.text()
+                text = mime_data.text()
+                if self._is_valid_text(text):
+                    self.last_clipboard = text
             elif mime_data.hasUrls():
                 urls = mime_data.urls()
                 if urls:
@@ -196,6 +198,8 @@ class ClipboardManager:
                         clip_type = "url"
             elif mime_data.hasText():
                 current = mime_data.text()
+                if not self._is_valid_text(current):
+                    return
                 # Detect the correct type
                 clip_type = self.detect_type(current)
             
@@ -322,6 +326,19 @@ class ClipboardManager:
         
         if old_clips != self.clips:
             self.refresh_ui()
+
+    def _is_valid_text(self, text):
+        """Check if text is valid displayable content (not garbled binary data)."""
+        if not text:
+            return False
+        # Reject if contains Unicode replacement character (U+FFFD)
+        if '\ufffd' in text:
+            return False
+        # Reject if too many non-printable/control characters (except common whitespace)
+        non_printable = sum(1 for c in text if not c.isprintable() and c not in '\n\r\t')
+        if len(text) > 0 and non_printable / len(text) > 0.1:
+            return False
+        return True
 
     def detect_type(self, content):
         # First check if it is a terminal command (has priority over ambiguous URLs)
@@ -589,7 +606,7 @@ class ClipboardManager:
     def start_clear_animation(self):
         """Solo iniciar el timer, el botón ya se marcó como presionado"""
         self.clear_progress = 0
-        self.clear_timer.start(15)
+        self.clear_timer.start(20)
 
     def cancel_clear_animation(self):
         """Solo detener el timer, el botón ya se reseteó"""
@@ -597,7 +614,7 @@ class ClipboardManager:
         self.clear_progress = 0
 
     def update_clear_progress(self):
-        self.clear_progress += 1
+        self.clear_progress += 2
         
         if hasattr(self, 'clear_btn'):
             self.clear_btn.setProgress(self.clear_progress)
@@ -610,6 +627,13 @@ class ClipboardManager:
                 self.clear_btn.setProgress(0)
     def clear_all_unpinned(self):
         """Borrar todos los elementos que no estén pinned respetando el filtro actual"""
+        # Hide all widgets immediately to prevent costly repaints during cleanup
+        if hasattr(self, 'content_layout'):
+            for i in range(self.content_layout.count()):
+                item = self.content_layout.itemAt(i)
+                if item and item.widget():
+                    item.widget().hide()
+
         current_filter = getattr(self, 'current_filter', 'all')
         
         # Filter logic:
@@ -626,9 +650,14 @@ class ClipboardManager:
         
         self.clips = new_clips
         
-        # Cleanup images dict to only keep images that are still in self.clips
+        # Defer heavy image cleanup to avoid blocking the UI refresh
         valid_images = {c['content'] for c in self.clips if c['type'] == 'image'}
-        self.clipboard_images = {k: v for k, v in self.clipboard_images.items() if k in valid_images}
+        keys_to_remove = [k for k in self.clipboard_images if k not in valid_images]
+        if keys_to_remove:
+            def _cleanup_images():
+                for k in keys_to_remove:
+                    self.clipboard_images.pop(k, None)
+            QTimer.singleShot(100, _cleanup_images)
         
         if hasattr(self, 'refresh_ui'):
             self.refresh_ui()

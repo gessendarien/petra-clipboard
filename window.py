@@ -1,8 +1,9 @@
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
                              QLineEdit, QPushButton, QScrollArea, QLabel, 
-                             QGridLayout, QSizePolicy, QApplication, QGraphicsOpacityEffect)
+                             QGridLayout, QSizePolicy, QApplication, QGraphicsOpacityEffect,
+                             QSystemTrayIcon, QMenu)
 from PyQt6.QtCore import Qt, QTimer, QThreadPool, QSize, QEvent, pyqtSignal, QRectF
-from PyQt6.QtGui import QIcon, QPixmap, QFont, QFontDatabase, QPainter, QColor, QBrush, QPen, QRadialGradient, QLinearGradient
+from PyQt6.QtGui import QIcon, QPixmap, QFont, QFontDatabase, QPainter, QColor, QBrush, QPen, QRadialGradient, QLinearGradient, QAction
 from pathlib import Path
 import os
 import subprocess
@@ -285,6 +286,55 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         
         self.apply_theme()
         
+        # Initialize system tray icon
+        self.setup_tray_icon()
+        
+    def setup_tray_icon(self):
+        """Configura el icono de la bandeja del sistema"""
+        self.tray_icon = QSystemTrayIcon(self)
+        
+        # Use systray-specific icon
+        icons_root = Path(__file__).parent / 'icons'
+        icon_path = icons_root / 'petra_systray.png'
+        
+        # Fallback chain
+        if not icon_path.exists():
+            icon_path = icons_root / 'petra.png'
+        if not icon_path.exists():
+            icons_folder = self.themes_manager.get_icons_folder() if hasattr(self, 'themes_manager') else 'dark'
+            icon_path = icons_root / icons_folder / 'all.png'
+            
+        if icon_path.exists():
+            self.tray_icon.setIcon(QIcon(str(icon_path)))
+        else:
+            self.tray_icon.setIcon(self.style().standardIcon(Qt.Style.SP_ComputerIcon))
+            
+        # Context Menu
+        tray_menu = QMenu()
+        
+        show_action = QAction("Mostrar", self)
+        show_action.triggered.connect(self.show)
+        tray_menu.addAction(show_action)
+        
+        quit_action = QAction("Salir", self)
+        quit_action.triggered.connect(self.quit_application)
+        tray_menu.addAction(quit_action)
+        
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.show()
+        
+        # Connect activation (click)
+        self.tray_icon.activated.connect(self.on_tray_icon_activated)
+
+    def on_tray_icon_activated(self, reason):
+        """Maneja la activación del icono de la bandeja"""
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            if self.isVisible():
+                self.hide()
+            else:
+                self.show()
+                self.activateWindow()
+
     def setup_ui(self):
         self.setWindowTitle("Petra")
         self.setFixedSize(515, 680)
