@@ -255,13 +255,19 @@ class EmojiCarousel(QWidget):
         self.categorySelected.emit(name, emojis)
 
 
-class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager, GlobalShortcutManager):
+class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager):
     def __init__(self):
         QMainWindow.__init__(self)
         ClipboardManager.__init__(self)
         FilterManager.__init__(self)
         ConfigManager.__init__(self)
-        GlobalShortcutManager.__init__(self)
+
+        # Shortcut manager as composed object (not inherited)
+        self.shortcut_manager = GlobalShortcutManager(
+            on_toggle=self._handle_shortcut_toggle,
+            on_show=self.show_window,
+            on_hide=self.hide
+        )
         
         self.clips = []
         self.window_pinned = False
@@ -282,13 +288,20 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.load_pinned()
         self.initialize_clipboard_state()
         self.setup_clipboard_monitor()
-        self.setup_global_shortcut(self.shortcut)
+        self.shortcut_manager.setup_global_shortcut(self.shortcut)
         
         self.apply_theme()
         
         # Initialize system tray icon
         self.setup_tray_icon()
         
+    def _handle_shortcut_toggle(self):
+        """Toggle window visibility — called by the shortcut manager."""
+        if self.isVisible():
+            self.hide()
+        else:
+            self.show_window()
+
     def setup_tray_icon(self):
         """Configura el icono de la bandeja del sistema"""
         self.tray_icon = QSystemTrayIcon(self)
@@ -332,8 +345,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             if self.isVisible():
                 self.hide()
             else:
-                self.show()
-                self.activateWindow()
+                self.show_window()
 
     def setup_ui(self):
         self.setWindowTitle("Petra")
@@ -715,8 +727,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         """Actually quit the application"""
         if hasattr(self, 'timer'):
             self.timer.stop()
-        if hasattr(self, 'command_timer'):
-            self.command_timer.stop()
+        if hasattr(self, 'shortcut_manager'):
+            self.shortcut_manager.cleanup_fifo()
         QApplication.quit()
     
     def mousePressEvent(self, event):
@@ -888,6 +900,13 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                     self._pinned_image_hashes.discard(image_hash)
         
         self.clips.remove(clip)
+        
+        # Clean orphaned image caches
+        if clip['type'] == 'image':
+            if clip['content'] in self.clipboard_images:
+                del self.clipboard_images[clip['content']]
+            self._cleanup_image_caches()
+        
         if clip['pinned']:
             self.save_pinned()
         self.refresh_ui()
@@ -1244,7 +1263,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         try:
             visibility_file = Path("/tmp/petra_visible")
             visibility_file.touch()
-        except:
+        except Exception:
             pass
 
     def hide(self):
@@ -1281,7 +1300,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             visibility_file = Path("/tmp/petra_visible")
             if visibility_file.exists():
                 visibility_file.unlink()
-        except:
+        except Exception:
             pass
 
     def toggle_window_pin(self):

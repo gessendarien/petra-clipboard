@@ -62,6 +62,11 @@ class ImageTask(QRunnable):
             self.signals.processed.emit(unique_id, img, image_hash, self.image_name, self.key, thumb)
         except Exception as e:
             print(f"ImageTask error: {e}")
+            # Emit with None values so the key can be cleaned from processing_keys
+            try:
+                self.signals.processed.emit("", None, "", "", self.key, None)
+            except Exception:
+                pass
 
 class ClipboardManager:
     def __init__(self):
@@ -224,8 +229,9 @@ class ClipboardManager:
             if key in self.processing_keys:
                 self.processing_keys.discard(key)
 
-            # Removed strict last_clipboard check here too
-            # to allow re-copying deleted images
+            # If img is None, the task failed — just clean up the key and return
+            if img is None:
+                return
             
             # Check if this hash already exists in pinned images (avoids duplicates on restart)
             if hasattr(self, '_pinned_image_hashes') and str(image_hash) in self._pinned_image_hashes:
@@ -324,8 +330,34 @@ class ClipboardManager:
         visible_keys = set(c['content'] for c in self.clips if c['type'] == 'image')
         self.clipboard_images = {k: v for k, v in self.clipboard_images.items() if k in visible_keys}
         
+        # Clean orphaned cache entries
+        self._cleanup_image_caches()
+        
         if old_clips != self.clips:
             self.refresh_ui()
+
+    def _cleanup_image_caches(self):
+        """Remove orphaned entries from _thumbnail_cache, _image_hashes and _pinned_image_hashes."""
+        valid_image_keys = {c['content'] for c in self.clips if c['type'] == 'image'}
+
+        # Clean _image_hashes
+        if hasattr(self, '_image_hashes'):
+            orphaned = [k for k in self._image_hashes if k not in valid_image_keys]
+            for k in orphaned:
+                del self._image_hashes[k]
+
+        # Clean _thumbnail_cache (keys are "thumb_{unique_id}")
+        if hasattr(self, '_thumbnail_cache'):
+            valid_thumb_keys = {f"thumb_{k}" for k in valid_image_keys}
+            orphaned = [k for k in self._thumbnail_cache if k not in valid_thumb_keys]
+            for k in orphaned:
+                del self._thumbnail_cache[k]
+
+        # Clean _pinned_image_hashes — keep only hashes of currently pinned images
+        if hasattr(self, '_pinned_image_hashes') and hasattr(self, '_image_hashes'):
+            pinned_keys = {c['content'] for c in self.clips if c['type'] == 'image' and c['pinned']}
+            valid_hashes = {self._image_hashes[k] for k in pinned_keys if k in self._image_hashes}
+            self._pinned_image_hashes = self._pinned_image_hashes & valid_hashes
 
     def _is_valid_text(self, text):
         """Check if text is valid displayable content (not garbled binary data)."""
@@ -352,7 +384,7 @@ class ClipboardManager:
         
         if not has_spaces or has_explicit_protocol:
             # Only search for URLs if there are no spaces OR if it has an explicit protocol
-            url_regex = re.compile(r'(https?://|ftp://|www\.|\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}(?:/[^\s]*)?)', re.IGNORECASE)
+            url_regex = re.compile(r'(https?://|ftp://|www\.)[^\s]+', re.IGNORECASE)
             if url_regex.search(content):
                 return "url"
         
@@ -438,7 +470,6 @@ class ClipboardManager:
             r'^\./[\w.-]+',  # ./script.sh
             r'^\|',  # Pipe at the start (continuation)
             r'\|\s*\w+',  # Commands with pipe
-            r'^[\w.-]+\s+--?[\w-]',  # command --option or command -o
             r'^\$\s*\w+',  # $VAR or $ command (prompt)
         ]
         
@@ -600,7 +631,7 @@ class ClipboardManager:
                     wid = proc.stdout.strip().splitlines()[0]
                     if wid:
                         self.input_simulator.activate_window(wid)
-            except:
+            except Exception:
                 pass
 
     def start_clear_animation(self):
@@ -657,7 +688,10 @@ class ClipboardManager:
             def _cleanup_images():
                 for k in keys_to_remove:
                     self.clipboard_images.pop(k, None)
+                self._cleanup_image_caches()
             QTimer.singleShot(100, _cleanup_images)
+        else:
+            self._cleanup_image_caches()
         
         if hasattr(self, 'refresh_ui'):
             self.refresh_ui()

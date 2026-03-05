@@ -1,29 +1,57 @@
 import subprocess
 import os
+import sys
+import threading
+import stat
 from pathlib import Path
 from display_detector import DisplayDetector
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QTimer, QSocketNotifier, pyqtSignal, QObject
 import shlex
 
 
+class _FifoReaderSignal(QObject):
+    """Helper to emit Qt signals from the FIFO reader thread."""
+    commandReceived = pyqtSignal(str)
+
+
 class GlobalShortcutManager:
-    def __init__(self):
+    HOST_COMMAND_PIPE = "/tmp/petra_command_pipe"
+
+    def __init__(self, on_toggle=None, on_show=None, on_hide=None):
         self.detector = DisplayDetector()
         self.display_server = self.detector.get_display_server()
         self.config_dir = Path.home() / ".config" / "petra"
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.is_flatpak = self.detector.is_flatpak
-        
-        self.command_timer = QTimer()
-        self.command_timer.timeout.connect(self.check_toggle_command)
-        self.command_timer.start(100)
-    
+
+        # Signal bridge for thread -> Qt main loop
+        self._fifo_signal = _FifoReaderSignal()
+        self._fifo_signal.commandReceived.connect(self._process_command)
+
+        # File descriptor / notifier for non-Flatpak FIFO reading
+        self._fifo_fd = None
+        self._fifo_notifier = None
+
+        # Thread for Flatpak FIFO reading
+        self._fifo_thread = None
+        self._fifo_thread_stop = threading.Event()
+
+        # Callbacks for command processing (decoupled from window)
+        self._on_toggle = on_toggle
+        self._on_show = on_show
+        self._on_hide = on_hide
+
+        # Fallback timer (slow, only as safety net)
+        self._fallback_timer = QTimer()
+        self._fallback_timer.timeout.connect(self._fallback_check)
+        self._fallback_timer.start(2000)
+
     def _run_command(self, cmd, **kwargs):
-        """Ejecutar comando, usando flatpak-spawn si estamos en Flatpak"""
+        """Run command, using flatpak-spawn if inside Flatpak"""
         if self.is_flatpak:
             # In some Flatpak environments, host PATH is not passed correctly.
             tool = cmd[0]
-            if tool in ['xdotool', 'xbindkeys', 'pkill']: # pkill is usually also in /usr/bin
+            if tool in ['xdotool', 'xbindkeys', 'pkill']:
                  cmd[0] = f'/usr/bin/{tool}'
             
             cmd = ['flatpak-spawn', '--host'] + cmd
@@ -42,17 +70,11 @@ class GlobalShortcutManager:
         else:
             print("Wayland - alternative method")
             return False
-    
-    def _setup_x11_direct_shortcut(self, shortcut_str):
-        if not self.detector.is_tool_available('xdotool'):
-            print("xdotool not found. Install it: sudo apt install xdotool")
-            return False
-            
-    # --- Helper to write to HOST via PIPE ---
+
     def _write_host_file(self, host_path, content):
-        """Escribe contenido en un archivo del HOST usando flatpak-spawn y tee."""
+        """Write content to a HOST file using flatpak-spawn and tee."""
         if not self.is_flatpak:
-            # Fallback for non-flatpak local development
+            # Direct write for non-flatpak environments
             try:
                 p = Path(host_path)
                 p.parent.mkdir(parents=True, exist_ok=True)
@@ -67,11 +89,10 @@ class GlobalShortcutManager:
         # In Flatpak: Use stdin pipe to 'tee' on host
         cmd = ['flatpak-spawn', '--host', 'tee', str(host_path)]
         try:
-            # Use input=content.encode() to pass data via stdin
             res = subprocess.run(
                 cmd, 
                 input=content.encode('utf-8'), 
-                stdout=subprocess.DEVNULL, # tee writes to stdout too, we silence it
+                stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
                 cwd='/tmp'
             )
@@ -91,19 +112,198 @@ class GlobalShortcutManager:
             print(f"Exception writing to host: {e}")
             return False
 
+    def _ensure_fifo(self):
+        """Create the FIFO (named pipe) on the host if it doesn't exist."""
+        pipe_path = self.HOST_COMMAND_PIPE
+
+        if not self.is_flatpak:
+            # Direct: create FIFO locally
+            p = Path(pipe_path)
+            if p.exists():
+                # If it's already a FIFO, reuse it
+                if stat.S_ISFIFO(p.stat().st_mode):
+                    return True
+                # Otherwise remove the stale regular file and recreate
+                p.unlink(missing_ok=True)
+            try:
+                os.mkfifo(pipe_path)
+                return True
+            except OSError as e:
+                print(f"Error creating FIFO: {e}")
+                return False
+        else:
+            # Flatpak: create FIFO on host
+            # First remove any stale regular file
+            subprocess.run(
+                ['flatpak-spawn', '--host', 'bash', '-c',
+                 f'[ -p "{pipe_path}" ] || (rm -f "{pipe_path}" && mkfifo "{pipe_path}")'],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                cwd='/tmp'
+            )
+            return True
+
+    def _start_fifo_listener(self):
+        """Start listening on the FIFO for commands."""
+        if not self.is_flatpak:
+            self._start_fifo_listener_direct()
+        else:
+            self._start_fifo_listener_flatpak()
+
+    def _start_fifo_listener_direct(self):
+        """Non-Flatpak: open FIFO with QSocketNotifier for zero-polling."""
+        pipe_path = self.HOST_COMMAND_PIPE
+        try:
+            # Open in non-blocking read mode.
+            # O_RDONLY|O_NONBLOCK ensures open() returns immediately even if
+            # no writer has opened the FIFO yet.
+            self._fifo_fd = os.open(pipe_path, os.O_RDONLY | os.O_NONBLOCK)
+
+            self._fifo_notifier = QSocketNotifier(
+                self._fifo_fd, QSocketNotifier.Type.Read
+            )
+            self._fifo_notifier.activated.connect(self._on_fifo_ready)
+            self._fifo_notifier.setEnabled(True)
+            print("FIFO listener started (direct, QSocketNotifier)")
+        except OSError as e:
+            print(f"Error opening FIFO for listening: {e}")
+
+    def _on_fifo_ready(self):
+        """Called by QSocketNotifier when data is available on the FIFO."""
+        if self._fifo_fd is None:
+            return
+        try:
+            data = os.read(self._fifo_fd, 1024)
+            if data:
+                command = data.decode('utf-8', errors='replace').strip()
+                if command:
+                    self._process_command(command)
+            else:
+                # EOF — the writer closed. Re-open the FIFO to wait for
+                # the next writer (re-arm the notifier).
+                self._reopen_fifo_direct()
+        except BlockingIOError:
+            pass
+        except OSError as e:
+            print(f"Error reading FIFO: {e}")
+            self._reopen_fifo_direct()
+
+    def _reopen_fifo_direct(self):
+        """Re-open the FIFO after EOF so we can receive the next command."""
+        try:
+            if self._fifo_notifier:
+                self._fifo_notifier.setEnabled(False)
+                self._fifo_notifier.deleteLater()
+                self._fifo_notifier = None
+            if self._fifo_fd is not None:
+                os.close(self._fifo_fd)
+                self._fifo_fd = None
+        except OSError:
+            pass
+
+        pipe_path = self.HOST_COMMAND_PIPE
+        try:
+            self._fifo_fd = os.open(pipe_path, os.O_RDONLY | os.O_NONBLOCK)
+            self._fifo_notifier = QSocketNotifier(
+                self._fifo_fd, QSocketNotifier.Type.Read
+            )
+            self._fifo_notifier.activated.connect(self._on_fifo_ready)
+            self._fifo_notifier.setEnabled(True)
+        except OSError as e:
+            print(f"Error re-opening FIFO: {e}")
+
+    def _start_fifo_listener_flatpak(self):
+        """Flatpak: use a daemon thread that runs a blocking cat on the host FIFO."""
+        self._fifo_thread_stop.clear()
+        self._fifo_thread = threading.Thread(
+            target=self._fifo_reader_loop_flatpak, daemon=True
+        )
+        self._fifo_thread.start()
+        print("FIFO listener started (Flatpak, blocking thread)")
+
+    def _fifo_reader_loop_flatpak(self):
+        """
+        Blocking loop that runs in a daemon thread.
+        Uses 'cat' on the host FIFO — it blocks until a writer sends data,
+        then returns the data and exits. We loop to keep listening.
+        """
+        pipe_path = self.HOST_COMMAND_PIPE
+        while not self._fifo_thread_stop.is_set():
+            try:
+                res = subprocess.run(
+                    ['flatpak-spawn', '--host', 'cat', pipe_path],
+                    capture_output=True, text=True, cwd='/tmp',
+                    timeout=30  # Safety timeout to avoid orphaned processes
+                )
+                if res.returncode == 0 and res.stdout.strip():
+                    command = res.stdout.strip()
+                    self._fifo_signal.commandReceived.emit(command)
+            except subprocess.TimeoutExpired:
+                # Normal — just re-loop. The FIFO had no writer for 30s.
+                continue
+            except Exception as e:
+                if not self._fifo_thread_stop.is_set():
+                    print(f"FIFO reader error: {e}")
+                    # Brief sleep before retrying to avoid busy-loop on error
+                    self._fifo_thread_stop.wait(1.0)
+
+    def _process_command(self, command):
+        """Process a command received from the FIFO (runs on Qt main thread)."""
+        if command == "toggle":
+            if self._on_toggle:
+                self._on_toggle()
+        elif command == "show":
+            if self._on_show:
+                self._on_show()
+        elif command == "hide":
+            if self._on_hide:
+                self._on_hide()
+
+    def _fallback_check(self):
+        """
+        Slow fallback timer (2s). Only processes commands if the FIFO
+        listener missed something (e.g. FIFO was replaced by a regular file).
+        """
+        pipe_path = self.HOST_COMMAND_PIPE
+        if not self.is_flatpak:
+            p = Path(pipe_path)
+            if not p.exists():
+                return
+            # Only process if it's a regular file (not a FIFO — FIFO is handled
+            # by the notifier). This catches edge cases where something wrote
+            # a regular file instead.
+            try:
+                if stat.S_ISFIFO(p.stat().st_mode):
+                    return  # FIFO is handled by QSocketNotifier
+                command = p.read_text().strip()
+                p.unlink(missing_ok=True)
+                if command:
+                    self._process_command(command)
+            except Exception:
+                return
+        else:
+            # In Flatpak: only check if thread is not running
+            if self._fifo_thread and self._fifo_thread.is_alive():
+                return
+            # Thread died — restart it
+            print("FIFO reader thread died, restarting...")
+            self._start_fifo_listener_flatpak()
+
     def _setup_x11_direct_shortcut(self, shortcut_str):
         if not self.detector.is_tool_available('xdotool'):
             print("xdotool not found. Install it: sudo apt install xdotool")
             return False
             
-        # "PIPE" STRATEGY: We do not depend on shared paths.
+        # "PIPE" STRATEGY: We use a real FIFO (named pipe).
         # Everything happens in HOST /tmp.
         
         host_script_path = "/tmp/petra_toggle.sh"
-        host_command_file = "/tmp/petra_command_pipe"
+        host_command_file = self.HOST_COMMAND_PIPE
         host_config_path = "/tmp/petra_xbindkeysrc"
         
-        # SIMPLIFIED Script: Only writes "toggle", Python decides whether to show/hide
+        # 0. Ensure FIFO exists on host
+        self._ensure_fifo()
+        
+        # SIMPLIFIED Script: Only writes "toggle" to the FIFO
         script_content = f"""#!/bin/bash
 echo "toggle" > "{host_command_file}"
 """
@@ -113,13 +313,9 @@ echo "toggle" > "{host_command_file}"
             return False
 
         # 2. Generate xbindkeys config
-        # Convert shortcut format to xbindkeys format
-        # "Super + v" -> "Mod4 + v", "Control" -> "Control", etc.
         xbindkeys_shortcut = shortcut_str
         xbindkeys_shortcut = xbindkeys_shortcut.replace('Super', 'Mod4')
-        xbindkeys_shortcut = xbindkeys_shortcut.replace('Alt', 'Alt')  # Already correct
         xbindkeys_shortcut = xbindkeys_shortcut.replace('Ctrl', 'Control')
-        xbindkeys_shortcut = xbindkeys_shortcut.replace('Shift', 'Shift')  # Already correct
         
         config_lines = []
         config_lines.append('# Petra Clipboard Manager')
@@ -135,7 +331,7 @@ echo "toggle" > "{host_command_file}"
         # 4. Restart xbindkeys on HOST
         print(f"DEBUG: Restarting xbindkeys with config {host_config_path}")
         
-        # First we kill the specific previous instance of this config
+        # First kill the specific previous instance of this config
         kill_cmd = ['pkill', '-f', f'xbindkeys -f {host_config_path}']
         self._run_command(kill_cmd, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
         
@@ -143,50 +339,33 @@ echo "toggle" > "{host_command_file}"
         command = ['xbindkeys', '-f', host_config_path]
         res = self._run_command(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         print(f"DEBUG: xbindkeys restart result: {res.returncode}")
+
+        # 5. Start FIFO listener
+        self._start_fifo_listener()
         
-        print("Shortcut configured via PIPE Strategy.")
+        print("Shortcut configured via FIFO Strategy.")
         return True
 
-    def check_toggle_command(self):
-        # Read command file FROM HOST via flatpak-spawn cat
-        # We do not try to open it locally.
-        
-        host_command_file = "/tmp/petra_command_pipe"
-        
-        cmd = ['flatpak-spawn', '--host', 'cat', host_command_file]
-        try:
-            res = subprocess.run(
-                cmd, 
-                capture_output=True, 
-                text=True,
-                cwd='/tmp',
-                timeout=0.5  # Fast timeout to avoid blocking
-            )
-            
-            if res.returncode == 0:
-                command = res.stdout.strip()
-                # Clean up file on host immediately
-                subprocess.run(
-                     ['flatpak-spawn', '--host', 'rm', '-f', host_command_file],
-                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd='/tmp',
-                     timeout=0.5
-                )
-                
-                if command == "toggle":
-                    # Python decides based on its own state
-                    if self.isVisible():
-                        self.hide()
-                    else:
-                        self.show_window() if hasattr(self, 'show_window') else self.show()
-                elif command == "show":
-                    if hasattr(self, 'show_window'):
-                        self.show_window()
-                elif command == "hide":
-                    self.hide()
-        except subprocess.TimeoutExpired:
-            pass  # Timeout - no pending command
-        except Exception:
-            pass
-    
+    def cleanup_fifo(self):
+        """Clean up FIFO resources. Call on application exit."""
+        # Stop thread
+        self._fifo_thread_stop.set()
+
+        # Close notifier and fd
+        if self._fifo_notifier:
+            self._fifo_notifier.setEnabled(False)
+            self._fifo_notifier.deleteLater()
+            self._fifo_notifier = None
+        if self._fifo_fd is not None:
+            try:
+                os.close(self._fifo_fd)
+            except OSError:
+                pass
+            self._fifo_fd = None
+
+        # Stop fallback timer
+        if hasattr(self, '_fallback_timer'):
+            self._fallback_timer.stop()
+
     def register_global_hotkey(self, shortcut_str='Super + v'):
         return self.setup_global_shortcut(shortcut_str)

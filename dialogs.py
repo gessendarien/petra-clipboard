@@ -444,8 +444,8 @@ class SettingsDialog(QDialog):
                 if hasattr(parent, 'apply_theme'):
                     parent.apply_theme()
                 
-                if hasattr(parent, 'register_global_hotkey'):
-                    parent.register_global_hotkey(parent.shortcut)
+                if hasattr(parent, 'shortcut_manager'):
+                    parent.shortcut_manager.register_global_hotkey(parent.shortcut)
         except Exception as e:
             print(f"DEBUG: Error saving settings: {e}")
         self.accept()

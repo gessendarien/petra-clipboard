@@ -35,7 +35,7 @@ A different clipboard for Linux, my way.
 This application is currently in the testing phase to be uploaded to Flathub. Meanwhile, you can test it by running the following command in the project folder and choosing the desired option:
 
 ```bash
-./install-flatpak.sh
+./install.sh
 ```
 
 ## License

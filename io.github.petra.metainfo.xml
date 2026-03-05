@@ -31,11 +31,24 @@
   
   <content_rating type="oars-1.1" />
   
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/main/screenshots/screenshot_1.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/main/screenshots/screenshot_2.png</image>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/main/screenshots/screenshot_3.png</image>
+    </screenshot>
+  </screenshots>
+
   <releases>
-    <release version="1.0.0" date="2026-01-01">
+    <release version="0.0.1" date="2026-03-04">
       <description>
         <p>Initial release</p>
       </description>
     </release>
   </releases>
 </component>
+

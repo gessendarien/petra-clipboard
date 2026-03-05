@@ -40,7 +40,7 @@ class DisplayDetector:
                     # GNOME can use Wayland or X11
                     if 'wayland' in os.environ.get('XDG_CURRENT_DESKTOP', '').lower():
                         return 'wayland'
-            except:
+            except Exception:
                 pass
                 
             return 'x11'  # Fallback to X11 for compatibility

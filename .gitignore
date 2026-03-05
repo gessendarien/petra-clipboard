@@ -8,6 +8,11 @@ flatpak-build/
 flatpak-repo/
 *.flatpak
 
+# Build output
+output/
+*.AppImage
+.cache/
+
 # IDE
 .vscode/
 .idea/

@@ -209,7 +209,7 @@ class InputSimulator:
                                   capture_output=True, text=True, timeout=2)
             if result.returncode == 0:
                 return result.stdout.strip()
-        except:
+        except Exception:
             pass
         return None
     
@@ -263,7 +263,7 @@ class InputSimulator:
             result = subprocess.run(['xdotool', 'windowactivate', '--sync', window_id], 
                                   capture_output=True, text=True, timeout=2)
             return result.returncode == 0
-        except:
+        except Exception:
             return False
     
     def _activate_window_wayland(self, window_id):
@@ -277,6 +277,6 @@ class InputSimulator:
                 result = subprocess.run(['hyprctl', 'dispatch', 'focuswindow', f'address:{window_id}'], 
                                       capture_output=True, text=True, timeout=2)
                 return result.returncode == 0
-        except:
+        except Exception:
             pass
         return False

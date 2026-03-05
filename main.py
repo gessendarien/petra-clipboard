@@ -52,8 +52,7 @@ def start_socket_server(window):
                 conn.close()
                 if data == 'SHOW':
                     # Use QTimer to safely interact with GUI from this thread
-                    QTimer.singleShot(0, window.show)
-                    QTimer.singleShot(50, window.activateWindow)
+                    QTimer.singleShot(0, window.show_window)
             except socket.timeout:
                 continue
             except OSError:
@@ -65,7 +64,7 @@ def start_socket_server(window):
 
 
 def main():
-    print("PETRA STARTUP - VERSION: ROBUST_FIX_V2_FUZZY_MIGRATION")
+    print("Petra Clipboard v0.0.1")
     # Enable faulthandler so Python prints stack traces on crashes (SIGSEGV)
     try:
         faulthandler.enable()
@@ -160,7 +159,7 @@ def main():
     
     # Only show window if not started with --hidden
     if not args.hidden:
-        window.show()
+        window.show_window()
     
     sys.exit(app.exec())
 
