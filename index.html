@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Petra | Linux Clipboard Manager</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <style type="text/tailwindcss">
+        :root {
+            --obsidian-black: #f1f5f9;
+            --obsidian-gray: #e2e8f0;
+            --obsidian-accent: #0f172a;
+            --obsidian-muted: #64748b;
+        }
+        @layer base {
+            body {
+                background-color: var(--obsidian-black);
+                color: var(--obsidian-accent);
+                font-family: 'Inter', sans-serif;
+            }
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0f172a",
+                        "obsidian": {
+                            DEFAULT: "#f1f5f9",
+                            lighter: "#e2e8f0",
+                            border: "#cbd5e1"
+                        }
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+
+<body class="antialiased">
+    <div class="relative flex min-h-screen w-full flex-col">
+
+        <main class="flex-1">
+            <section class="max-w-[1200px] mx-auto px-6 pt-24 pb-4 text-center">
+                <div class="flex flex-col items-center gap-6 mb-8">
+                    <img src="icons/petra.png" alt="Petra" class="size-64 object-contain drop-shadow-2xl">
+                    <h2 class="text-primary text-5xl font-bold tracking-tighter">Petra</h2>
+                </div>
+                <div class="space-y-6">
+                    <h1
+                        class="text-primary text-6xl md:text-8xl font-bold tracking-tighter leading-[1] max-w-4xl mx-auto">
+                        A different clipboard <br /> for Linux.
+                    </h1>
+                    <p class="text-slate-500 text-xl md:text-2xl font-light max-w-2xl mx-auto leading-relaxed">
+                        Support for copying and pasting text, images, links, console commands, and emojis
+                        with a minimalist interface.
+                    </p>
+                </div>
+                <div
+                    class="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 w-full max-w-sm sm:max-w-none mx-auto">
+                    <button
+                        class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
+                        <span class="material-symbols-outlined text-[20px] transition-colors">rocket_launch</span>
+                        <span>Get it on Flathub</span>
+                    </button>
+                    <button
+                        class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
+                        <span class="material-symbols-outlined text-[20px] transition-colors">package_2</span>
+                        <span>Download .deb</span>
+                    </button>
+                    <button
+                        class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
+                        <span class="material-symbols-outlined text-[20px] transition-colors">install_desktop</span>
+                        <span>Download AppImage</span>
+                    </button>
+                    <a href="https://github.com/gessendarien/petra-clipboard" target="_blank"
+                        class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
+                        <span class="material-symbols-outlined text-[20px] transition-colors">code</span>
+                        <span>View Source Code</span>
+                    </a>
+                </div>
+            </section>
+            <section class="max-w-[1400px] mx-auto px-6 pt-0 pb-12">
+                <div class="group relative">
+
+
+                    <!-- Navigation Buttons (Click) -->
+                    <button id="arrow-left"
+                        onclick="document.getElementById('gallery').scrollBy({left: -400, behavior: 'smooth'})"
+                        class="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 z-50 size-14 md:size-12 rounded-full bg-white/80 backdrop-blur-xl flex items-center justify-center transition-all duration-300 border border-black/10 text-neutral-900 hover:bg-black hover:text-white shadow-xl opacity-0 pointer-events-none">
+                        <span class="material-symbols-outlined text-[28px] md:text-[24px]">arrow_back</span>
+                    </button>
+                    <button id="arrow-right"
+                        onclick="document.getElementById('gallery').scrollBy({left: 400, behavior: 'smooth'})"
+                        class="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 z-50 size-14 md:size-12 rounded-full bg-white/80 backdrop-blur-xl flex items-center justify-center transition-all duration-300 border border-black/10 text-neutral-900 hover:bg-black hover:text-white shadow-xl">
+                        <span class="material-symbols-outlined text-[28px] md:text-[24px]">arrow_forward</span>
+                    </button>
+
+                    <!-- Slider Container -->
+                    <div id="gallery"
+                        class="flex gap-8 overflow-x-auto snap-x snap-mandatory scrollbar-hide py-10 px-4 md:px-0">
+                        <!-- Slide 1 -->
+                        <div class="flex-none w-[280px] md:w-[350px] snap-center">
+                            <div class="bg-white rounded-[5px] border border-black/10 overflow-hidden shadow-xl transition-transform hover:scale-[1.01]"
+                                onclick="openImage('screenshots/screenshot_1.png')">
+                                <img alt="Petra History" class="w-full h-auto" src="screenshots/screenshot_1.png" />
+                            </div>
+                        </div>
+                        <!-- Slide 2 -->
+                        <div class="flex-none w-[280px] md:w-[350px] snap-center">
+                            <div class="bg-white rounded-[5px] border border-black/10 overflow-hidden shadow-xl transition-transform hover:scale-[1.01]"
+                                onclick="openImage('screenshots/screenshot_2.png')">
+                                <img alt="Petra Emojis" class="w-full h-auto" src="screenshots/screenshot_2.png" />
+                            </div>
+                        </div>
+                        <!-- Slide 3 -->
+                        <div class="flex-none w-[280px] md:w-[350px] snap-center">
+                            <div class="bg-white rounded-[5px] border border-black/10 overflow-hidden shadow-xl transition-transform hover:scale-[1.01]"
+                                onclick="openImage('screenshots/screenshot_3.png')">
+                                <img alt="Filtering & Search" class="w-full h-auto"
+                                    src="screenshots/screenshot_3.png" />
+                            </div>
+                        </div>
+                        <!-- Slide 4 -->
+                        <div class="flex-none w-[280px] md:w-[350px] snap-center">
+                            <div class="bg-white rounded-[5px] border border-black/10 overflow-hidden shadow-xl transition-transform hover:scale-[1.01]"
+                                onclick="openImage('screenshots/screenshot_4.png')">
+                                <img alt="Global Configuration" class="w-full h-auto"
+                                    src="screenshots/screenshot_4.png" />
+                            </div>
+                        </div>
+                        <!-- Slide 5 -->
+                        <div class="flex-none w-[280px] md:w-[350px] snap-center">
+                            <div class="bg-white rounded-[5px] border border-black/10 overflow-hidden shadow-xl transition-transform hover:scale-[1.01]"
+                                onclick="openImage('screenshots/screenshot_5.png')">
+                                <img alt="Petra Themes" class="w-full h-auto" src="screenshots/screenshot_5.png" />
+                            </div>
+                        </div>
+                        <!-- Slide 6 -->
+                        <div class="flex-none w-[280px] md:w-[350px] snap-center">
+                            <div class="bg-white rounded-[5px] border border-black/10 overflow-hidden shadow-xl transition-transform hover:scale-[1.01]"
+                                onclick="openImage('screenshots/screenshot_6.png')">
+                                <img alt="Petra Preview" class="w-full h-auto" src="screenshots/screenshot_6.png" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <footer class="border-t border-black/5 py-12 px-6 md:px-12 bg-obsidian-lighter">
+            <div class="max-w-[1200px] mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
+                <div class="flex flex-col items-center md:items-start gap-4">
+                    <div class="flex items-center gap-4 text-neutral-900">
+                        <img src="icons/petra.png" alt="Petra" class="size-10 object-contain drop-shadow-xl">
+                        <span class="font-bold tracking-tight text-xl">Petra</span>
+                    </div>
+                    <span class="text-neutral-500 text-xs font-medium pl-1">© 2026 <a
+                            href="http://gessendarien.github.io" target="_blank">Gessén Darien</a> - Cassca
+                        Studios</span>
+                </div>
+
+            </div>
+        </footer>
+    </div>
+
+    <!-- Image Modal Overlay -->
+    <div id="imageModal"
+        class="fixed inset-0 z-[100] hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-12"
+        onclick="closeImage()">
+        <img id="modalImg" src="" alt="Expanded View"
+            class="max-w-full max-h-full rounded-[5px] shadow-[0_0_100px_rgba(255,255,255,0.1)] transition-transform duration-300 scale-95 opacity-0">
+    </div>
+
+    <script>
+        const gallery = document.getElementById('gallery');
+        const arrowLeft = document.getElementById('arrow-left');
+        const arrowRight = document.getElementById('arrow-right');
+
+        function updateArrows() {
+            const isAtStart = gallery.scrollLeft <= 10;
+            const isAtEnd = gallery.scrollLeft + gallery.clientWidth >= gallery.scrollWidth - 10;
+
+            arrowLeft.style.opacity = isAtStart ? '0' : '1';
+            arrowLeft.style.pointerEvents = isAtStart ? 'none' : 'auto';
+
+            arrowRight.style.opacity = isAtEnd ? '0' : '1';
+            arrowRight.style.pointerEvents = isAtEnd ? 'none' : 'auto';
+        }
+
+        gallery.addEventListener('scroll', updateArrows);
+        window.addEventListener('resize', updateArrows);
+        // Initial check
+        updateArrows();
+
+        function openImage(src) {
+            const modal = document.getElementById('imageModal');
+            const img = document.getElementById('modalImg');
+            img.src = src;
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                img.classList.remove('scale-95', 'opacity-0');
+                img.classList.add('scale-100', 'opacity-100');
+            }, 10);
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeImage() {
+            const modal = document.getElementById('imageModal');
+            const img = document.getElementById('modalImg');
+            img.classList.remove('scale-100', 'opacity-100');
+            img.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+            document.body.style.overflow = 'auto';
+        }
+    </script>
+</body>
+
+</html>
