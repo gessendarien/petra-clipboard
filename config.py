@@ -14,8 +14,8 @@ class ConfigManager:
         self.config_file = self.config_dir / "config.json"
         self.pinned_images_dir = self.config_dir / "pinned_images"
         self.pinned_images_dir.mkdir(parents=True, exist_ok=True)
-        
         self.max_images = 10
+        self.max_clips = 20
         self.language = 'es'
         self.config = {}
         self.show_clear_btn = True
@@ -38,6 +38,7 @@ class ConfigManager:
         default = {
             'language': 'es',
             'max_images': 10,
+            'max_clips': 20,
             'shortcut': 'Alt + space',  # Default shortcut: Alt+Espacio
             'show_clear_btn': True,  # Ensure this is enabled by default
             'show_pin_btn': True,    # Ensure this is enabled by default
@@ -73,6 +74,7 @@ class ConfigManager:
 
         self.language = self.config.get('language', default['language'])
         self.max_images = int(self.config.get('max_images', default['max_images']))
+        self.max_clips = int(self.config.get('max_clips', default.get('max_clips', 20)))
         self.shortcut = self.config.get('shortcut', default['shortcut'])
         self.show_clear_btn = bool(self.config.get('show_clear_btn', True))  # Default to True
         self.show_pin_btn = bool(self.config.get('show_pin_btn', True))      # Default to True
@@ -87,6 +89,7 @@ class ConfigManager:
                 
             self.config['language'] = getattr(self, 'language', 'es')
             self.config['max_images'] = getattr(self, 'max_images', 10)
+            self.config['max_clips'] = getattr(self, 'max_clips', 20)
             self.config['shortcut'] = getattr(self, 'shortcut', 'Super + v')
             self.config['show_clear_btn'] = getattr(self, 'show_clear_btn', True)
             self.config['show_pin_btn'] = getattr(self, 'show_pin_btn', True)

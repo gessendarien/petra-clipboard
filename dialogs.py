@@ -177,32 +177,38 @@ class SettingsDialog(QDialog):
         
         layout.addWidget(grid_container)
 
-        # 5. Max Images (Row 4)
-        h = QWidget()
-        hl = QHBoxLayout(h)
-        hl.setContentsMargins(0, 0, 0, 0)
-        hl.setSpacing(4) # Tighter spacing for this specific one per request, or standard? 
-                         # User said "el mismo que hay entre Max images... con su input" implies others should match THIS.
-                         # This uses 4px. Others use 10px. 
-                         # Wait, "el espacio... debe ser el mismo que hay entre Max images...". 
-                         # The red line in user image showed a TIGHT gap for Max Images.
-                         # User wants OTHERS to be like Max Images.
-                         # So I should use spacing=4 for ALL.
+        # 5 & 6. Max History and Max Images (Grid aligned)
+        limits_container = QWidget()
+        limits_layout = QGridLayout(limits_container)
+        limits_layout.setContentsMargins(0, 0, 0, 0)
+        limits_layout.setSpacing(10)
+        limits_layout.setColumnStretch(2, 1) # Push everything to the left
 
+        # Max History Items (Top)
+        self.max_clips_label = QLabel("Máx. elementos en historial:")
+        self.max_clips_label.setObjectName("settings_label")
+        limits_layout.addWidget(self.max_clips_label, 0, 0)
+
+        self.max_clips_sb = QSpinBox()
+        self.max_clips_sb.setRange(10, 100)
+        self.max_clips_sb.setFixedWidth(50)
+        self.max_clips_sb.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
+        self.max_clips_sb.setStyleSheet("padding: 2px;")
+        limits_layout.addWidget(self.max_clips_sb, 0, 1)
+
+        # Max Images in Cache (Bottom)
         self.max_images_label = QLabel("Máx. imágenes en caché:")
         self.max_images_label.setObjectName("settings_label")
-        hl.addWidget(self.max_images_label)
+        limits_layout.addWidget(self.max_images_label, 1, 0)
         
         self.max_images_sb = QSpinBox()
         self.max_images_sb.setRange(1, 100)
         self.max_images_sb.setFixedWidth(50)
         self.max_images_sb.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
         self.max_images_sb.setStyleSheet("padding: 2px;") 
-        
-        hl.addWidget(self.max_images_sb)
-        hl.addStretch()
+        limits_layout.addWidget(self.max_images_sb, 1, 1)
 
-        layout.addWidget(h)
+        layout.addWidget(limits_container)
 
         # Show/Hide clear-all button
         self.show_clear_cb = QCheckBox("Mostrar botón 'Borrar todo' en la cabecera")
@@ -309,6 +315,7 @@ class SettingsDialog(QDialog):
             if self.parent() is not None:
                 parent = self.parent()
                 self.max_images_sb.setValue(int(getattr(parent, 'max_images', 10)))
+                self.max_clips_sb.setValue(int(getattr(parent, 'max_clips', 20)))
                 
                 lang = getattr(parent, 'language', 'en')
                 idx = self.lang_combo.findData(lang)
@@ -352,6 +359,7 @@ class SettingsDialog(QDialog):
             'es': {
                 'title': 'Configuración',
                 'max_images': 'Máx. imágenes en caché:',
+                'max_clips': 'Máx. elementos en historial:',
                 'save': 'Guardar',
                 'close': 'Cancelar',
                 'quit': 'Salir',
@@ -371,6 +379,7 @@ class SettingsDialog(QDialog):
             'en': {
                 'title': 'Settings',
                 'max_images': 'Max images in cache:',
+                'max_clips': 'Max history items:',
                 'save': 'Save',
                 'close': 'Cancel',
                 'quit': 'Quit',
@@ -403,6 +412,7 @@ class SettingsDialog(QDialog):
             parent = self.parent()
             if parent is not None:
                 parent.max_images = int(self.max_images_sb.value())
+                parent.max_clips = int(self.max_clips_sb.value())
                 parent.language = self.lang_combo.currentData()
                 
                 # New: save theme
@@ -435,6 +445,7 @@ class SettingsDialog(QDialog):
                 
                 parent.config['language'] = parent.language
                 parent.config['max_images'] = parent.max_images
+                parent.config['max_clips'] = parent.max_clips
                 parent.config['shortcut'] = getattr(parent, 'shortcut', 'Super + v')
                 parent.config['theme'] = parent.theme  # New
                 
@@ -457,6 +468,9 @@ class SettingsDialog(QDialog):
             
             if hasattr(self, 'max_images_label'):
                 self.max_images_label.setText(t.get('max_images', self.max_images_label.text()))
+                
+            if hasattr(self, 'max_clips_label'):
+                self.max_clips_label.setText(t.get('max_clips', self.max_clips_label.text()))
                 
             if hasattr(self, 'show_clear_cb'):
                 self.show_clear_cb.setText(t.get('show_clear', self.show_clear_cb.text()))

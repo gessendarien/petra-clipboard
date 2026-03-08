@@ -312,9 +312,14 @@ class ClipboardManager:
         self.clips.insert(0, clip)
         
         non_pinned = [c for c in self.clips if not c['pinned']]
-        if len(non_pinned) > 20:
+        try:
+            limit_clips = int(getattr(self, 'max_clips', 20))
+        except Exception:
+            limit_clips = 20
+            
+        if len(non_pinned) > limit_clips:
             pinned = [c for c in self.clips if c['pinned']]
-            self.clips = pinned + non_pinned[:20]
+            self.clips = pinned + non_pinned[:limit_clips]
             
         image_keys = [c['content'] for c in self.clips if c['type'] == 'image' and not c['pinned']]
         try:
