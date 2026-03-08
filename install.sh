@@ -7,13 +7,13 @@ set -e
 # Configuration
 APP_ID="io.github.petra"
 APP_NAME="Petra"
-APP_VERSION="0.0.1"
+APP_VERSION=$(cat global-version.txt)
 BUILD_DIR="flatpak-build"
 REPO_DIR="flatpak-repo"
 OUTPUT_DIR="output"
-BUNDLE_FILE="${OUTPUT_DIR}/petra.flatpak"
+BUNDLE_FILE="${OUTPUT_DIR}/${APP_NAME,,}_${APP_VERSION}.flatpak"
 DEB_FILE="${OUTPUT_DIR}/${APP_NAME,,}_${APP_VERSION}_all.deb"
-APPIMAGE_FILE="${OUTPUT_DIR}/${APP_NAME}-x86_64.AppImage"
+APPIMAGE_FILE="${OUTPUT_DIR}/${APP_NAME}-${APP_VERSION}-x86_64.AppImage"
 APPIMAGETOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
 PYTHON_STANDALONE_URL="https://github.com/indygreg/python-build-standalone/releases/download/20240224/cpython-3.11.8+20240224-x86_64-unknown-linux-gnu-install_only.tar.gz"
 APPIMAGETOOL_CACHE=".cache/appimagetool"

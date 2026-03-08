@@ -8,7 +8,7 @@ A different clipboard for Linux, my way.
 
 ## Features
 
-- Allows copying and pasting text, images, links, console commands, and emojis.
+- Allows copying and pasting text, images, links, console commands, and emojis
 - Filter by copied item type
 - General search, by type or emoji
 - Open links directly in the browser
