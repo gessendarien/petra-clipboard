@@ -75,5 +75,7 @@ modules:
       - install -Dm644 icons/petra-32.png ${FLATPAK_DEST}/share/icons/hicolor/32x32/apps/io.github.gessendarien.petra.png
       - install -Dm644 icons/petra-16.png ${FLATPAK_DEST}/share/icons/hicolor/16x16/apps/io.github.gessendarien.petra.png
     sources:
-      - type: dir
-        path: .
+      - type: git
+        url: https://github.com/gessendarien/petra-clipboard.git
+        tag: "0.0.1"
+        commit: 9c76a599cef16a2ae70b1e63a21c30d25a6ffaa8
