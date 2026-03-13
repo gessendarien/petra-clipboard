@@ -78,4 +78,4 @@ modules:
       - type: git
         url: https://github.com/gessendarien/petra-clipboard.git
         tag: "0.0.1"
-        commit: 9c76a599cef16a2ae70b1e63a21c30d25a6ffaa8
+        commit: 9650ec69b038f1f8cbada0b9594a4a2083f1ef74
