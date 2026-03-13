@@ -1,0 +1,44 @@
+[
+  {
+    "name": "python3-pyqt6-sip",
+    "buildsystem": "simple",
+    "build-commands": [
+      "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} pyqt6_sip"
+    ],
+    "sources": [
+      {
+        "type": "file",
+        "url": "https://files.pythonhosted.org/packages/95/cb/116f9b328636765f3bce97d9e10ec041c54bbe92beb0617edb86c2b615c1/pyqt6_sip-13.11.1-cp312-cp312-manylinux1_x86_64.manylinux_2_5_x86_64.whl",
+        "sha256": "0df15849946cea969d3ff2b24b76149262b6044aea2c5403e4f70c24c973a4c8",
+        "only-arches": ["x86_64"]
+      },
+      {
+        "type": "file",
+        "url": "https://files.pythonhosted.org/packages/1b/be/fe2321285e8f683e705d199dbb458131f1850dc5966155a19c40100c85bb/pyqt6_sip-13.11.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl",
+        "sha256": "c52b2b27fc77d9447a8dc1c6de1aaccc22d41e48697aafb2f2f20b8984bb02a5",
+        "only-arches": ["aarch64"]
+      }
+    ]
+  },
+  {
+    "name": "python3-pyqt6",
+    "buildsystem": "simple",
+    "build-commands": [
+      "pip3 install --verbose --exists-action=i --no-index --find-links=\"file://${PWD}\" --prefix=${FLATPAK_DEST} --no-deps pyqt6"
+    ],
+    "sources": [
+      {
+        "type": "file",
+        "url": "https://files.pythonhosted.org/packages/ec/3e/9a015651ec71cea2e2f960c37edeb21623ba96a74956c0827def837f7c6b/pyqt6-6.10.2-cp39-abi3-manylinux_2_34_x86_64.whl",
+        "sha256": "78e1b3d5763e4cbc84485aef600e0aba5e1932fd263b716f92cd1a40dfa5e924",
+        "only-arches": ["x86_64"]
+      },
+      {
+        "type": "file",
+        "url": "https://files.pythonhosted.org/packages/51/74/a88fec2b99700270ca5d7dc7d650236a4990ed6fc88e055ca0fc8a339ee3/pyqt6-6.10.2-cp39-abi3-manylinux_2_39_aarch64.whl",
+        "sha256": "bbc3af541bbecd27301bfe69fe445aa1611a9b490bd3de77306b12df632f7ec6",
+        "only-arches": ["aarch64"]
+      }
+    ]
+  }
+]

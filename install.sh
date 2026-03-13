@@ -5,7 +5,7 @@
 set -e
 
 # Configuration
-APP_ID="io.github.petra"
+APP_ID="io.github.gessendarien.petra"
 APP_NAME="Petra"
 APP_VERSION=$(cat global-version.txt)
 BUILD_DIR="flatpak-build"

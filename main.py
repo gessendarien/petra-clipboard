@@ -116,8 +116,8 @@ def main():
     # If not found locally, search in Flatpak paths
     if not icon_loaded:
         flatpak_paths = [
-            flatpak_base / "scalable/apps/io.github.petra.svg",
-            flatpak_base / "512x512/apps/io.github.petra.png",
+            flatpak_base / "scalable/apps/io.github.gessendarien.petra.svg",
+            flatpak_base / "512x512/apps/io.github.gessendarien.petra.png",
         ]
         for fpath in flatpak_paths:
             if fpath.exists():
@@ -132,7 +132,7 @@ def main():
     # Set application name and desktop file for icon association
     # This is critical for the desktop system to show the correct icon
     app.setApplicationName("Petra")
-    app.setDesktopFileName("io.github.petra")
+    app.setDesktopFileName("io.github.gessendarien.petra")
     
     # Handle Ctrl+C correctly
     import signal

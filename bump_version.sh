@@ -26,7 +26,7 @@ sed -i -E "s/<span id=\"app-version\">.*<\/span>/<span id=\"app-version\">$NEW_V
 echo "Updated index.html"
 
 # Update Flatpak MetaInfo (for Flathub/Software Centers)
-sed -i -E "s/<release version=\".*\" date=\".*\">/<release version=\"$NEW_VERSION\" date=\"$(date +%Y-%m-%d)\">/" io.github.petra.metainfo.xml
-echo "Updated io.github.petra.metainfo.xml"
+sed -i -E "s/<release version=\".*\" date=\".*\">/<release version=\"$NEW_VERSION\" date=\"$(date +%Y-%m-%d)\">/" io.github.gessendarien.petra.metainfo.xml
+echo "Updated io.github.gessendarien.petra.metainfo.xml"
 
 echo "Version bump complete."

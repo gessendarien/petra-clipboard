@@ -306,22 +306,32 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         """Configura el icono de la bandeja del sistema"""
         self.tray_icon = QSystemTrayIcon(self)
         
-        # Use systray-specific icon
+        # Resolvemos las rutas de los iconos
         icons_root = Path(__file__).parent / 'icons'
         icon_path = icons_root / 'petra_systray.png'
         
-        # Fallback chain
+        # Cadena de fallback local
         if not icon_path.exists():
             icon_path = icons_root / 'petra.png'
         if not icon_path.exists():
-            icons_folder = self.themes_manager.get_icons_folder() if hasattr(self, 'themes_manager') else 'dark'
+            icons_folder = getattr(self.themes_manager, 'get_icons_folder', lambda: 'dark')()
             icon_path = icons_root / icons_folder / 'all.png'
             
+        icon = QIcon()
         if icon_path.exists():
-            self.tray_icon.setIcon(QIcon(str(icon_path)))
+            # MUY IMPORTANTE PARA FLATPAK/WAYLAND: 
+            # Creando el QIcon a partir de un QPixmap fuerza a Qt a enviar
+            # los píxeles de la imagen (RGBA) por D-Bus (SNI) al host.
+            # Si usamos QIcon(str(path)), Qt envía el string de la ruta absoluta.
+            # Como la ruta es interna del sandbox de Flatpak ("/app/..."), el 
+            # host de GNOME/PopOS no encuentra la imagen y muestra un icono invisible.
+            pixmap = QPixmap(str(icon_path))
+            icon = QIcon(pixmap)
         else:
-            self.tray_icon.setIcon(self.style().standardIcon(Qt.Style.SP_ComputerIcon))
-            
+            icon = self.style().standardIcon(Qt.Style.SP_ComputerIcon)
+                
+        self.tray_icon.setIcon(icon)
+        
         # Context Menu
         tray_menu = QMenu()
         
@@ -1027,8 +1037,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 display_emoji = ensure_emoji_presentation(emoji)
                 btn.setText(display_emoji)
                 btn.clicked.connect(lambda checked, e=emoji: self.insert_emoji(e))
-                # Detect mouse enter to disable keyboard highlight
-                btn.enterEvent = lambda event, idx=i: self._on_emoji_mouse_enter(event, idx)
+                # Detect mouse enter via eventFilter to avoid Qt segfault
+                btn.installEventFilter(self)
                 if emoji_font_name:
                     btn.setFont(QFont(emoji_font_name, 24))
             else:
@@ -1219,6 +1229,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             self.position_at_right()
         else:  # 'center' or default
             self.center_window()
+        # Ensure window is un-minimized and active
+        self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
         self.show()
         self.activateWindow()
         self.raise_()
@@ -1348,6 +1360,15 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         try:
             # safely avoid re-entrant handling
             if getattr(self, '_handling_key', False):
+                return super().eventFilter(obj, event)
+
+            # Handle mouse hover on recent emoji buttons safely
+            if event.type() == QEvent.Type.Enter and obj in getattr(self, 'recent_emoji_buttons', []):
+                try:
+                    idx = self.recent_emoji_buttons.index(obj)
+                    self._on_emoji_mouse_enter(event, idx)
+                except ValueError:
+                    pass
                 return super().eventFilter(obj, event)
 
             # Only process when visible AND when we are the active window. This

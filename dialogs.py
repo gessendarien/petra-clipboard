@@ -43,7 +43,7 @@ def enable_autostart():
     # Determine execution command based on environment
     if is_running_in_flatpak():
         # In Flatpak, use 'flatpak run' with app ID
-        flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.petra')
+        flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra')
         exec_path = f"flatpak run {flatpak_id}"
         icon_name = flatpak_id
     elif getattr(sys, 'frozen', False):

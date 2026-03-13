@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 Gessén Darien -->
+<component type="desktop-application">
+  <id>io.github.gessendarien.petra</id>
+  <name>Petra</name>
+  <summary>A different clipboard for Linux</summary>
+  <summary xml:lang="es">Un portapapeles diferente para Linux</summary>
+
+  <developer id="io.github.gessendarien">
+    <name>Gessén Darien</name>
+  </developer>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <description>
+    <p>
+      Petra is a modern clipboard manager with emoji support and a minimalist interface.
+      It allows you to manage your clipboard history, pin important items,
+      and quickly insert emojis.
+    </p>
+    <p xml:lang="es">
+      Petra es un gestor de portapapeles moderno con soporte para emojis y una interfaz minimalista.
+      Permite gestionar el historial del portapapeles, fijar elementos importantes,
+      e insertar emojis rápidamente.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Copy and paste text, images, links, console commands, and emojis</li>
+      <li>Filter by copied item type</li>
+      <li>General search, by type or emoji</li>
+      <li>Open links directly in the browser</li>
+      <li>Full keyboard navigation (q, w, Ctrl+F, Esc, and arrow keys)</li>
+      <li>Preview copied images</li>
+      <li>Pin window and save items</li>
+      <li>Wide variety of themes and colors</li>
+      <li>Start on system boot</li>
+      <li>Open on the left, right, or at mouse position</li>
+      <li>Customizable keyboard shortcut</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">io.github.gessendarien.petra.desktop</launchable>
+
+  <url type="homepage">https://gessendarien.github.io/petra-clipboard/</url>
+  <url type="bugtracker">https://github.com/gessendarien/petra-clipboard/issues</url>
+  <url type="vcs-browser">https://github.com/gessendarien/petra-clipboard</url>
+  <url type="donation">https://paypal.me/gessendarien</url>
+
+  <provides>
+    <binary>petra</binary>
+  </provides>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#e2e8f0</color>
+    <color type="primary" scheme_preference="dark">#0f172a</color>
+  </branding>
+
+  <content_rating type="oars-1.1" />
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/0.0.1/screenshots/screenshot_1.png</image>
+      <caption>Clipboard history view</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/0.0.1/screenshots/screenshot_2.png</image>
+      <caption>Emoji picker</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/0.0.1/screenshots/screenshot_3.png</image>
+      <caption>Filtering and search</caption>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="0.0.1" date="2026-03-04">
+      <description>
+        <p>Initial release</p>
+      </description>
+    </release>
+  </releases>
+</component>
