@@ -58,11 +58,11 @@ check_flatpak_dependencies() {
     fi
 
     # Check KDE Runtimes
-    if ! flatpak info org.kde.Platform//6.7 &> /dev/null; then
-        MISSING_KDE+=("org.kde.Platform//6.7")
+    if ! flatpak info org.kde.Platform//6.9 &> /dev/null; then
+        MISSING_KDE+=("org.kde.Platform//6.9")
     fi
-    if ! flatpak info org.kde.Sdk//6.7 &> /dev/null; then
-        MISSING_KDE+=("org.kde.Sdk//6.7")
+    if ! flatpak info org.kde.Sdk//6.9 &> /dev/null; then
+        MISSING_KDE+=("org.kde.Sdk//6.9")
     fi
 
     if [ ${#MISSING_DEPS[@]} -eq 0 ] && [ ${#MISSING_KDE[@]} -eq 0 ]; then
@@ -84,6 +84,8 @@ check_flatpak_dependencies() {
         fi
         
         if [ ${#MISSING_KDE[@]} -gt 0 ]; then
+             echo "Ensuring Flathub remote is configured..."
+             flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
              echo "Installing Flatpak runtimes..."
              flatpak install --user -y flathub "${MISSING_KDE[@]}"
         fi
