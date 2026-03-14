@@ -11,16 +11,7 @@ class InputSimulator:
         self.is_flatpak = self.detector.is_flatpak
     
     def _run_command(self, cmd, **kwargs):
-        """Ejecutar comando, usando flatpak-spawn si estamos en Flatpak"""
-        if self.is_flatpak:
-            # Use absolute paths for known tools
-            tool = cmd[0]
-            if tool in ['xdotool', 'ydotool', 'wtype', 'xclip', 'xsel']:
-                cmd[0] = f'/usr/bin/{tool}'
-            cmd = ['flatpak-spawn', '--host'] + cmd
-            # Force CWD to /tmp to avoid directory error
-            if 'cwd' not in kwargs:
-                kwargs['cwd'] = '/tmp'
+        """Ejecutar comando directamente (las herramientas están dentro del Flatpak)"""
         return subprocess.run(cmd, **kwargs)
         
     def simulate_key(self, key_combination):

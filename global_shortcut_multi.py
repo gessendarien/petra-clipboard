@@ -47,19 +47,7 @@ class GlobalShortcutManager:
         self._fallback_timer.start(2000)
 
     def _run_command(self, cmd, **kwargs):
-        """Run command, using flatpak-spawn if inside Flatpak"""
-        if self.is_flatpak:
-            # In some Flatpak environments, host PATH is not passed correctly.
-            tool = cmd[0]
-            if tool in ['xdotool', 'xbindkeys', 'pkill']:
-                 cmd[0] = f'/usr/bin/{tool}'
-            
-            cmd = ['flatpak-spawn', '--host'] + cmd
-            # CRITICAL: Force CWD to /tmp because sandbox directory (/app/...)
-            # does not exist on host, and flatpak-spawn will fail if it tries to use it.
-            if 'cwd' not in kwargs:
-                kwargs['cwd'] = '/tmp'
-                
+        """Run command directly inside the sandbox"""
         return subprocess.run(cmd, **kwargs)
     
     def setup_global_shortcut(self, shortcut_str='Super + v'):
@@ -72,75 +60,34 @@ class GlobalShortcutManager:
             return False
 
     def _write_host_file(self, host_path, content):
-        """Write content to a HOST file using flatpak-spawn and tee."""
-        if not self.is_flatpak:
-            # Direct write for non-flatpak environments
-            try:
-                p = Path(host_path)
-                p.parent.mkdir(parents=True, exist_ok=True)
-                with open(p, 'w') as f:
-                    f.write(content)
-                p.chmod(0o755)
-                return True
-            except Exception as e:
-                print(f"Error writing local: {e}")
-                return False
-
-        # In Flatpak: Use stdin pipe to 'tee' on host
-        cmd = ['flatpak-spawn', '--host', 'tee', str(host_path)]
+        """Write content to a file (always local inside the sandbox if in Flatpak)"""
         try:
-            res = subprocess.run(
-                cmd, 
-                input=content.encode('utf-8'), 
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.PIPE,
-                cwd='/tmp'
-            )
-            if res.returncode != 0:
-                print(f"Error writing to host {host_path}: {res.stderr}")
-                return False
-                
-            # Make executable
-            subprocess.run(
-                ['flatpak-spawn', '--host', 'chmod', '+x', str(host_path)],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                cwd='/tmp'
-            )
+            p = Path(host_path)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            with open(p, 'w') as f:
+                f.write(content)
+            p.chmod(0o755)
             return True
         except Exception as e:
-            print(f"Exception writing to host: {e}")
+            print(f"Error writing file {host_path}: {e}")
             return False
 
     def _ensure_fifo(self):
-        """Create the FIFO (named pipe) on the host if it doesn't exist."""
+        """Create the FIFO (named pipe) locally."""
         pipe_path = self.HOST_COMMAND_PIPE
-
-        if not self.is_flatpak:
-            # Direct: create FIFO locally
-            p = Path(pipe_path)
-            if p.exists():
-                # If it's already a FIFO, reuse it
-                if stat.S_ISFIFO(p.stat().st_mode):
-                    return True
-                # Otherwise remove the stale regular file and recreate
-                p.unlink(missing_ok=True)
-            try:
-                os.mkfifo(pipe_path)
+        p = Path(pipe_path)
+        if p.exists():
+            # If it's already a FIFO, reuse it
+            if stat.S_ISFIFO(p.stat().st_mode):
                 return True
-            except OSError as e:
-                print(f"Error creating FIFO: {e}")
-                return False
-        else:
-            # Flatpak: create FIFO on host
-            # First remove any stale regular file
-            subprocess.run(
-                ['flatpak-spawn', '--host', 'bash', '-c',
-                 f'[ -p "{pipe_path}" ] || (rm -f "{pipe_path}" && mkfifo "{pipe_path}")'],
-                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                cwd='/tmp'
-            )
+            # Otherwise remove the stale regular file and recreate
+            p.unlink(missing_ok=True)
+        try:
+            os.mkfifo(pipe_path)
             return True
+        except OSError as e:
+            print(f"Error creating FIFO: {e}")
+            return False
 
     def _start_fifo_listener(self):
         """Start listening on the FIFO for commands."""
