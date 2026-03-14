@@ -5,30 +5,12 @@ sdk: org.kde.Sdk
 command: petra
 
 finish-args:
-  # X11 + XShm access
   - --share=ipc
-  - --socket=fallback-x11
-  # Wayland access
+  - --socket=x11
   - --socket=wayland
-  # GPU for rendering
+  - --filesystem=xdg-config/petra:create  # Solo esto para tu config
   - --device=dri
-  # XDG Desktop Portal access (for global shortcuts)
-  - --talk-name=org.freedesktop.portal.Desktop
-  - --talk-name=org.freedesktop.portal.GlobalShortcuts
-  # KDE global shortcuts
-  - --talk-name=org.kde.kglobalaccel
-  # StatusNotifier implementation for system tray (KDE/AppIndicator)
-  - --talk-name=org.kde.StatusNotifierWatcher
-  # Config directory for settings
-  - --filesystem=xdg-config/petra:create
-  # Autostart directory
-  - --filesystem=xdg-config/autostart:create
-  - --filesystem=/tmp:create
-  - --filesystem=home:ro
-  # Host command execution for paste simulation (xdotool/ydotool)
-  - --talk-name=org.freedesktop.Flatpak
-  # Make PyQt6 pip wheels see the system flatpak KDE qt plugins
-  - --env=QT_PLUGIN_PATH=/usr/plugins
+  - --talk-name=org.freedesktop.Notifications
 
 modules:
   - name: python3-pyqt6-sip
