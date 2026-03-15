@@ -90,7 +90,7 @@ def main():
     # Set application icon BEFORE configuring name
     # This is important for some desktop environments to detect it correctly
     icon = QIcon()
-    icon_base = Path(__file__).parent / "icons"
+    icon_base = Path(__file__).parent.parent / "icons"
     flatpak_base = Path("/app/share/icons/hicolor")
     
     # Add multiple icon sizes for better compatibility

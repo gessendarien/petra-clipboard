@@ -307,7 +307,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.tray_icon = QSystemTrayIcon(self)
         
         # Resolvemos las rutas de los iconos
-        icons_root = Path(__file__).parent / 'icons'
+        icons_root = Path(__file__).parent.parent / 'icons'
         icon_path = icons_root / 'petra_systray.png'
         
         # Cadena de fallback local
@@ -554,7 +554,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     def setup_icon_button(self, button, icon_name):
         try:
             icons_folder = self.themes_manager.get_icons_folder() if hasattr(self, 'themes_manager') else 'dark'
-            icons_dir = Path(__file__).parent / 'icons' / icons_folder
+            icons_dir = Path(__file__).parent.parent / 'icons' / icons_folder
             if icon_name:
                 icon_path = icons_dir / icon_name
                 if icon_path.exists():
@@ -566,7 +566,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     def setup_pin_button_icon(self):
         try:
             icons_folder = self.themes_manager.get_icons_folder() if hasattr(self, 'themes_manager') else 'dark'
-            icons_dir = Path(__file__).parent / 'icons' / icons_folder
+            icons_dir = Path(__file__).parent.parent / 'icons' / icons_folder
             pin_path = icons_dir / 'pin.png'
             unpin_path = icons_dir / 'unpinned.png'
             pinned_path = icons_dir / 'pinned.png'
@@ -626,7 +626,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         """Update header button icons according to current theme"""
         try:
             icons_folder = self.themes_manager.get_icons_folder()
-            icons_dir = Path(__file__).parent / 'icons' / icons_folder
+            icons_dir = Path(__file__).parent.parent / 'icons' / icons_folder
             
             # Update settings button icon
             if hasattr(self, 'settings_btn') and self.settings_btn:
@@ -1181,7 +1181,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         try:
             from PyQt6.QtCore import QSize
             icon = QIcon()
-            icon_base = Path(__file__).parent / "icons"
+            icon_base = Path(__file__).parent.parent / "icons"
             
             # Add multiple sizes
             for size in [16, 32, 48, 64, 128, 256]:
@@ -1326,7 +1326,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     def update_pin_button_icon(self):
         try:
             icons_folder = self.themes_manager.get_icons_folder() if hasattr(self, 'themes_manager') else 'dark'
-            icons_dir = Path(__file__).parent / 'icons' / icons_folder
+            icons_dir = Path(__file__).parent.parent / 'icons' / icons_folder
             pin_path = icons_dir / 'pin.png'
             unpin_path = icons_dir / 'unpinned.png'
             pinned_path = icons_dir / 'pinned.png'

@@ -4,6 +4,7 @@ venv/
 *.pyo
 # Flatpak build
 .flatpak-builder/
+build-dir/
 flatpak-build/
 flatpak-repo/
 *.flatpak

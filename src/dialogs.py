@@ -283,7 +283,7 @@ class SettingsDialog(QDialog):
         else:
             icon_folder = 'dark'
         
-        icon_path = Path(__file__).parent / "icons" / icon_folder / "code.png"
+        icon_path = Path(__file__).parent.parent / "icons" / icon_folder / "code.png"
         if icon_path.exists():
             self.github_btn.setIcon(QIcon(str(icon_path)))
             self.github_btn.setIconSize(QSize(30, 30))

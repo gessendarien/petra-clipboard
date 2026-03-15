@@ -162,7 +162,7 @@ class ClipItem(QFrame):
                 icons_folder = 'dark'  # default
                 if self.main_window and hasattr(self.main_window, 'themes_manager'):
                     icons_folder = self.main_window.themes_manager.get_icons_folder()
-                icons_dir = Path(__file__).parent / 'icons' / icons_folder
+                icons_dir = Path(__file__).parent.parent / 'icons' / icons_folder
                 icon_files = {
                     "text": "texts.png",
                     "url": "links.png", 
@@ -484,7 +484,7 @@ class ClipItem(QFrame):
         icons_folder = 'dark'  # default
         if self.main_window and hasattr(self.main_window, 'themes_manager'):
             icons_folder = self.main_window.themes_manager.get_icons_folder()
-        icons_dir = Path(__file__).parent / 'icons' / icons_folder
+        icons_dir = Path(__file__).parent.parent / 'icons' / icons_folder
         pin_path = icons_dir / 'pin.png'
         unpin_path = icons_dir / 'unpin.png'
         self._pin_icon = QIcon(str(pin_path)) if pin_path.exists() else None
