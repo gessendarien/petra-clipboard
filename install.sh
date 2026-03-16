@@ -57,12 +57,15 @@ check_flatpak_dependencies() {
         fi
     fi
 
-    # Check KDE Runtimes
+    # Check KDE Runtimes and BaseApp
     if ! flatpak info org.kde.Platform//6.9 &> /dev/null; then
         MISSING_KDE+=("org.kde.Platform//6.9")
     fi
     if ! flatpak info org.kde.Sdk//6.9 &> /dev/null; then
         MISSING_KDE+=("org.kde.Sdk//6.9")
+    fi
+    if ! flatpak info com.riverbankcomputing.PyQt.BaseApp//6.9 &> /dev/null; then
+        MISSING_KDE+=("com.riverbankcomputing.PyQt.BaseApp//6.9")
     fi
 
     if [ ${#MISSING_DEPS[@]} -eq 0 ] && [ ${#MISSING_KDE[@]} -eq 0 ]; then
