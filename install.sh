@@ -225,7 +225,7 @@ create_appimage() {
     # ── usr/share/petra (application files) ──
     APP_DEST="$APPDIR/usr/share/petra"
     mkdir -p "$APP_DEST"
-    cp -r *.py icons "$APP_DEST/"
+    cp -r src icons "$APP_DEST/"
 
     # ── usr/share/applications ──
     mkdir -p "$APPDIR/usr/share/applications"
@@ -265,7 +265,7 @@ PYTHON="$HERE/opt/python/bin/python3"
 export LD_LIBRARY_PATH="$HERE/opt/python/lib:$LD_LIBRARY_PATH"
 export QT_QPA_PLATFORM_PLUGIN_PATH="$HERE/opt/python/lib/python3.11/site-packages/PyQt6/Qt6/plugins/platforms"
 
-cd "$APP_DIR"
+cd "$APP_DIR/src"
 exec "$PYTHON" main.py "$@"
 APPRUN_EOF
     chmod +x "$APPDIR/AppRun"
@@ -326,7 +326,7 @@ Description: Modern clipboard manager with emoji support
 EOF
 
     # ── Copy Application Files ──
-    cp -r *.py icons "$DEB_BUILD_DIR/opt/petra/"
+    cp -r src icons "$DEB_BUILD_DIR/opt/petra/"
     
     # Clean pycache if exists
     find "$DEB_BUILD_DIR/opt/petra" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
@@ -334,7 +334,7 @@ EOF
     # ── Executable Wrapper ──
     cat > "$DEB_BUILD_DIR/usr/bin/petra" << 'EOF'
 #!/bin/bash
-cd /opt/petra
+cd /opt/petra/src
 exec python3 main.py "$@"
 EOF
     chmod +x "$DEB_BUILD_DIR/usr/bin/petra"
