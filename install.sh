@@ -11,8 +11,8 @@ APP_VERSION=$(cat global-version.txt)
 BUILD_DIR="flatpak-build"
 REPO_DIR="flatpak-repo"
 OUTPUT_DIR="output"
-BUNDLE_FILE="${OUTPUT_DIR}/${APP_NAME,,}_${APP_VERSION}.flatpak"
-DEB_FILE="${OUTPUT_DIR}/${APP_NAME,,}_${APP_VERSION}_all.deb"
+BUNDLE_FILE="${OUTPUT_DIR}/${APP_NAME}-${APP_VERSION}.flatpak"
+DEB_FILE="${OUTPUT_DIR}/${APP_NAME}-${APP_VERSION}-all.deb"
 APPIMAGE_FILE="${OUTPUT_DIR}/${APP_NAME}-${APP_VERSION}-x86_64.AppImage"
 APPIMAGETOOL_URL="https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage"
 PYTHON_STANDALONE_URL="https://github.com/indygreg/python-build-standalone/releases/download/20240224/cpython-3.11.8+20240224-x86_64-unknown-linux-gnu-install_only.tar.gz"
@@ -316,7 +316,7 @@ create_debian_package() {
 Package: ${APP_NAME,,}
 Version: ${APP_VERSION}
 Architecture: all
-Maintainer: Petra Developer <dev@petra.github.io>
+Maintainer: Gessén Darién <casscastudios@gmail.com>
 Depends: python3, python3-pyqt6
 Section: utils
 Priority: optional
