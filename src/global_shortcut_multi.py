@@ -20,7 +20,8 @@ class GlobalShortcutManager:
     def __init__(self, on_toggle=None, on_show=None, on_hide=None):
         self.detector = DisplayDetector()
         self.display_server = self.detector.get_display_server()
-        self.config_dir = Path.home() / ".config" / "petra"
+        config_base = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / ".config"))
+        self.config_dir = config_base / "petra"
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.is_flatpak = self.detector.is_flatpak
 
@@ -47,7 +48,7 @@ class GlobalShortcutManager:
         self._fallback_timer.start(2000)
 
     def _run_command(self, cmd, **kwargs):
-        """Run command directly inside the sandbox"""
+        """Run command directly (in flatpak we bundled xbindkeys/xdotool)."""
         return subprocess.run(cmd, **kwargs)
     
     def setup_global_shortcut(self, shortcut_str='Super + v'):
@@ -91,10 +92,7 @@ class GlobalShortcutManager:
 
     def _start_fifo_listener(self):
         """Start listening on the FIFO for commands."""
-        if not self.is_flatpak:
-            self._start_fifo_listener_direct()
-        else:
-            self._start_fifo_listener_flatpak()
+        self._start_fifo_listener_direct()
 
     def _start_fifo_listener_direct(self):
         """Non-Flatpak: open FIFO with QSocketNotifier for zero-polling."""
@@ -158,40 +156,6 @@ class GlobalShortcutManager:
         except OSError as e:
             print(f"Error re-opening FIFO: {e}")
 
-    def _start_fifo_listener_flatpak(self):
-        """Flatpak: use a daemon thread that runs a blocking cat on the host FIFO."""
-        self._fifo_thread_stop.clear()
-        self._fifo_thread = threading.Thread(
-            target=self._fifo_reader_loop_flatpak, daemon=True
-        )
-        self._fifo_thread.start()
-        print("FIFO listener started (Flatpak, blocking thread)")
-
-    def _fifo_reader_loop_flatpak(self):
-        """
-        Blocking loop that runs in a daemon thread.
-        Uses 'cat' on the host FIFO — it blocks until a writer sends data,
-        then returns the data and exits. We loop to keep listening.
-        """
-        pipe_path = self.HOST_COMMAND_PIPE
-        while not self._fifo_thread_stop.is_set():
-            try:
-                res = subprocess.run(
-                    ['flatpak-spawn', '--host', 'cat', pipe_path],
-                    capture_output=True, text=True, cwd='/tmp',
-                    timeout=30  # Safety timeout to avoid orphaned processes
-                )
-                if res.returncode == 0 and res.stdout.strip():
-                    command = res.stdout.strip()
-                    self._fifo_signal.commandReceived.emit(command)
-            except subprocess.TimeoutExpired:
-                # Normal — just re-loop. The FIFO had no writer for 30s.
-                continue
-            except Exception as e:
-                if not self._fifo_thread_stop.is_set():
-                    print(f"FIFO reader error: {e}")
-                    # Brief sleep before retrying to avoid busy-loop on error
-                    self._fifo_thread_stop.wait(1.0)
 
     def _process_command(self, command):
         """Process a command received from the FIFO (runs on Qt main thread)."""
@@ -211,29 +175,21 @@ class GlobalShortcutManager:
         listener missed something (e.g. FIFO was replaced by a regular file).
         """
         pipe_path = self.HOST_COMMAND_PIPE
-        if not self.is_flatpak:
-            p = Path(pipe_path)
-            if not p.exists():
-                return
-            # Only process if it's a regular file (not a FIFO — FIFO is handled
-            # by the notifier). This catches edge cases where something wrote
-            # a regular file instead.
-            try:
-                if stat.S_ISFIFO(p.stat().st_mode):
-                    return  # FIFO is handled by QSocketNotifier
-                command = p.read_text().strip()
-                p.unlink(missing_ok=True)
-                if command:
-                    self._process_command(command)
-            except Exception:
-                return
-        else:
-            # In Flatpak: only check if thread is not running
-            if self._fifo_thread and self._fifo_thread.is_alive():
-                return
-            # Thread died — restart it
-            print("FIFO reader thread died, restarting...")
-            self._start_fifo_listener_flatpak()
+        p = Path(pipe_path)
+        if not p.exists():
+            return
+        # Only process if it's a regular file (not a FIFO — FIFO is handled
+        # by the notifier). This catches edge cases where something wrote
+        # a regular file instead.
+        try:
+            if stat.S_ISFIFO(p.stat().st_mode):
+                return  # FIFO is handled by QSocketNotifier
+            command = p.read_text().strip()
+            p.unlink(missing_ok=True)
+            if command:
+                self._process_command(command)
+        except Exception:
+            return
 
     def _setup_x11_direct_shortcut(self, shortcut_str):
         if not self.detector.is_tool_available('xdotool'):

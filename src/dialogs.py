@@ -13,7 +13,8 @@ from themes_manager import ThemesManager
 
 def get_autostart_path():
     """Get path to .desktop file in autostart"""
-    return Path.home() / ".config" / "autostart" / "petra.desktop"
+    config_base = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / ".config"))
+    return config_base / "autostart" / "petra.desktop"
 
 
 def is_autostart_enabled():
@@ -37,7 +38,8 @@ def is_running_in_flatpak():
 
 def enable_autostart():
     """Create .desktop file for autostart"""
-    autostart_dir = Path.home() / ".config" / "autostart"
+    config_base = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / ".config"))
+    autostart_dir = config_base / "autostart"
     autostart_dir.mkdir(parents=True, exist_ok=True)
     
     # Determine execution command based on environment

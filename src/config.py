@@ -3,12 +3,14 @@ import base64
 import hashlib
 from datetime import datetime
 from pathlib import Path
+import os
 
 from dialogs import SettingsDialog
 
 class ConfigManager:
     def __init__(self):
-        self.config_dir = Path.home() / ".config" / "petra"
+        config_base = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / ".config"))
+        self.config_dir = config_base / "petra"
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.pinned_file = self.config_dir / "pinned.json"
         self.config_file = self.config_dir / "config.json"
