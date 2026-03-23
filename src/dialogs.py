@@ -160,12 +160,12 @@ class SettingsDialog(QDialog):
         
         # Common shortcuts options
         common_shortcuts = [
-            "Alt + space",
+            "Super + v",
+            "Ctrl + Alt + v",
             "Alt + v",
             "Alt + z",
             "Alt + x",
-            "Alt + c",
-            "Super + v"
+            "Alt + space"
         ]
         self.shortcut_combo.addItems(common_shortcuts)
         grid_layout.addWidget(self.shortcut_combo, 3, 1)

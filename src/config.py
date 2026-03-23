@@ -41,7 +41,7 @@ class ConfigManager:
             'language': 'es',
             'max_images': 10,
             'max_clips': 20,
-            'shortcut': 'Alt + space',  # Default shortcut: Alt+Espacio
+            'shortcut': 'Super + v',
             'show_clear_btn': True,  # Ensure this is enabled by default
             'show_pin_btn': True,    # Ensure this is enabled by default
             'theme': 'dark',
@@ -54,14 +54,6 @@ class ConfigManager:
                 with open(self.config_file, 'r') as f:
                     self.config = json.load(f)
                 
-                # AUTO-MIGRATION: Force update if old shortcut is detected
-                current_shortcut = str(self.config.get('shortcut', '')).lower()
-                # Migrate from Control+Shift+v OR from Super+v to new Alt+space
-                if ('control' in current_shortcut and 'shift' in current_shortcut and 'v' in current_shortcut) or \
-                   ('super' in current_shortcut and 'v' in current_shortcut):
-                    print(f"DEBUG: Migrating old shortcut '{self.config.get('shortcut')}' to 'Alt + space'")
-                    self.config['shortcut'] = 'Alt + space'
-                    
                 # Validate the loaded configuration
                 self.config = self.validate_config(self.config, default)
             else:

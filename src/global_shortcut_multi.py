@@ -33,12 +33,30 @@ class GlobalShortcutManager:
         Inside Flatpak, wraps with flatpak-spawn --host.
         Outside Flatpak, runs directly."""
         if self.is_flatpak:
-            cmd = ['flatpak-spawn', '--host'] + cmd
+            cmd = ['flatpak-spawn', '--host', '--directory=/'] + cmd
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=5, **kwargs)
+            if result.returncode != 0 and result.stderr:
+                print(f"CMD STDERR ({' '.join(cmd[:4])}): {result.stderr.strip()}")
             return result
         except Exception as e:
             print(f"Error running {' '.join(cmd[:3])}...: {e}")
+            return None
+
+    def _host_bash(self, bash_cmd):
+        """Run a bash command string on the HOST.
+        Using 'bash -c' ensures the host's environment (including DBUS_SESSION_BUS_ADDRESS)
+        is available, which is critical for gsettings/dconf to work from Flatpak."""
+        cmd = ['bash', '-c', bash_cmd]
+        if self.is_flatpak:
+            cmd = ['flatpak-spawn', '--host', '--directory=/'] + cmd
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+            if result.returncode != 0 and result.stderr:
+                print(f"BASH STDERR: {result.stderr.strip()}")
+            return result
+        except Exception as e:
+            print(f"Error running bash command: {e}")
             return None
 
     def _get_petra_command(self):
@@ -185,18 +203,27 @@ class GlobalShortcutManager:
         except Exception:
             return []
 
-    def _find_existing_binding(self, base_path, custom_list, is_full_path=False):
-        """Find if a Petra keybinding already exists. Returns the key/path or None."""
+    def _find_existing_binding(self, base_path, custom_list, relocatable_schema=None, is_full_path=False):
+        """Find if a Petra keybinding already exists. Returns the key/path or None.
+        Uses gsettings via bash for Flatpak compatibility."""
         for item in custom_list:
             if is_full_path:
                 path = item if item.endswith('/') else item + '/'
             else:
                 path = f"{base_path}/{item}/"
-            result = self._dconf(['read', f'{path}name'])
-            if result and result.returncode == 0:
-                name = result.stdout.strip().strip("'")
-                if name == self.KEYBINDING_NAME:
-                    return item
+
+            name = None
+            if relocatable_schema:
+                result = self._host_bash(f"gsettings get '{relocatable_schema}:{path}' name")
+                if result and result.returncode == 0:
+                    name = result.stdout.strip().strip("'")
+            else:
+                result = self._dconf(['read', f'{path}name'])
+                if result and result.returncode == 0:
+                    name = result.stdout.strip().strip("'")
+
+            if name == self.KEYBINDING_NAME:
+                return item
         return None
 
     def _next_custom_num(self, custom_list, prefix='custom'):
@@ -220,28 +247,41 @@ class GlobalShortcutManager:
     def _register_cinnamon(self, shortcut_str):
         base = "/org/cinnamon/desktop/keybindings/custom-keybindings"
         schema = "org.cinnamon.desktop.keybindings"
+        relocatable = "org.cinnamon.desktop.keybindings.custom-keybinding"
         binding = self._shortcut_to_binding(shortcut_str)
         command = self._get_petra_command()
 
-        r = self._gsettings(['get', schema, 'custom-list'])
+        r = self._host_bash(f"gsettings get {schema} custom-list")
         custom_list = self._parse_gsettings_list(r.stdout) if r and r.returncode == 0 else []
 
-        existing = self._find_existing_binding(base, custom_list)
+        existing = self._find_existing_binding(base, custom_list, relocatable_schema=relocatable)
         if existing:
             key_name = existing
         else:
             key_name = f"custom{self._next_custom_num(custom_list)}"
 
         path = f"{base}/{key_name}/"
-        self._dconf(['write', f'{path}name', f"'{self.KEYBINDING_NAME}'"])
-        self._dconf(['write', f'{path}command', f"'{command}'"])
-        self._dconf(['write', f'{path}binding', f"['{binding}']"])
+        schema_path = f"{relocatable}:{path}"
+
+        # Use bash -c for reliable D-Bus session access from Flatpak
+        self._host_bash(f"gsettings set '{schema_path}' name '{self.KEYBINDING_NAME}'")
+        self._host_bash(f"gsettings set '{schema_path}' command '{command}'")
+        self._host_bash(f"gsettings set '{schema_path}' binding \"['{binding}']\"")
 
         if key_name not in custom_list:
             custom_list.append(key_name)
-            self._gsettings(['set', schema, 'custom-list', str(custom_list).replace('"', "'")])
+            list_str = str(custom_list).replace('"', "'")
+            self._host_bash(f"gsettings set {schema} custom-list \"{list_str}\"")
 
         print(f"Cinnamon shortcut registered: {binding} -> {command}")
+        # Verify the binding was written correctly
+        verify = self._host_bash(f"gsettings get '{schema_path}' binding")
+        if verify and verify.returncode == 0 and binding in verify.stdout:
+            print(f"Cinnamon shortcut VERIFIED OK")
+        else:
+            stdout = verify.stdout.strip() if verify else 'None'
+            stderr = verify.stderr.strip() if verify and verify.stderr else ''
+            print(f"WARNING: Cinnamon shortcut verification failed. stdout='{stdout}' stderr='{stderr}'")
         return True
 
     # ─────────────────────────────────────
@@ -251,28 +291,41 @@ class GlobalShortcutManager:
     def _register_gnome(self, shortcut_str):
         base = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
         schema = "org.gnome.settings-daemon.plugins.media-keys"
+        relocatable = "org.gnome.settings-daemon.plugins.media-keys.custom-keybinding"
         binding = self._shortcut_to_binding(shortcut_str)
         command = self._get_petra_command()
 
-        r = self._gsettings(['get', schema, 'custom-keybindings'])
+        r = self._host_bash(f"gsettings get {schema} custom-keybindings")
         custom_list = self._parse_gsettings_list(r.stdout) if r and r.returncode == 0 else []
 
-        existing = self._find_existing_binding(base, custom_list, is_full_path=True)
+        existing = self._find_existing_binding(base, custom_list, relocatable_schema=relocatable, is_full_path=True)
         if existing:
             path = existing if existing.endswith('/') else existing + '/'
         else:
             num = self._next_custom_num(custom_list)
             path = f"{base}/custom{num}/"
 
-        self._dconf(['write', f'{path}name', f"'{self.KEYBINDING_NAME}'"])
-        self._dconf(['write', f'{path}command', f"'{command}'"])
-        self._dconf(['write', f'{path}binding', f"'{binding}'"])
+        schema_path = f"{relocatable}:{path}"
+
+        # Use bash -c for reliable D-Bus session access from Flatpak
+        self._host_bash(f"gsettings set '{schema_path}' name '{self.KEYBINDING_NAME}'")
+        self._host_bash(f"gsettings set '{schema_path}' command '{command}'")
+        self._host_bash(f"gsettings set '{schema_path}' binding '{binding}'")
 
         if path not in custom_list:
             custom_list.append(path)
-            self._gsettings(['set', schema, 'custom-keybindings', str(custom_list).replace('"', "'")])
+            list_str = str(custom_list).replace('"', "'")
+            self._host_bash(f"gsettings set {schema} custom-keybindings \"{list_str}\"")
 
         print(f"GNOME shortcut registered: {binding} -> {command}")
+        # Verify the binding was written correctly
+        verify = self._host_bash(f"gsettings get '{schema_path}' binding")
+        if verify and verify.returncode == 0 and binding in verify.stdout:
+            print(f"GNOME shortcut VERIFIED OK")
+        else:
+            stdout = verify.stdout.strip() if verify else 'None'
+            stderr = verify.stderr.strip() if verify and verify.stderr else ''
+            print(f"WARNING: GNOME shortcut verification failed. stdout='{stdout}' stderr='{stderr}'")
         return True
 
     # ─────────────────────────────────────

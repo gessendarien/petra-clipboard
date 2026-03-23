@@ -77,7 +77,7 @@ class DisplayDetector:
                     cmd = [tool_name, '--help']
                     
                 result = subprocess.run(
-                    ['flatpak-spawn', '--host'] + cmd,
+                    ['flatpak-spawn', '--host', '--directory=/'] + cmd,
                     capture_output=True,
                     timeout=2,
                     cwd='/tmp' # CRITICAL: Force CWD to /tmp
