@@ -252,6 +252,21 @@ create_appimage() {
         ln -sf "$APP_ID.png" "$APPDIR/.DirIcon"
     fi
 
+    # ── Bundle host tools (libxcb-cursor0 for Qt, xdotool & libxdo3 for pasting) ──
+    echo "Bundling required system libraries and tools..."
+    mkdir -p "$APPDIR/usr/lib" "$APPDIR/usr/bin"
+    XCB_TEMP=$(mktemp -d)
+    pushd "$XCB_TEMP" >/dev/null
+    if apt-get download libxcb-cursor0 xdotool libxdo3 2>/dev/null; then
+        for deb in *.deb; do dpkg -x "$deb" .; done
+        cp usr/lib/*/lib*.so* "$APPDIR/usr/lib/" 2>/dev/null || true
+        cp usr/bin/* "$APPDIR/usr/bin/" 2>/dev/null || true
+    else
+        echo -e "${YELLOW}Warning: Could not download required system dependencies to bundle.${NC}"
+    fi
+    popd >/dev/null
+    rm -rf "$XCB_TEMP"
+
     # ── AppRun ──
     cat > "$APPDIR/AppRun" << 'APPRUN_EOF'
 #!/bin/bash
@@ -262,7 +277,8 @@ APP_DIR="$HERE/usr/share/petra"
 PYTHON="$HERE/opt/python/bin/python3"
 
 # Set library path so PyQt6 finds Qt libraries properly within the AppImage
-export LD_LIBRARY_PATH="$HERE/opt/python/lib:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$HERE/usr/lib:$HERE/opt/python/lib:$LD_LIBRARY_PATH"
+export PATH="$HERE/usr/bin:$PATH"
 export QT_QPA_PLATFORM_PLUGIN_PATH="$HERE/opt/python/lib/python3.11/site-packages/PyQt6/Qt6/plugins/platforms"
 
 cd "$APP_DIR/src"
@@ -317,7 +333,7 @@ Package: ${APP_NAME,,}
 Version: ${APP_VERSION}
 Architecture: all
 Maintainer: Gessén Darién <casscastudios@gmail.com>
-Depends: python3, python3-pyqt6
+Depends: python3, python3-pyqt6, libxcb-cursor0, xdotool, wl-clipboard
 Section: utils
 Priority: optional
 Description: Modern clipboard manager with emoji support

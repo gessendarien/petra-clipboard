@@ -1,274 +1,419 @@
 import subprocess
 import os
-import sys
-import threading
-import stat
+import json
 from pathlib import Path
-from display_detector import DisplayDetector
-from PyQt6.QtCore import QTimer, QSocketNotifier, pyqtSignal, QObject
-import shlex
-
-
-class _FifoReaderSignal(QObject):
-    """Helper to emit Qt signals from the FIFO reader thread."""
-    commandReceived = pyqtSignal(str)
 
 
 class GlobalShortcutManager:
-    HOST_COMMAND_PIPE = "/tmp/petra_command_pipe"
+    """Manages global keyboard shortcuts by registering them with the desktop environment.
+
+    Supports: Cinnamon, GNOME, KDE Plasma, XFCE, MATE.
+    Works from: native install (.deb/AppImage), Flatpak (via flatpak-spawn --host).
+    When the shortcut is pressed, the OS runs the Petra command, and Petra's
+    single-instance mechanism (Unix socket in main.py) shows the existing window.
+    """
+
+    KEYBINDING_NAME = "Petra Clipboard"
 
     def __init__(self, on_toggle=None, on_show=None, on_hide=None):
-        self.detector = DisplayDetector()
-        self.display_server = self.detector.get_display_server()
-        config_base = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / ".config"))
-        self.config_dir = config_base / "petra"
-        self.config_dir.mkdir(parents=True, exist_ok=True)
-        self.is_flatpak = self.detector.is_flatpak
+        self.is_flatpak = Path('/.flatpak-info').exists()
+        self.desktop = os.environ.get('XDG_CURRENT_DESKTOP', '').lower()
 
-        # Signal bridge for thread -> Qt main loop
-        self._fifo_signal = _FifoReaderSignal()
-        self._fifo_signal.commandReceived.connect(self._process_command)
-
-        # File descriptor / notifier for non-Flatpak FIFO reading
-        self._fifo_fd = None
-        self._fifo_notifier = None
-
-        # Thread for Flatpak FIFO reading
-        self._fifo_thread = None
-        self._fifo_thread_stop = threading.Event()
-
-        # Callbacks for command processing (decoupled from window)
+        # Callbacks (kept for compatibility)
         self._on_toggle = on_toggle
         self._on_show = on_show
         self._on_hide = on_hide
 
-        # Fallback timer (slow, only as safety net)
-        self._fallback_timer = QTimer()
-        self._fallback_timer.timeout.connect(self._fallback_check)
-        self._fallback_timer.start(2000)
+    # ─────────────────────────────────────
+    #  Command execution helpers
+    # ─────────────────────────────────────
 
-    def _run_command(self, cmd, **kwargs):
-        """Run command directly (in flatpak we bundled xbindkeys/xdotool)."""
-        return subprocess.run(cmd, **kwargs)
-    
-    def setup_global_shortcut(self, shortcut_str='Super + v'):
-        print(f"Configuring global shortcut: {shortcut_str}")
-        
-        if self.display_server == 'x11':
-            return self._setup_x11_direct_shortcut(shortcut_str)
-        else:
-            print("Wayland - alternative method")
-            return False
-
-    def _write_host_file(self, host_path, content):
-        """Write content to a file (always local inside the sandbox if in Flatpak)"""
+    def _host_run(self, cmd, **kwargs):
+        """Run a command on the HOST system.
+        Inside Flatpak, wraps with flatpak-spawn --host.
+        Outside Flatpak, runs directly."""
+        if self.is_flatpak:
+            cmd = ['flatpak-spawn', '--host'] + cmd
         try:
-            p = Path(host_path)
-            p.parent.mkdir(parents=True, exist_ok=True)
-            with open(p, 'w') as f:
-                f.write(content)
-            p.chmod(0o755)
-            return True
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5, **kwargs)
+            return result
         except Exception as e:
-            print(f"Error writing file {host_path}: {e}")
-            return False
+            print(f"Error running {' '.join(cmd[:3])}...: {e}")
+            return None
 
-    def _ensure_fifo(self):
-        """Create the FIFO (named pipe) locally."""
-        pipe_path = self.HOST_COMMAND_PIPE
-        p = Path(pipe_path)
-        if p.exists():
-            # If it's already a FIFO, reuse it
-            if stat.S_ISFIFO(p.stat().st_mode):
-                return True
-            # Otherwise remove the stale regular file and recreate
-            p.unlink(missing_ok=True)
-        try:
-            os.mkfifo(pipe_path)
-            return True
-        except OSError as e:
-            print(f"Error creating FIFO: {e}")
-            return False
+    def _get_petra_command(self):
+        """Return the command string the OS should run to toggle Petra.
+        Must be a stable path that survives app restarts and reboots.
+        """
+        # 1. Flatpak: always use 'flatpak run <id>'
+        if self.is_flatpak:
+            flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra')
+            return f"flatpak run {flatpak_id}"
 
-    def _start_fifo_listener(self):
-        """Start listening on the FIFO for commands."""
-        self._start_fifo_listener_direct()
+        # 2. AppImage: $APPIMAGE env var points to the real .AppImage file on disk
+        appimage_path = os.environ.get('APPIMAGE')
+        if appimage_path and Path(appimage_path).exists():
+            return appimage_path
 
-    def _start_fifo_listener_direct(self):
-        """Non-Flatpak: open FIFO with QSocketNotifier for zero-polling."""
-        pipe_path = self.HOST_COMMAND_PIPE
-        try:
-            # Open in non-blocking read mode.
-            # O_RDONLY|O_NONBLOCK ensures open() returns immediately even if
-            # no writer has opened the FIFO yet.
-            self._fifo_fd = os.open(pipe_path, os.O_RDONLY | os.O_NONBLOCK)
+        # 3. Installed .deb: /usr/bin/petra wrapper exists
+        if Path('/usr/bin/petra').exists():
+            return '/usr/bin/petra'
 
-            self._fifo_notifier = QSocketNotifier(
-                self._fifo_fd, QSocketNotifier.Type.Read
-            )
-            self._fifo_notifier.activated.connect(self._on_fifo_ready)
-            self._fifo_notifier.setEnabled(True)
-            print("FIFO listener started (direct, QSocketNotifier)")
-        except OSError as e:
-            print(f"Error opening FIFO for listening: {e}")
+        # 4. Development: resolve real path of main.py (avoid any symlinks or /tmp mounts)
+        main_script = Path(__file__).resolve().parent / "main.py"
+        return f"python3 {main_script}"
 
-    def _on_fifo_ready(self):
-        """Called by QSocketNotifier when data is available on the FIFO."""
-        if self._fifo_fd is None:
-            return
-        try:
-            data = os.read(self._fifo_fd, 1024)
-            if data:
-                command = data.decode('utf-8', errors='replace').strip()
-                if command:
-                    self._process_command(command)
+    def _shortcut_to_binding(self, shortcut_str):
+        """Convert 'Alt + space' → '<Alt>space' (gsettings format)."""
+        parts = [p.strip() for p in shortcut_str.split('+')]
+        binding = ""
+        for part in parts:
+            lower = part.lower()
+            if lower in ('alt',):
+                binding += "<Alt>"
+            elif lower in ('ctrl', 'control'):
+                binding += "<Control>"
+            elif lower in ('shift',):
+                binding += "<Shift>"
+            elif lower in ('super', 'mod4'):
+                binding += "<Super>"
             else:
-                # EOF — the writer closed. Re-open the FIFO to wait for
-                # the next writer (re-arm the notifier).
-                self._reopen_fifo_direct()
-        except BlockingIOError:
-            pass
-        except OSError as e:
-            print(f"Error reading FIFO: {e}")
-            self._reopen_fifo_direct()
+                binding += part.lower()
+        return binding
 
-    def _reopen_fifo_direct(self):
-        """Re-open the FIFO after EOF so we can receive the next command."""
-        try:
-            if self._fifo_notifier:
-                self._fifo_notifier.setEnabled(False)
-                self._fifo_notifier.deleteLater()
-                self._fifo_notifier = None
-            if self._fifo_fd is not None:
-                os.close(self._fifo_fd)
-                self._fifo_fd = None
-        except OSError:
-            pass
+    def _detect_desktop_type(self):
+        """Detect the desktop environment."""
+        desktop = self.desktop
+        if 'cinnamon' in desktop:
+            return 'cinnamon'
+        elif 'mate' in desktop:
+            return 'mate'
+        elif 'xfce' in desktop:
+            return 'xfce'
+        elif 'kde' in desktop or 'plasma' in desktop:
+            return 'kde'
+        elif 'gnome' in desktop or 'unity' in desktop or 'pop' in desktop or 'budgie' in desktop or 'pantheon' in desktop:
+            return 'gnome'
+        else:
+            # Fallback: try to detect by checking which tools exist
+            return self._detect_desktop_by_tools()
 
-        pipe_path = self.HOST_COMMAND_PIPE
-        try:
-            self._fifo_fd = os.open(pipe_path, os.O_RDONLY | os.O_NONBLOCK)
-            self._fifo_notifier = QSocketNotifier(
-                self._fifo_fd, QSocketNotifier.Type.Read
-            )
-            self._fifo_notifier.activated.connect(self._on_fifo_ready)
-            self._fifo_notifier.setEnabled(True)
-        except OSError as e:
-            print(f"Error re-opening FIFO: {e}")
+    def _detect_desktop_by_tools(self):
+        """Fallback detection by checking which settings tools exist on host."""
+        # Try cinnamon first (common on Mint)
+        r = self._host_run(['gsettings', 'get', 'org.cinnamon.desktop.keybindings', 'custom-list'])
+        if r and r.returncode == 0:
+            return 'cinnamon'
+        # Try GNOME
+        r = self._host_run(['gsettings', 'get', 'org.gnome.settings-daemon.plugins.media-keys', 'custom-keybindings'])
+        if r and r.returncode == 0:
+            return 'gnome'
+        # Try KDE
+        for kw in ['kwriteconfig6', 'kwriteconfig5']:
+            r = self._host_run(['which', kw])
+            if r and r.returncode == 0:
+                return 'kde'
+        # Try XFCE
+        r = self._host_run(['which', 'xfconf-query'])
+        if r and r.returncode == 0:
+            return 'xfce'
+        # Try MATE
+        r = self._host_run(['gsettings', 'get', 'org.mate.Marco.global-keybindings', 'run-command-1'])
+        if r and r.returncode == 0:
+            return 'mate'
+        return 'unknown'
 
+    # ─────────────────────────────────────
+    #  Main entry points
+    # ─────────────────────────────────────
 
-    def _process_command(self, command):
-        """Process a command received from the FIFO (runs on Qt main thread)."""
-        if command == "toggle":
-            if self._on_toggle:
-                self._on_toggle()
-        elif command == "show":
-            if self._on_show:
-                self._on_show()
-        elif command == "hide":
-            if self._on_hide:
-                self._on_hide()
+    def setup_global_shortcut(self, shortcut_str='Alt + space'):
+        """Register the global shortcut with the desktop environment."""
+        desktop_type = self._detect_desktop_type()
+        print(f"Registering global shortcut '{shortcut_str}' for desktop: {desktop_type}")
 
-    def _fallback_check(self):
-        """
-        Slow fallback timer (2s). Only processes commands if the FIFO
-        listener missed something (e.g. FIFO was replaced by a regular file).
-        """
-        pipe_path = self.HOST_COMMAND_PIPE
-        p = Path(pipe_path)
-        if not p.exists():
-            return
-        # Only process if it's a regular file (not a FIFO — FIFO is handled
-        # by the notifier). This catches edge cases where something wrote
-        # a regular file instead.
-        try:
-            if stat.S_ISFIFO(p.stat().st_mode):
-                return  # FIFO is handled by QSocketNotifier
-            command = p.read_text().strip()
-            p.unlink(missing_ok=True)
-            if command:
-                self._process_command(command)
-        except Exception:
-            return
+        handlers = {
+            'cinnamon': self._register_cinnamon,
+            'gnome': self._register_gnome,
+            'kde': self._register_kde,
+            'xfce': self._register_xfce,
+            'mate': self._register_mate,
+        }
 
-    def _setup_x11_direct_shortcut(self, shortcut_str):
-        if not self.detector.is_tool_available('xdotool'):
-            print("xdotool not found. Install it: sudo apt install xdotool")
-            return False
-            
-        # "PIPE" STRATEGY: We use a real FIFO (named pipe).
-        # Everything happens in HOST /tmp.
-        
-        host_script_path = "/tmp/petra_toggle.sh"
-        host_command_file = self.HOST_COMMAND_PIPE
-        host_config_path = "/tmp/petra_xbindkeysrc"
-        
-        # 0. Ensure FIFO exists on host
-        self._ensure_fifo()
-        
-        # SIMPLIFIED Script: Only writes "toggle" to the FIFO
-        script_content = f"""#!/bin/bash
-echo "toggle" > "{host_command_file}"
-"""
-        # 1. Inject script into HOST
-        if not self._write_host_file(host_script_path, script_content):
-            print("Failed to inject script into host")
-            return False
+        handler = handlers.get(desktop_type)
+        if handler:
+            try:
+                return handler(shortcut_str)
+            except Exception as e:
+                print(f"Error registering shortcut for {desktop_type}: {e}")
+                return False
+        else:
+            print(f"Desktop '{self.desktop}' not auto-detected. Trying GNOME-compatible fallback...")
+            try:
+                return self._register_gnome(shortcut_str)
+            except Exception:
+                print(f"Fallback failed. Shortcut not registered.")
+                return False
 
-        # 2. Generate xbindkeys config
-        xbindkeys_shortcut = shortcut_str
-        xbindkeys_shortcut = xbindkeys_shortcut.replace('Super', 'Mod4')
-        xbindkeys_shortcut = xbindkeys_shortcut.replace('Ctrl', 'Control')
-        
-        config_lines = []
-        config_lines.append('# Petra Clipboard Manager')
-        config_lines.append(f'"{host_script_path}"')
-        config_lines.append(f'  {xbindkeys_shortcut}')
-        xbindkeys_content = '\n'.join(config_lines) + '\n'
-
-        # 3. Inject config into HOST
-        if not self._write_host_file(host_config_path, xbindkeys_content):
-             print("Failed to inject config into host")
-             return False
-
-        # 4. Restart xbindkeys on HOST
-        print(f"DEBUG: Restarting xbindkeys with config {host_config_path}")
-        
-        # First kill the specific previous instance of this config
-        kill_cmd = ['pkill', '-f', f'xbindkeys -f {host_config_path}']
-        self._run_command(kill_cmd, stderr=subprocess.DEVNULL, stdout=subprocess.DEVNULL)
-        
-        # Start new instance
-        command = ['xbindkeys', '-f', host_config_path]
-        res = self._run_command(command, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
-        print(f"DEBUG: xbindkeys restart result: {res.returncode}")
-
-        # 5. Start FIFO listener
-        self._start_fifo_listener()
-        
-        print("Shortcut configured via FIFO Strategy.")
-        return True
+    def register_global_hotkey(self, shortcut_str='Alt + space'):
+        """Alias for setup_global_shortcut (backwards compatibility)."""
+        return self.setup_global_shortcut(shortcut_str)
 
     def cleanup_fifo(self):
-        """Clean up FIFO resources. Call on application exit."""
-        # Stop thread
-        self._fifo_thread_stop.set()
+        """No-op. Kept for backwards compatibility."""
+        pass
 
-        # Close notifier and fd
-        if self._fifo_notifier:
-            self._fifo_notifier.setEnabled(False)
-            self._fifo_notifier.deleteLater()
-            self._fifo_notifier = None
-        if self._fifo_fd is not None:
+    # ─────────────────────────────────────
+    #  gsettings/dconf helpers (Cinnamon, GNOME, MATE)
+    # ─────────────────────────────────────
+
+    def _gsettings(self, args):
+        """Run gsettings on host."""
+        return self._host_run(['gsettings'] + args)
+
+    def _dconf(self, args):
+        """Run dconf on host."""
+        return self._host_run(['dconf'] + args)
+
+    def _parse_gsettings_list(self, raw):
+        """Parse a gsettings list output like \"['a', 'b']\" into a Python list."""
+        raw = raw.strip()
+        if raw == '@as []':
+            return []
+        try:
+            return json.loads(raw.replace("'", '"'))
+        except Exception:
+            return []
+
+    def _find_existing_binding(self, base_path, custom_list, is_full_path=False):
+        """Find if a Petra keybinding already exists. Returns the key/path or None."""
+        for item in custom_list:
+            if is_full_path:
+                path = item if item.endswith('/') else item + '/'
+            else:
+                path = f"{base_path}/{item}/"
+            result = self._dconf(['read', f'{path}name'])
+            if result and result.returncode == 0:
+                name = result.stdout.strip().strip("'")
+                if name == self.KEYBINDING_NAME:
+                    return item
+        return None
+
+    def _next_custom_num(self, custom_list, prefix='custom'):
+        """Find the next available custom number."""
+        existing = set()
+        for k in custom_list:
+            part = k.rstrip('/').split('/')[-1] if '/' in k else k
             try:
-                os.close(self._fifo_fd)
-            except OSError:
+                existing.add(int(part.replace(prefix, '')))
+            except ValueError:
                 pass
-            self._fifo_fd = None
+        n = 0
+        while n in existing:
+            n += 1
+        return n
 
-        # Stop fallback timer
-        if hasattr(self, '_fallback_timer'):
-            self._fallback_timer.stop()
+    # ─────────────────────────────────────
+    #  Cinnamon
+    # ─────────────────────────────────────
 
-    def register_global_hotkey(self, shortcut_str='Super + v'):
-        return self.setup_global_shortcut(shortcut_str)
+    def _register_cinnamon(self, shortcut_str):
+        base = "/org/cinnamon/desktop/keybindings/custom-keybindings"
+        schema = "org.cinnamon.desktop.keybindings"
+        binding = self._shortcut_to_binding(shortcut_str)
+        command = self._get_petra_command()
+
+        r = self._gsettings(['get', schema, 'custom-list'])
+        custom_list = self._parse_gsettings_list(r.stdout) if r and r.returncode == 0 else []
+
+        existing = self._find_existing_binding(base, custom_list)
+        if existing:
+            key_name = existing
+        else:
+            key_name = f"custom{self._next_custom_num(custom_list)}"
+
+        path = f"{base}/{key_name}/"
+        self._dconf(['write', f'{path}name', f"'{self.KEYBINDING_NAME}'"])
+        self._dconf(['write', f'{path}command', f"'{command}'"])
+        self._dconf(['write', f'{path}binding', f"['{binding}']"])
+
+        if key_name not in custom_list:
+            custom_list.append(key_name)
+            self._gsettings(['set', schema, 'custom-list', str(custom_list).replace('"', "'")])
+
+        print(f"Cinnamon shortcut registered: {binding} -> {command}")
+        return True
+
+    # ─────────────────────────────────────
+    #  GNOME (also works for Budgie, Pantheon, etc.)
+    # ─────────────────────────────────────
+
+    def _register_gnome(self, shortcut_str):
+        base = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
+        schema = "org.gnome.settings-daemon.plugins.media-keys"
+        binding = self._shortcut_to_binding(shortcut_str)
+        command = self._get_petra_command()
+
+        r = self._gsettings(['get', schema, 'custom-keybindings'])
+        custom_list = self._parse_gsettings_list(r.stdout) if r and r.returncode == 0 else []
+
+        existing = self._find_existing_binding(base, custom_list, is_full_path=True)
+        if existing:
+            path = existing if existing.endswith('/') else existing + '/'
+        else:
+            num = self._next_custom_num(custom_list)
+            path = f"{base}/custom{num}/"
+
+        self._dconf(['write', f'{path}name', f"'{self.KEYBINDING_NAME}'"])
+        self._dconf(['write', f'{path}command', f"'{command}'"])
+        self._dconf(['write', f'{path}binding', f"'{binding}'"])
+
+        if path not in custom_list:
+            custom_list.append(path)
+            self._gsettings(['set', schema, 'custom-keybindings', str(custom_list).replace('"', "'")])
+
+        print(f"GNOME shortcut registered: {binding} -> {command}")
+        return True
+
+    # ─────────────────────────────────────
+    #  KDE Plasma
+    # ─────────────────────────────────────
+
+    def _register_kde(self, shortcut_str):
+        binding = self._shortcut_to_binding(shortcut_str)
+        # KDE format: Alt+Space (no angle brackets, + separated)
+        kde_binding = shortcut_str.replace(' ', '')  # "Alt+space"
+        command = self._get_petra_command()
+
+        # Detect kwriteconfig version
+        kwrite = None
+        for cmd in ['kwriteconfig6', 'kwriteconfig5']:
+            r = self._host_run(['which', cmd])
+            if r and r.returncode == 0:
+                kwrite = cmd
+                break
+
+        if not kwrite:
+            print("KDE: kwriteconfig not found, cannot register shortcut")
+            return False
+
+        # Write to kglobalshortcutsrc
+        group = "petra-clipboard.desktop"
+        self._host_run([
+            kwrite, '--file', 'kglobalshortcutsrc',
+            '--group', group,
+            '--key', '_k_friendly_name', self.KEYBINDING_NAME
+        ])
+        self._host_run([
+            kwrite, '--file', 'kglobalshortcutsrc',
+            '--group', group,
+            '--key', 'Petra', f'{kde_binding},none,Toggle Petra Clipboard'
+        ])
+
+        # Write the action to khotkeysrc for custom command
+        self._host_run([
+            kwrite, '--file', 'khotkeysrc',
+            '--group', 'Data_petra',
+            '--key', 'Comment', 'Petra Clipboard Manager'
+        ])
+        self._host_run([
+            kwrite, '--file', 'khotkeysrc',
+            '--group', 'Data_petra',
+            '--key', 'Enabled', 'true'
+        ])
+        self._host_run([
+            kwrite, '--file', 'khotkeysrc',
+            '--group', 'Data_petra',
+            '--key', 'Type', 'SIMPLE_ACTION_DATA'
+        ])
+        self._host_run([
+            kwrite, '--file', 'khotkeysrc',
+            '--group', 'Data_petra_Actions0',
+            '--key', 'CommandURL', command
+        ])
+        self._host_run([
+            kwrite, '--file', 'khotkeysrc',
+            '--group', 'Data_petra_Actions0',
+            '--key', 'Type', 'COMMAND_URL'
+        ])
+        self._host_run([
+            kwrite, '--file', 'khotkeysrc',
+            '--group', 'Data_petra_Triggers0',
+            '--key', 'Key', kde_binding
+        ])
+        self._host_run([
+            kwrite, '--file', 'khotkeysrc',
+            '--group', 'Data_petra_Triggers0',
+            '--key', 'Type', 'SHORTCUT'
+        ])
+
+        # Reload kglobalaccel
+        self._host_run(['dbus-send', '--type=signal', '--dest=org.kde.kglobalaccel',
+                         '/kglobalaccel', 'org.kde.KGlobalAccel.reloadConfig'])
+        # Also try reconfiguring khotkeys
+        self._host_run(['dbus-send', '--type=signal', '--dest=org.kde.keyboard',
+                         '/modules/khotkeys', 'org.kde.khotkeys.reread_configuration'])
+
+        print(f"KDE shortcut registered: {kde_binding} -> {command}")
+        return True
+
+    # ─────────────────────────────────────
+    #  XFCE
+    # ─────────────────────────────────────
+
+    def _register_xfce(self, shortcut_str):
+        binding = self._shortcut_to_binding(shortcut_str)
+        command = self._get_petra_command()
+
+        # XFCE uses xfconf-query for custom shortcuts
+        # Channel: xfce4-keyboard-shortcuts
+        # Property: /commands/custom/<binding>
+        prop = f"/commands/custom/{binding}"
+
+        self._host_run([
+            'xfconf-query', '--channel', 'xfce4-keyboard-shortcuts',
+            '--property', prop,
+            '--create', '--type', 'string',
+            '--set', command
+        ])
+
+        print(f"XFCE shortcut registered: {binding} -> {command}")
+        return True
+
+    # ─────────────────────────────────────
+    #  MATE
+    # ─────────────────────────────────────
+
+    def _register_mate(self, shortcut_str):
+        binding = self._shortcut_to_binding(shortcut_str)
+        command = self._get_petra_command()
+
+        # MATE uses dconf with a similar structure to GNOME but different schemas
+        base = "/org/mate/desktop/keybindings"
+        # Find an available custom slot (MATE has fixed slots: custom0..custom11)
+        slot = None
+        for i in range(12):
+            path = f"{base}/custom{i}/"
+            r = self._dconf(['read', f'{path}name'])
+            if r and r.returncode == 0:
+                name = r.stdout.strip().strip("'")
+                if name == self.KEYBINDING_NAME:
+                    slot = i
+                    break
+                if not name or name == "''":
+                    if slot is None:
+                        slot = i
+            else:
+                if slot is None:
+                    slot = i
+
+        if slot is None:
+            slot = 0  # Overwrite first slot as last resort
+
+        path = f"{base}/custom{slot}/"
+        self._dconf(['write', f'{path}name', f"'{self.KEYBINDING_NAME}'"])
+        self._dconf(['write', f'{path}action', f"'{command}'"])
+        self._dconf(['write', f'{path}binding', f"'{binding}'"])
+
+        print(f"MATE shortcut registered: {binding} -> {command}")
+        return True

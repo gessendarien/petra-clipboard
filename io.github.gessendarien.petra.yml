@@ -22,6 +22,7 @@ finish-args:
   - --socket=wayland
   - --device=dri             # Required for Qt hardware-accelerated rendering.
   - --talk-name=org.kde.StatusNotifierWatcher  # Required for the system tray icon.
+  - --talk-name=org.freedesktop.Flatpak         # Required for flatpak-spawn --host to register global shortcuts in the host DE.
   # REMOVED: --talk-name=org.freedesktop.Notifications
   #   Reason: the Flatpak notification portal handles this automatically via the runtime.
   #   Explicitly requesting it is unnecessary and flagged by the sandbox policy.
@@ -46,13 +47,6 @@ modules:
         url: https://github.com/jordansissel/xdotool/archive/refs/tags/v3.20211022.1.tar.gz
         sha256: 82b15a944a5e82fee15e0f6116bd9f642bc3d0bb6989fc0ca5ad9dfe35de0847
 
-  - name: xbindkeys
-    config-opts:
-      - --disable-guile
-    sources:
-      - type: archive
-        url: https://archive.ubuntu.com/ubuntu/pool/universe/x/xbindkeys/xbindkeys_1.8.7.orig.tar.gz
-        sha256: a29b86a8ec91d4abc83b420e547da27470847d0efe808aa6e75147aa0adb82f2
 
   - name: petra
     buildsystem: simple

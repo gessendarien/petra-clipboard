@@ -560,8 +560,8 @@ class SettingsDialog(QDialog):
                 QApplication.quit()
     
     def open_github(self):
-        """Open the GitHub repository in the default browser"""
-        QDesktopServices.openUrl(QUrl("https://github.com/gessendarien/petra-clipboard"))
+        """Open the project website in the default browser"""
+        QDesktopServices.openUrl(QUrl("https://gessendarien.github.io/petra-clipboard/"))
 
 
 class ImagePreviewDialog(QDialog):
