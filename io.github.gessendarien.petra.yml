@@ -5,38 +5,31 @@ runtime: org.kde.Platform
 runtime-version: '6.9'
 sdk: org.kde.Sdk
 command: petra
-
-# Required to strip build tools (sip, pyqt-builder, etc.) from the final bundle.
-# Mandatory when using the KDE PyQt BaseApp — without this, Flathub linter will reject the build.
 cleanup-commands:
   - /app/cleanup-BaseApp.sh
-
 build-options:
   env:
-    # Petra does not use QtWebEngine, so we exclude it to reduce bundle size significantly.
     - BASEAPP_REMOVE_WEBENGINE=1
-
 finish-args:
   - --share=ipc
-  - --socket=fallback-x11    # Wayland-first with X11 as fallback. Replaces --socket=x11 as required by reviewers.
+  - --socket=fallback-x11
   - --socket=wayland
-  - --device=dri             # Required for Qt hardware-accelerated rendering.
-  - --talk-name=org.kde.StatusNotifierWatcher  # Required for the system tray icon.
-  - --talk-name=org.freedesktop.Flatpak         # Required for flatpak-spawn --host to register global shortcuts in the host DE.
-  # REMOVED: --talk-name=org.freedesktop.Notifications
-  #   Reason: the Flatpak notification portal handles this automatically via the runtime.
-  #   Explicitly requesting it is unnecessary and flagged by the sandbox policy.
-  # REMOVED: --filesystem=xdg-config/petra:create
-  #   Reason: the app must store config inside the sandbox ($XDG_CONFIG_HOME),
-  #   which maps to ~/.var/app/io.github.gessendarien.petra/config — no host access needed.
-
+  - --device=dri
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --talk-name=org.kde.kglobalaccel
+  - --talk-name=org.gnome.Shell
+  - --filesystem=xdg-desktop:ro
+  - --filesystem=xdg-documents:ro
+  - --filesystem=xdg-download:ro
+  - --filesystem=xdg-music:ro
+  - --filesystem=xdg-pictures:ro
+  - --filesystem=xdg-videos:ro
 modules:
   - name: libxtst
     sources:
       - type: archive
         url: https://www.x.org/archive/individual/lib/libXtst-1.2.4.tar.gz
         sha256: 01366506aeb033f6dffca5326af85f670746b0cabbfd092aabefb046cf48c445
-
   - name: xdotool
     buildsystem: simple
     build-commands:
@@ -46,8 +39,6 @@ modules:
       - type: archive
         url: https://github.com/jordansissel/xdotool/archive/refs/tags/v3.20211022.1.tar.gz
         sha256: 82b15a944a5e82fee15e0f6116bd9f642bc3d0bb6989fc0ca5ad9dfe35de0847
-
-
   - name: petra
     buildsystem: simple
     build-commands:
@@ -57,7 +48,6 @@ modules:
       - install -Dm644 io.github.gessendarien.petra.desktop ${FLATPAK_DEST}/share/applications/io.github.gessendarien.petra.desktop
       - install -Dm644 io.github.gessendarien.petra.metainfo.xml ${FLATPAK_DEST}/share/metainfo/io.github.gessendarien.petra.metainfo.xml
       - install -Dm644 LICENSE.txt ${FLATPAK_DEST}/share/licenses/${FLATPAK_ID}/LICENSE.txt
-      # Install PNG icons in all standard hicolor sizes
       - install -Dm644 icons/petra-512.png ${FLATPAK_DEST}/share/icons/hicolor/512x512/apps/io.github.gessendarien.petra.png
       - install -Dm644 icons/petra-256.png ${FLATPAK_DEST}/share/icons/hicolor/256x256/apps/io.github.gessendarien.petra.png
       - install -Dm644 icons/petra-128.png ${FLATPAK_DEST}/share/icons/hicolor/128x128/apps/io.github.gessendarien.petra.png
