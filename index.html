@@ -84,8 +84,13 @@
                     <button
                         class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
                         <span class="material-symbols-outlined text-[20px] transition-colors">rocket_launch</span>
+                        <span>Launch Snap</span>
+                    </button>
+                    <button
+                        class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
+                        <span class="material-symbols-outlined text-[20px] transition-colors">inventory_2</span>
                         <!--<span>Get it on Flathub</span>-->
-                        <span class="text-slate-500">Coming soon on Flathub</span>
+                        <span>Download Flatpak</span>
 
                     </button>
                     <button
@@ -98,11 +103,47 @@
                         <span class="material-symbols-outlined text-[20px] transition-colors">install_desktop</span>
                         <span>Download AppImage</span>
                     </button>
-                    <a href="https://github.com/gessendarien/petra-clipboard" target="_blank"
-                        class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
-                        <span class="material-symbols-outlined text-[20px] transition-colors">code</span>
-                        <span>View Source Code</span>
-                    </a>
+                </div>
+
+                <!-- SURVEY SECTION -->
+                <div class="mt-12 max-w-2xl mx-auto">
+                    <button onclick="toggleSurvey()"
+                        class="text-slate-500 hover:text-slate-800 transition-colors text-sm font-medium flex items-center gap-1 mx-auto">
+                        Which one to choose?
+                        <span id="survey-arrow"
+                            class="material-symbols-outlined text-xs transition-transform transform">expand_more</span>
+                    </button>
+
+                    <div id="survey-container" class="hidden mt-6 overflow-hidden text-center">
+                        <div class="bg-white/50 backdrop-blur-sm border border-black/5 rounded-3xl p-8 space-y-6">
+                            <p class="text-sm text-slate-500 font-medium">Select your Linux distribution:</p>
+                            
+                            <div class="relative max-w-xs mx-auto">
+                                <select onchange="selectDistro(this.value)" 
+                                    class="w-full appearance-none bg-white border border-slate-400 rounded-full px-6 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/5 transition-all cursor-pointer">
+                                    <option value="" disabled selected>Choose a distribution...</option>
+                                    <option value="ubuntu">Ubuntu</option>
+                                    <option value="mint">Linux Mint</option>
+                                    <option value="zorin">Zorin OS</option>
+                                    <option value="elementary">Elementary OS</option>
+                                    <option value="pop">Pop!_OS</option>
+                                    <option value="fedora">Fedora</option>
+                                    <option value="debian">Debian</option>
+                                    <option value="manjaro">Manjaro</option>
+                                    <option value="mx">MX Linux</option>
+                                    <option value="other">Other</option>
+                                    <option value="none">I don't know</option>
+                                </select>
+                            </div>
+
+                            <div id="recommendation-result" class="hidden mt-4 pt-6 border-t border-black/5 animate-in fade-in slide-in-from-top-2 duration-500">
+                                <p class="text-sm text-slate-600 leading-relaxed font-light">
+                                    We recommend using <span id="rec-text" class="font-bold text-slate-900"></span> for
+                                    your system.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
             <section class="max-w-[1400px] mx-auto px-6 pt-0 pb-0">
@@ -200,6 +241,14 @@
                     With additional options to pin the window, start on system boot, and manually save, delete, or clear
                     all items, Petra adapts entirely to your workflow.
                 </p>
+
+                <div class="flex justify-center mt-12">
+                    <a href="https://github.com/gessendarien/petra-clipboard" target="_blank"
+                        class="flex w-full sm:w-56 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group px-6">
+                        <span class="material-symbols-outlined text-[20px] transition-colors">code</span>
+                        <span>View Source Code</span>
+                    </a>
+                </div>
             </section>
         </main>
         <footer class="border-t border-black/5 py-12 px-6 md:px-12 bg-obsidian-lighter">
@@ -268,6 +317,59 @@
                 modal.classList.add('hidden');
             }, 300);
             document.body.style.overflow = 'auto';
+        }
+
+        // Survey Logic
+        function toggleSurvey() {
+            const container = document.getElementById('survey-container');
+            const arrow = document.getElementById('survey-arrow');
+            const isHidden = container.classList.contains('hidden');
+
+            if (isHidden) {
+                container.classList.remove('hidden');
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                container.classList.add('hidden');
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+
+        function selectDistro(distro) {
+            const result = document.getElementById('recommendation-result');
+            const recText = document.getElementById('rec-text');
+            
+            if (!distro) {
+                result.classList.add('hidden');
+                return;
+            }
+            
+            result.classList.remove('hidden');
+            
+            let recommendation = "";
+            switch (distro) {
+                case 'ubuntu':
+                case 'zorin':
+                    recommendation = "Snap, .deb, and AppImage";
+                    break;
+                case 'elementary':
+                case 'pop':
+                case 'mint':
+                case 'mx':
+                    recommendation = "Flatpak, .deb, and AppImage";
+                    break;
+                case 'debian':
+                    recommendation = ".deb";
+                    break;
+                case 'fedora':
+                case 'manjaro':
+                case 'other':
+                    recommendation = "Flatpak and AppImage";
+                    break;
+                case 'none':
+                    recommendation = "AppImage";
+                    break;
+            }
+            recText.textContent = recommendation;
         }
     </script>
 </body>
