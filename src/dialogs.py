@@ -48,14 +48,19 @@ def enable_autostart():
         flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra')
         exec_path = f"flatpak run {flatpak_id}"
         icon_name = flatpak_id
+    elif os.environ.get("APPIMAGE"):
+        # If running as AppImage
+        appimage_path = os.environ.get("APPIMAGE")
+        exec_path = f'"{appimage_path}"'
+        icon_name = "Petra"
     elif getattr(sys, 'frozen', False):
         # If compiled executable
-        exec_path = sys.executable
+        exec_path = f'"{sys.executable}"'
         icon_name = "accessories-clipboard"
     else:
         # If running as Python script
         main_script = Path(__file__).parent / "main.py"
-        exec_path = f"python3 {main_script}"
+        exec_path = f'python3 "{main_script}"'
         icon_name = "accessories-clipboard"
     
     desktop_content = f"""[Desktop Entry]
@@ -727,6 +732,7 @@ class UpdateDialog(QDialog):
         self.setFixedWidth(380)
         self.setModal(True)
         self.setWindowTitle(self.t['window_title'].format(version=current_version))
+        self.setObjectName("SettingsDialog")
         self._apply_theme_style(parent, theme_id)
 
         layout = QVBoxLayout(self)
@@ -735,9 +741,11 @@ class UpdateDialog(QDialog):
 
         # ── Title label ──
         if version:
-            title = QLabel(f"<b>{self.t['update_available'].format(version=version)}</b>")
+            title = QLabel(self.t['update_available'].format(version=version))
         else:
-            title = QLabel(f"<b>{self.t['up_to_date'].format(version=current_version)}</b>")
+            title = QLabel(self.t['up_to_date'].format(version=current_version))
+        title.setObjectName("settings_label")
+        title.setStyleSheet("font-weight: bold;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setWordWrap(True)
         layout.addWidget(title)
@@ -748,12 +756,14 @@ class UpdateDialog(QDialog):
                 body = QLabel(self.t['snap_available'].format(version=version))
             else:
                 body = QLabel(self.t['snap_up_to_date'].format(version=current_version))
+            body.setObjectName("settings_label")
             body.setAlignment(Qt.AlignmentFlag.AlignCenter)
             body.setWordWrap(True)
             layout.addWidget(body)
 
         if version and install_type != 'snap':
             self.ignore_cb = QCheckBox(self.t['no_remind'])
+            self.ignore_cb.setObjectName("settings_checkbox")
             if self._is_ignored:
                 self.ignore_cb.setChecked(True)
             # Save immediately on toggle
@@ -820,6 +830,7 @@ class UpdateDialog(QDialog):
                 border: 1px solid #555;
                 border-radius: 4px;
                 text-align: center;
+                color: palette(text);
                 background: rgba(128, 128, 128, 30);
             }}
             QProgressBar::chunk {{

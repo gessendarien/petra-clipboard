@@ -381,8 +381,6 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         
         # Connect activation (click)
         self.tray_icon.activated.connect(self.on_tray_icon_activated)
-        # Connect notification click to open update dialog
-        self.tray_icon.messageClicked.connect(self._on_notification_clicked)
 
     def on_tray_icon_activated(self, reason):
         """Maneja la activación del icono de la bandeja"""
@@ -392,19 +390,6 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             else:
                 self.show_window()
 
-    def _on_notification_clicked(self):
-        """Handle click on the tray notification bubble — open update dialog directly."""
-        
-        def _trigger_update_dialog():
-            from PyQt6.QtWidgets import QApplication
-            for widget in QApplication.topLevelWidgets():
-                if widget.__class__.__name__ == 'SettingsDialog' and widget.isVisible():
-                    widget.open_update_dialog()
-                    break
-        
-        # Schedule the update dialog to open 250ms AFTER the settings dialog appears
-        QTimer.singleShot(250, _trigger_update_dialog)
-        self.open_settings()
 
     def setup_ui(self):
         self.setWindowTitle("Petra")
