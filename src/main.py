@@ -64,7 +64,7 @@ def start_socket_server(window):
 
 
 def main():
-    print("Petra Clipboard v0.0.1")
+    print("Petra Clipboard v0.0.8")
     # Enable faulthandler so Python prints stack traces on crashes (SIGSEGV)
     try:
         faulthandler.enable()
@@ -132,6 +132,7 @@ def main():
     # Set application name and desktop file for icon association
     # This is critical for the desktop system to show the correct icon
     app.setApplicationName("Petra")
+    app.setApplicationDisplayName("Petra")
     app.setDesktopFileName("io.github.gessendarien.petra")
     
     # Handle Ctrl+C correctly

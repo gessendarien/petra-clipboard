@@ -111,41 +111,12 @@ build_flatpak() {
     flatpak-builder --user --repo="$REPO_DIR" --force-clean "$BUILD_DIR" "$APP_ID.yml"
     echo -e "${GREEN}Build complete and repository created at $REPO_DIR${NC}"
 }
-
-install_flatpak_local() {
-    print_header "Installing from Local Repository"
-    flatpak --user remote-add --no-gpg-verify --if-not-exists petra-local "$REPO_DIR"
-    flatpak --user install -y --reinstall petra-local "$APP_ID"
-    echo -e "${GREEN}Installed successfully! Run with: flatpak run $APP_ID${NC}"
-}
-
 create_flatpak_bundle() {
     print_header "Creating Flatpak Bundle"
     ensure_output_dir
     flatpak build-bundle "$REPO_DIR" "$BUNDLE_FILE" "$APP_ID"
     echo -e "${GREEN}Bundle created: $BUNDLE_FILE ($(du -h "$BUNDLE_FILE" | cut -f1))${NC}"
 }
-
-install_flatpak_bundle() {
-    print_header "Installing Bundle"
-    
-    # Uninstall if exists to ensure clean install
-    if flatpak list --user | grep -q "$APP_ID"; then
-        echo "Removing previous installation..."
-        flatpak uninstall --user -y "$APP_ID" 2>/dev/null || true
-    fi
-
-    flatpak install --user -y "$BUNDLE_FILE"
-    
-    # Desktop integration
-    echo "Updating desktop database..."
-    mkdir -p ~/.local/share/applications
-    ln -sf ~/.local/share/flatpak/exports/share/applications/"$APP_ID".desktop ~/.local/share/applications/ 2>/dev/null || true
-    update-desktop-database ~/.local/share/applications/ 2>/dev/null || true
-    
-    echo -e "${GREEN}Installed successfully!${NC}"
-}
-
 # ─────────────────────────────────────
 #  AppImage Functions
 # ─────────────────────────────────────
@@ -226,6 +197,7 @@ create_appimage() {
     APP_DEST="$APPDIR/usr/share/petra"
     mkdir -p "$APP_DEST"
     cp -r src icons "$APP_DEST/"
+    cp global-version.txt "$APP_DEST/"
 
     # ── usr/share/applications ──
     mkdir -p "$APPDIR/usr/share/applications"
@@ -343,6 +315,7 @@ EOF
 
     # ── Copy Application Files ──
     cp -r src icons "$DEB_BUILD_DIR/opt/petra/"
+    cp global-version.txt "$DEB_BUILD_DIR/opt/petra/"
     
     # Clean pycache if exists
     find "$DEB_BUILD_DIR/opt/petra" -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
@@ -392,26 +365,19 @@ EOF
 clear
 print_header "Petra Clipboard Manager - Build System"
 echo "Select an option:"
-echo "1) Build & Install Locally (Flatpak Dev)"
-echo "2) Create Flatpak Bundle (.flatpak) & Install"
-echo "3) Create Flatpak Bundle (.flatpak) Only"
-echo "4) Create Debian Package (.deb)"
-echo "5) Create AppImage"
-echo "6) Exit"
+echo "1) Create Debian Package (.deb)"
+echo "2) Create AppImage"
+echo "3) Create Flatpak Bundle (.flatpak)"
+echo "4) Exit"
 echo ""
-read -p "Option [1-6]: " option
+read -p "Option [1-4]: " option
 
 case $option in
     1)
-        check_flatpak_dependencies
-        build_flatpak
-        install_flatpak_local
+        create_debian_package
         ;;
     2)
-        check_flatpak_dependencies
-        build_flatpak
-        create_flatpak_bundle
-        install_flatpak_bundle
+        create_appimage
         ;;
     3)
         check_flatpak_dependencies
@@ -419,12 +385,6 @@ case $option in
         create_flatpak_bundle
         ;;
     4)
-        create_debian_package
-        ;;
-    5)
-        create_appimage
-        ;;
-    6)
         echo "Exiting."
         exit 0
         ;;
@@ -433,3 +393,4 @@ case $option in
         exit 1
         ;;
 esac
+

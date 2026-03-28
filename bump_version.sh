@@ -14,8 +14,8 @@ echo "$NEW_VERSION" > global-version.txt
 echo "Updated global-version.txt to $NEW_VERSION"
 
 # Update main.py
-sed -i -E "s/print\(\"Petra Clipboard v.*\"\)/print(\"Petra Clipboard v$NEW_VERSION\")/" main.py
-echo "Updated main.py"
+sed -i -E "s/print\(\"Petra Clipboard v.*\"\)/print(\"Petra Clipboard v$NEW_VERSION\")/" src/main.py
+echo "Updated src/main.py"
 
 # Update README.md
 sed -i -E "s/Version-Beta%20.*-orange/Version-Beta%20$NEW_VERSION-orange/" README.md

@@ -9,3 +9,4 @@ Type=Application
 Categories=Utility;
 Keywords=clipboard;paste;copy;emoji;
 StartupNotify=true
+StartupWMClass=Petra

@@ -1,0 +1,6 @@
+Package: petra
+Source: Petra
+Version: 1.0
+Architecture: all
+Maintainer: A <A@A.com>
+Description: Modern clipboard manager with emoji support

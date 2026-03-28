@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-Beta%200.0.1-orange?style=for-the-badge) ![License](https://img.shields.io/badge/License-GPL%20v3-blue?style=for-the-badge) ![Platform](https://img.shields.io/badge/Platform-Linux-yellow?style=for-the-badge&logo=linux)
+![Version](https://img.shields.io/badge/Version-Beta%200.0.8-orange?style=for-the-badge) ![License](https://img.shields.io/badge/License-GPL%20v3-blue?style=for-the-badge) ![Platform](https://img.shields.io/badge/Platform-Linux-yellow?style=for-the-badge&logo=linux)
 
 # Petra
 

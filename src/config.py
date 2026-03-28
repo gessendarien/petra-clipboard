@@ -16,16 +16,16 @@ class ConfigManager:
         self.config_file = self.config_dir / "config.json"
         self.pinned_images_dir = self.config_dir / "pinned_images"
         self.pinned_images_dir.mkdir(parents=True, exist_ok=True)
-        self.max_images = 10
-        self.max_clips = 20
-        self.language = 'es'
+        self.max_images = 15
+        self.max_clips = 25
+        self.language = 'en'
         self.config = {}
         self.show_clear_btn = True
         self.show_pin_btn = True
         self.shortcut = 'Super + v'
-        self.theme = 'dark'
+        self.theme = 'zorin'
         self.recent_emojis = []
-        self.open_position = 'mouse'  # 'mouse', 'center', 'left', 'right'
+        self.open_position = 'center'  # 'mouse', 'center', 'left', 'right'
         
         self.load_config()
 
@@ -38,15 +38,15 @@ class ConfigManager:
 
     def load_config(self):
         default = {
-            'language': 'es',
-            'max_images': 10,
-            'max_clips': 20,
+            'language': 'en',
+            'max_images': 15,
+            'max_clips': 25,
             'shortcut': 'Super + v',
             'show_clear_btn': True,  # Ensure this is enabled by default
             'show_pin_btn': True,    # Ensure this is enabled by default
-            'theme': 'dark',
+            'theme': 'zorin',
             'recent_emojis': [],
-            'open_position': 'mouse'
+            'open_position': 'center'
         }
 
         try:
@@ -202,6 +202,9 @@ class ConfigManager:
 
     def open_settings(self):
         dlg = SettingsDialog(self)
+        # If an update is pending, start the tilt animation on the github button
+        if getattr(self, '_pending_update_anim', False):
+            dlg.start_update_animation()
         if dlg.exec():
             try:
                 self.max_images = int(getattr(self, 'max_images', 10))

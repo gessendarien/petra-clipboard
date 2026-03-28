@@ -294,7 +294,40 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         
         # Initialize system tray icon
         self.setup_tray_icon()
-        
+
+        # ── Auto-update checker ──────────────────────────────────────
+        self._update_available_version = None
+        self._pending_update_anim = False
+        self._update_checker = None
+        self._setup_update_checker()
+
+    def _setup_update_checker(self):
+        """Launch a background update check 3 seconds after startup."""
+        from updater import UpdateChecker
+        self._update_checker = UpdateChecker(self)
+        self._update_checker.update_available.connect(self._on_update_available)
+        QTimer.singleShot(3000, self._update_checker.start)
+
+    def _on_update_available(self, version):
+        """Handle the update_available signal from UpdateChecker."""
+        # Always store the available version and mark animation as pending
+        self._update_available_version = version
+        self._pending_update_anim = True
+        # Only suppress the tray notification if user chose "don't remind" or is snap
+        from updater import detect_install_type
+        if self.config.get('ignored_update') == version or detect_install_type() == 'snap':
+            return
+        # System tray notification (language-aware)
+        if hasattr(self, 'tray_icon'):
+            lang = getattr(self, 'language', 'es')
+            msg = "Nueva versión disponible" if lang == 'es' else "New version available"
+            self.tray_icon.showMessage(
+                "Petra",
+                msg,
+                QSystemTrayIcon.MessageIcon.Information,
+                4000,
+            )
+
     def _handle_shortcut_toggle(self):
         """Toggle window visibility — called by the shortcut manager."""
         if self.isVisible():
@@ -348,6 +381,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         
         # Connect activation (click)
         self.tray_icon.activated.connect(self.on_tray_icon_activated)
+        # Connect notification click to open update dialog
+        self.tray_icon.messageClicked.connect(self._on_notification_clicked)
 
     def on_tray_icon_activated(self, reason):
         """Maneja la activación del icono de la bandeja"""
@@ -356,6 +391,20 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
                 self.hide()
             else:
                 self.show_window()
+
+    def _on_notification_clicked(self):
+        """Handle click on the tray notification bubble — open update dialog directly."""
+        
+        def _trigger_update_dialog():
+            from PyQt6.QtWidgets import QApplication
+            for widget in QApplication.topLevelWidgets():
+                if widget.__class__.__name__ == 'SettingsDialog' and widget.isVisible():
+                    widget.open_update_dialog()
+                    break
+        
+        # Schedule the update dialog to open 250ms AFTER the settings dialog appears
+        QTimer.singleShot(250, _trigger_update_dialog)
+        self.open_settings()
 
     def setup_ui(self):
         self.setWindowTitle("Petra")

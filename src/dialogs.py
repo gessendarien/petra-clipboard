@@ -1,8 +1,8 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, 
-                             QSpinBox, QCheckBox, QPushButton, QWidget, QComboBox, QSizePolicy, QAbstractSpinBox)
-from PyQt6.QtCore import Qt, QSize
+                             QSpinBox, QCheckBox, QPushButton, QWidget, QComboBox, QSizePolicy, QAbstractSpinBox,
+                             QProgressBar, QMessageBox)
+from PyQt6.QtCore import Qt, QSize, QTimer, QUrl
 from PyQt6.QtGui import QIcon, QDesktopServices
-from PyQt6.QtCore import QUrl
 from pathlib import Path
 import os
 import sys
@@ -68,6 +68,7 @@ Terminal=false
 Categories=Utility;
 StartupNotify=false
 X-GNOME-Autostart-enabled=true
+StartupWMClass=Petra
 """
     
     desktop_file = get_autostart_path()
@@ -237,9 +238,13 @@ class SettingsDialog(QDialog):
         self.github_btn = QPushButton()
         self.github_btn.setFixedSize(36, 36)
         self.github_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.github_btn.setToolTip("By Gessén Darién")
+        self.github_btn.setToolTip("Tienes la última versión")
         self.github_btn.setStyleSheet("QPushButton { border: none; background: transparent; }")
-        self.github_btn.clicked.connect(self.open_github)
+        self.github_btn.clicked.connect(self.open_update_dialog)
+        
+        # Update animation
+        self._update_anim = None
+        self._github_btn_rotation = 0.0
         brl.addWidget(self.github_btn)
         
         brl.addStretch()
@@ -376,7 +381,9 @@ class SettingsDialog(QDialog):
                 'pos_right': "Derecha de pantalla",
                 'autostart': "Iniciar con el sistema",
                 'shortcut': "⚠ Atajo:",
-                'shortcut_tooltip': "Algunos atajos pueden entrar en conflicto con otros programas y hacer que Petra no responda correctamente"
+                'shortcut_tooltip': "Algunos atajos pueden entrar en conflicto con otros programas y hacer que Petra no responda correctamente",
+                'tooltip_update': 'Nueva versión disponible',
+                'tooltip_no_update': 'Tienes la última versión'
             },
             'en': {
                 'title': 'Settings',
@@ -396,7 +403,9 @@ class SettingsDialog(QDialog):
                 'pos_right': "Right of screen",
                 'autostart': "Start with system",
                 'shortcut': "⚠ Shortcut:",
-                'shortcut_tooltip': "Some shortcuts may conflict with other programs and cause Petra to become unresponsive"
+                'shortcut_tooltip': "Some shortcuts may conflict with other programs and cause Petra to become unresponsive",
+                'tooltip_update': 'New version available',
+                'tooltip_no_update': 'You have the latest version'
             }
         }
 
@@ -484,6 +493,13 @@ class SettingsDialog(QDialog):
             if hasattr(self, 'lang_label'):
                 self.lang_label.setText(t.get('language', self.lang_label.text()))
                 
+            if hasattr(self, 'github_btn'):
+                parent_win = self.parent()
+                if parent_win and getattr(parent_win, '_pending_update_anim', False):
+                    self.github_btn.setToolTip(t.get('tooltip_update', 'Nueva versión disponible'))
+                else:
+                    self.github_btn.setToolTip(t.get('tooltip_no_update', 'Tienes la última versión'))
+                
             # New: translate theme label
             if hasattr(self, 'theme_label'):
                 self.theme_label.setText(t.get('theme', self.theme_label.text()))
@@ -562,6 +578,328 @@ class SettingsDialog(QDialog):
     def open_github(self):
         """Open the project website in the default browser"""
         QDesktopServices.openUrl(QUrl("https://gessendarien.github.io/petra-clipboard/"))
+
+    # ── Update animation ──────────────────────────────────────────────
+
+    def start_update_animation(self):
+        """Start heartbeat (scale pulse) animation on github_btn."""
+        if not hasattr(self, '_original_github_icon'):
+            self._original_github_icon = self.github_btn.icon()
+            self._original_github_icon_size = self.github_btn.iconSize()
+
+        # Set tooltip based on language
+        parent_win = self.parent()
+        lang = getattr(parent_win, 'language', 'es') if parent_win else 'es'
+        tip = "Nueva versión disponible" if lang == 'es' else "New version available"
+        self.github_btn.setToolTip(tip)
+
+        # Heartbeat: expand(1.0→1.2) → contract(1.2→0.85) → restore(0.85→1.0), pause 1s, repeat
+        self._hb_scale = 1.0
+        self._hb_phase = 0   # 0=expand, 1=contract, 2=restore, 3=pause
+        self._hb_pause_count = 0
+
+        self._anim_timer = QTimer(self)
+        self._anim_timer.setInterval(25)  # 40fps
+        self._anim_timer.timeout.connect(self._tick_heartbeat)
+        self._anim_timer.start()
+
+    def _tick_heartbeat(self):
+        speed = 0.02
+        if self._hb_phase == 0:  # expand 1.0 → 1.2
+            self._hb_scale += speed
+            if self._hb_scale >= 1.2:
+                self._hb_scale = 1.2
+                self._hb_phase = 1
+        elif self._hb_phase == 1:  # contract 1.2 → 0.85
+            self._hb_scale -= speed
+            if self._hb_scale <= 0.85:
+                self._hb_scale = 0.85
+                self._hb_phase = 2
+        elif self._hb_phase == 2:  # restore 0.85 → 1.0
+            self._hb_scale += speed
+            if self._hb_scale >= 1.0:
+                self._hb_scale = 1.0
+                self._hb_phase = 3
+                self._hb_pause_count = 0
+        elif self._hb_phase == 3:  # pause ~1 second
+            self._hb_pause_count += 1
+            if self._hb_pause_count >= 40:
+                self._hb_phase = 0
+
+        self._apply_scale(self._hb_scale)
+
+    def _apply_scale(self, scale):
+        if hasattr(self, '_original_github_icon'):
+            base_size = self._original_github_icon_size
+            new_w = max(1, int(base_size.width() * scale))
+            new_h = max(1, int(base_size.height() * scale))
+            scaled_size = QSize(new_w, new_h)
+            pixmap = self._original_github_icon.pixmap(base_size)
+            scaled_pixmap = pixmap.scaled(
+                scaled_size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            self.github_btn.setIcon(QIcon(scaled_pixmap))
+            self.github_btn.setIconSize(base_size)
+
+    def stop_update_animation(self):
+        """Stop animation and restore icon."""
+        if hasattr(self, '_anim_timer') and self._anim_timer is not None:
+            self._anim_timer.stop()
+            self._anim_timer = None
+        if hasattr(self, '_original_github_icon'):
+            self.github_btn.setIcon(self._original_github_icon)
+            self.github_btn.setIconSize(self._original_github_icon_size)
+
+    # ── Update dialog launcher ────────────────────────────────────────
+
+    def open_update_dialog(self):
+        """Open the UpdateDialog from the settings window."""
+        from updater import detect_install_type, _read_version
+        parent_win = self.parent()
+        version = getattr(parent_win, '_update_available_version', None) if parent_win else None
+        install_type = detect_install_type()
+        lang = self.lang_combo.currentData() if hasattr(self, 'lang_combo') else 'es'
+        # Get primary color from theme
+        primary_color = '#A855F7'
+        theme_id = None
+        if parent_win and hasattr(parent_win, 'themes_manager'):
+            try:
+                theme_id = getattr(parent_win, 'theme', 'dark')
+                colors = parent_win.themes_manager.get_theme_colors(theme_id)
+                primary_color = colors.get('primary', primary_color)
+            except Exception:
+                pass
+        current_version = _read_version()
+        # Check if this version was ignored
+        ignored = None
+        if parent_win and hasattr(parent_win, 'config'):
+            ignored = parent_win.config.get('ignored_update')
+        dlg = UpdateDialog(parent_win, version, install_type, lang,
+                           primary_color, current_version, theme_id, ignored)
+        dlg.exec()
+
+
+class UpdateDialog(QDialog):
+    """Dialog shown when user clicks the code/github button in settings."""
+
+    TRANSLATIONS = {
+        'es': {
+            'window_title': 'Actualización {version}',
+            'update_available': 'Nueva versión disponible {version}',
+            'up_to_date': 'Tienes la última versión {version}',
+            'snap_available': 'Nueva versión {version} disponible en la tienda de aplicaciones',
+            'snap_up_to_date': 'Tienes la última versión {version}',
+            'no_remind': 'No volver a recordar',
+            'credits': 'Créditos',
+            'update': 'Actualizar',
+            'update_title': 'Actualización',
+            'error_title': 'Error',
+        },
+        'en': {
+            'window_title': 'Update {version}',
+            'update_available': 'New version available {version}',
+            'up_to_date': 'You have the latest version {version}',
+            'snap_available': 'New version {version} available in the app store',
+            'snap_up_to_date': 'You have the latest version {version}',
+            'no_remind': 'Don\'t remind me again',
+            'credits': 'Credits',
+            'update': 'Update',
+            'update_title': 'Update',
+            'error_title': 'Error',
+        },
+    }
+
+    def __init__(self, parent=None, version=None, install_type='deb', lang='es',
+                 primary_color='#A855F7', current_version='0.0.1',
+                 theme_id=None, ignored_version=None):
+        super().__init__(parent)
+        self.version = version
+        self.install_type = install_type
+        self._downloader = None
+        self.t = self.TRANSLATIONS.get(lang, self.TRANSLATIONS['es'])
+        self._primary_color = primary_color
+
+        # Track if this update was previously ignored
+        self._is_ignored = (ignored_version == version) if version else False
+
+        self.setFixedWidth(380)
+        self.setModal(True)
+        self.setWindowTitle(self.t['window_title'].format(version=current_version))
+        self._apply_theme_style(parent, theme_id)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(18, 18, 18, 18)
+        layout.setSpacing(12)
+
+        # ── Title label ──
+        if version:
+            title = QLabel(f"<b>{self.t['update_available'].format(version=version)}</b>")
+        else:
+            title = QLabel(f"<b>{self.t['up_to_date'].format(version=current_version)}</b>")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setWordWrap(True)
+        layout.addWidget(title)
+
+        # ── Body (depends on install_type) ──
+        if install_type == 'snap':
+            if version:
+                body = QLabel(self.t['snap_available'].format(version=version))
+            else:
+                body = QLabel(self.t['snap_up_to_date'].format(version=current_version))
+            body.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            body.setWordWrap(True)
+            layout.addWidget(body)
+
+        if version and install_type != 'snap':
+            self.ignore_cb = QCheckBox(self.t['no_remind'])
+            if self._is_ignored:
+                self.ignore_cb.setChecked(True)
+            # Save immediately on toggle
+            self.ignore_cb.toggled.connect(self._on_ignore_toggled)
+            layout.addWidget(self.ignore_cb)
+
+        layout.addStretch()
+
+        # Buttons row
+        btn_row = QHBoxLayout()
+        credits_btn = QPushButton(self.t['credits'])
+        credits_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        credits_btn.clicked.connect(self._open_credits)
+        
+        if install_type == 'snap':
+            btn_row.addStretch()
+            btn_row.addWidget(credits_btn)
+            btn_row.addStretch()
+            layout.addLayout(btn_row)
+        else:
+            btn_row.addWidget(credits_btn)
+            btn_row.addStretch()
+
+            self.update_btn = QPushButton(self.t['update'])
+            self.update_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.update_btn.clicked.connect(self._start_update)
+            if not version:
+                self.update_btn.setEnabled(False)
+            btn_row.addWidget(self.update_btn)
+            layout.addLayout(btn_row)
+
+            # Progress bar (hidden initially)
+            self.progress_bar = QProgressBar()
+            self.progress_bar.setRange(0, 100)
+            self.progress_bar.setVisible(False)
+            layout.addWidget(self.progress_bar)
+
+        self.adjustSize()
+
+    def _apply_theme_style(self, parent, theme_id):
+        """Apply theme from themes_manager (like SettingsDialog), with input styling."""
+        pc = self._primary_color
+        # Use themes_manager to set base colors (background, text)
+        if parent and hasattr(parent, 'themes_manager') and theme_id:
+            try:
+                parent.themes_manager.apply_theme_to_widget(self, theme_id)
+            except Exception:
+                pass
+        # Override specific widget styles
+        self.setStyleSheet(self.styleSheet() + f"""
+            QPushButton {{
+                border: 1px solid palette(text);
+                border-radius: 4px;
+                padding: 6px 16px;
+            }}
+            QPushButton:hover {{
+                background-color: rgba(128, 128, 128, 40);
+            }}
+            QPushButton:disabled {{
+                color: #666666;
+                border-color: #444444;
+            }}
+            QProgressBar {{
+                border: 1px solid #555;
+                border-radius: 4px;
+                text-align: center;
+                background: rgba(128, 128, 128, 30);
+            }}
+            QProgressBar::chunk {{
+                background-color: {pc};
+                border-radius: 3px;
+            }}
+        """)
+
+    def _on_ignore_toggled(self, checked):
+        """Save/clear ignored_update immediately when checkbox is toggled."""
+        parent_win = self.parent()
+        if parent_win and hasattr(parent_win, 'config') and hasattr(parent_win, 'save_config'):
+            if checked and self.version:
+                parent_win.config['ignored_update'] = self.version
+            else:
+                parent_win.config.pop('ignored_update', None)
+            parent_win.save_config()
+
+    def _open_credits(self):
+        QDesktopServices.openUrl(QUrl("https://gessendarien.github.io/petra-clipboard/"))
+
+    def _start_update(self):
+        """Begin downloading and installing the update."""
+        from updater import UpdateDownloader
+
+        parent_win = self.parent()
+        if parent_win:
+            parent_win.setEnabled(False)
+
+        if hasattr(self, 'update_btn'):
+            self.update_btn.setVisible(False)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
+
+        self._downloader = UpdateDownloader(self.version, self.install_type, self)
+        self._downloader.progress.connect(self.progress_bar.setValue)
+        self._downloader.finished.connect(self._on_update_finished)
+        self._downloader.start()
+
+    def _on_update_finished(self, success, message):
+        parent_win = self.parent()
+        if success:
+            # Clear ignored_update since we just updated
+            if parent_win and hasattr(parent_win, 'config') and hasattr(parent_win, 'save_config'):
+                parent_win.config.pop('ignored_update', None)
+                parent_win.save_config()
+            self._restart_application()
+        else:
+            if message == "cancelled":
+                if parent_win:
+                    parent_win.setEnabled(True)
+                self.progress_bar.setVisible(False)
+                if hasattr(self, 'update_btn'):
+                    self.update_btn.setVisible(True)
+            else:
+                QMessageBox.warning(self, self.t['error_title'], message)
+                if parent_win:
+                    parent_win.setEnabled(True)
+                self.progress_bar.setVisible(False)
+                if hasattr(self, 'update_btn'):
+                    self.update_btn.setVisible(True)
+
+    def _restart_application(self):
+        """Restart the application after a successful update."""
+        import sys
+        import os
+        try:
+            # If running inside an AppImage, os.environ["APPIMAGE"] holds the path to the AppImage itself.
+            appimage_path = os.environ.get("APPIMAGE")
+            if appimage_path:
+                os.execv(appimage_path, [appimage_path] + sys.argv[1:])
+            else:
+                os.execv(sys.executable, [sys.executable] + sys.argv)
+        except Exception as e:
+            print(f"Failed to restart: {e}")
+            from PyQt6.QtWidgets import QApplication
+            QApplication.quit()
+
+    def closeEvent(self, event):
+        super().closeEvent(event)
 
 
 class ImagePreviewDialog(QDialog):
