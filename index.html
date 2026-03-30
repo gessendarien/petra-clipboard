@@ -58,7 +58,7 @@
 
 <body class="antialiased">
 
-    <!-- LANGUAGE SELECTOR — top right, moved left -->
+    <!-- LANGUAGE SELECTOR -->
     <div class="fixed top-4 right-24 z-50">
         <div
             class="flex items-center gap-1 bg-white/80 backdrop-blur border border-black/10 shadow-md rounded-full p-1">
@@ -97,7 +97,7 @@
                 </div>
                 <!-- VERSION DISPLAY -->
                 <div class="mt-4 mb-2 flex justify-center items-center gap-2 text-slate-500 font-medium">
-                    <span><span class="i18n-version">Version</span> <span id="app-version">0.1.0</span>
+                    <span><span class="i18n-version">Version</span> <span id="app-version">0.1.0</span></span>
                 </div>
                 <div
                     class="flex flex-col sm:flex-row items-center justify-center gap-3 mt-4 w-full max-w-sm sm:max-w-none mx-auto">
@@ -107,11 +107,13 @@
                         <span>Launch Snap</span>
                         </button> -->
                     <a href="https://github.com/gessendarien/petra-clipboard/releases/download/0.1.0/Petra-0.1.0-all.deb"
+                        onclick="count('download-deb')"
                         class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
                         <span class="material-symbols-outlined text-[20px] transition-colors">package_2</span>
                         <span><span class="i18n-download">Download</span> .deb</span>
                     </a>
                     <a href="https://github.com/gessendarien/petra-clipboard/releases/download/0.1.0/Petra-0.1.0-x86_64.AppImage"
+                        onclick="count('download-appimage')"
                         class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
                         <span class="material-symbols-outlined text-[20px] transition-colors">install_desktop</span>
                         <span><span class="i18n-download">Download</span> AppImage</span>
@@ -234,8 +236,6 @@
                     </div>
                 </div>
             </section>
-
-            <!-- Features Description -->
             <!-- Features Description -->
             <section class="w-full max-w-4xl mx-auto px-6 mt-8 mb-24 text-center space-y-8">
                 <p class="text-slate-600 text-lg md:text-xl leading-relaxed font-light">
@@ -290,12 +290,13 @@
 
                 <div class="flex flex-col items-center gap-4 mt-12">
                     <a href="https://github.com/gessendarien/petra-clipboard" target="_blank"
+                        onclick="count('click-source')"
                         class="flex w-full sm:w-56 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group px-6">
                         <span class="material-symbols-outlined text-[20px] transition-colors">code</span>
                         <span id="src-label-en">View Source Code</span>
                         <span id="src-label-es" class="hidden">Ver Código Fuente</span>
                     </a>
-                    <a href="https://paypal.me/gessendarien" target="_blank"
+                    <a href="https://paypal.me/gessendarien" target="_blank" onclick="count('click-donate')"
                         class="flex w-full sm:w-56 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group px-6">
                         <span class="material-symbols-outlined text-[20px] transition-colors">volunteer_activism</span>
                         <span id="donate-label-en">Donate on PayPal</span>
@@ -387,6 +388,36 @@
             }
         }
 
+        // Recommendations per language
+        const recommendations = {
+            en: {
+                ubuntu: '.deb and AppImage',
+                zorin: '.deb and AppImage',
+                elementary: '.deb and AppImage',
+                pop: '.deb and AppImage',
+                mint: '.deb and AppImage',
+                mx: '.deb and AppImage',
+                debian: '.deb',
+                fedora: 'AppImage',
+                manjaro: 'AppImage',
+                other: 'AppImage',
+                none: 'AppImage'
+            },
+            es: {
+                ubuntu: '.deb y AppImage',
+                zorin: '.deb y AppImage',
+                elementary: '.deb y AppImage',
+                pop: '.deb y AppImage',
+                mint: '.deb y AppImage',
+                mx: '.deb y AppImage',
+                debian: '.deb',
+                fedora: 'AppImage',
+                manjaro: 'AppImage',
+                other: 'AppImage',
+                none: 'AppImage'
+            }
+        };
+
         function selectDistro(distro) {
             const result = document.getElementById('recommendation-result');
             const recText = document.getElementById('rec-text');
@@ -397,33 +428,19 @@
             }
 
             result.classList.remove('hidden');
-
-            let recommendation = "";
-            switch (distro) {
-                case 'ubuntu':
-                case 'zorin':
-                    recommendation = /* "Snap, " + */ ".deb, & AppImage";
-                    break;
-                case 'elementary':
-                case 'pop':
-                case 'mint':
-                case 'mx':
-                    recommendation = /* "Flatpak, " + */ ".deb, & AppImage";
-                    break;
-                case 'debian':
-                    recommendation = ".deb";
-                    break;
-                case 'fedora':
-                case 'manjaro':
-                case 'other':
-                    recommendation = /* "Flatpak & " + */ "AppImage";
-                    break;
-                case 'none':
-                    recommendation = "AppImage";
-                    break;
-            }
-            recText.textContent = recommendation;
+            recText.textContent = recommendations[currentLang][distro] || 'AppImage';
         }
+
+        // CounterAPI
+        const WORKSPACE = 'petra-clipboard';
+
+        function count(slug) {
+            fetch(`https://api.counterapi.dev/v1/${WORKSPACE}/${slug}/up`, { method: 'GET' })
+                .catch(() => { }); // fail silently
+        }
+
+        // Count page view on load
+        window.addEventListener('load', () => count('page-views'));
 
         // Language selector — EN default
         let currentLang = 'en';
@@ -441,7 +458,7 @@
                 download: 'Descargar',
                 placeholder: 'Elige una distribución...',
                 other: 'Otra',
-                dontknow: 'No sé'
+                dontknow: 'No lo sé'
             }
         };
 
@@ -475,6 +492,13 @@
             // Translate select placeholder
             const sel = document.getElementById('distro-select');
             if (sel && sel.options[0]) sel.options[0].textContent = t.placeholder;
+
+            // Re-render recommendation if one is already shown
+            const recText = document.getElementById('rec-text');
+            const sel2 = document.getElementById('distro-select');
+            if (sel2 && sel2.value && recText) {
+                recText.textContent = recommendations[lang][sel2.value] || '';
+            }
         }
     </script>
 </body>
