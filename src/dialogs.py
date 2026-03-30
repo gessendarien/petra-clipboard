@@ -536,7 +536,8 @@ class SettingsDialog(QDialog):
     
     def quit_app(self):
         """Quit the application completely"""
-        from PyQt6.QtWidgets import QApplication, QMessageBox
+        from PyQt6.QtWidgets import QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+        from PyQt6.QtCore import Qt
         
         # Confirmation dialog
         lang = self.lang_combo.currentData() if hasattr(self, 'lang_combo') else 'en'
@@ -556,24 +557,60 @@ class SettingsDialog(QDialog):
         if parent_win and hasattr(parent_win, 'themes_manager'):
             theme = parent_win.themes_manager.get_current_theme()
         else:
-            theme = self.themes_manager.get_current_theme() if hasattr(self, 'themes_manager') else {"colors": {"confirm_text": "#000000"}}
+            theme = self.themes_manager.get_current_theme() if hasattr(self, 'themes_manager') else {"colors": {}}
         colors = theme.get("colors", {})
-        text_color = colors.get("confirm_text", "#000000")
-        print(f"DEBUG: confirm_text = {text_color}, theme_name = {theme.get('name', 'unknown')}, icons_folder = {theme.get('icons_folder', 'unknown')}")
+        text_color = colors.get("confirm_text", "#FFFFFF")
 
-        msg = QMessageBox(self)
-        msg.setWindowTitle(title)
-        msg.setText(text)
-        msg.setIcon(QMessageBox.Icon.Question)
-        yes_btn = msg.addButton(yes_text, QMessageBox.ButtonRole.YesRole)
-        no_btn = msg.addButton(no_text, QMessageBox.ButtonRole.NoRole)
-        msg.setDefaultButton(no_btn)
+        dlg = QDialog(self)
+        dlg.setWindowTitle(title)
+        dlg.setFixedSize(320, 130)
+        
+        layout = QVBoxLayout(dlg)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        lbl = QLabel(text)
+        lbl.setStyleSheet(f"color: {text_color}; font-size: 14px; background: transparent;")
+        lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignVCenter)
+        lbl.setWordWrap(True)
+        layout.addWidget(lbl)
+        
+        layout.addSpacing(10)
+        
+        btn_layout = QHBoxLayout()
+        btn_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        btn_layout.setSpacing(20)
+        
+        btn_style = """
+            QPushButton {
+                background-color: #1E1E1E;
+                color: #FFFFFF;
+                border: 1px solid #FFFFFF;
+                border-radius: 4px;
+                padding: 6px 16px;
+                min-width: 60px;
+            }
+            QPushButton:hover {
+                background-color: #333333;
+            }
+        """
+        
+        btn_no = QPushButton(no_text)
+        btn_no.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_no.setStyleSheet(btn_style)
+        
+        btn_yes = QPushButton(yes_text)
+        btn_yes.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_yes.setStyleSheet(btn_style)
+        
+        btn_no.clicked.connect(dlg.reject)
+        btn_yes.clicked.connect(dlg.accept)
+        
+        btn_layout.addWidget(btn_no)
+        btn_layout.addWidget(btn_yes)
+        
+        layout.addLayout(btn_layout)
 
-        # Apply text color using theme variable
-        msg.setStyleSheet(f"QLabel {{ color: {text_color}; }}")
-        msg.exec()
-
-        if msg.clickedButton() == yes_btn:
+        if dlg.exec() == QDialog.DialogCode.Accepted:
             self.reject()
             if self.parent() and hasattr(self.parent(), 'quit_application'):
                 self.parent().quit_application()
@@ -745,7 +782,7 @@ class UpdateDialog(QDialog):
         else:
             title = QLabel(self.t['up_to_date'].format(version=current_version))
         title.setObjectName("settings_label")
-        title.setStyleSheet("font-weight: bold;")
+        title.setStyleSheet("font-weight: bold; background: transparent;")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setWordWrap(True)
         layout.addWidget(title)
@@ -775,6 +812,7 @@ class UpdateDialog(QDialog):
         # Buttons row
         btn_row = QHBoxLayout()
         credits_btn = QPushButton(self.t['credits'])
+        credits_btn.setObjectName("settings_close_button")
         credits_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         credits_btn.clicked.connect(self._open_credits)
         
@@ -788,6 +826,7 @@ class UpdateDialog(QDialog):
             btn_row.addStretch()
 
             self.update_btn = QPushButton(self.t['update'])
+            self.update_btn.setObjectName("settings_save_button")
             self.update_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             self.update_btn.clicked.connect(self._start_update)
             if not version:
@@ -812,20 +851,8 @@ class UpdateDialog(QDialog):
                 parent.themes_manager.apply_theme_to_widget(self, theme_id)
             except Exception:
                 pass
-        # Override specific widget styles
+        # Override specific widget styles for progress bar
         self.setStyleSheet(self.styleSheet() + f"""
-            QPushButton {{
-                border: 1px solid palette(text);
-                border-radius: 4px;
-                padding: 6px 16px;
-            }}
-            QPushButton:hover {{
-                background-color: rgba(128, 128, 128, 40);
-            }}
-            QPushButton:disabled {{
-                color: #666666;
-                border-color: #444444;
-            }}
             QProgressBar {{
                 border: 1px solid #555;
                 border-radius: 4px;

@@ -57,6 +57,22 @@
 </head>
 
 <body class="antialiased">
+
+    <!-- LANGUAGE SELECTOR — top right, moved left -->
+    <div class="fixed top-4 right-24 z-50">
+        <div
+            class="flex items-center gap-1 bg-white/80 backdrop-blur border border-black/10 shadow-md rounded-full p-1">
+            <button onclick="setLanguage('en')" id="lang-btn-en"
+                class="px-4 py-1.5 rounded-full text-sm font-semibold transition-all bg-slate-900 text-white">
+                English
+            </button>
+            <button onclick="setLanguage('es')" id="lang-btn-es"
+                class="px-4 py-1.5 rounded-full text-sm font-semibold transition-all text-slate-600 hover:text-slate-900">
+                Español
+            </button>
+        </div>
+    </div>
+
     <div class="relative flex min-h-screen w-full flex-col">
 
         <main class="flex-1">
@@ -68,60 +84,62 @@
                 <div class="space-y-6">
                     <h1
                         class="text-primary text-6xl md:text-8xl font-bold tracking-tighter leading-[1] max-w-4xl mx-auto">
-                        A different clipboard <br /> for Linux.
+                        <span id="hero-title-en">A different clipboard <br /> for Linux.</span>
+                        <span id="hero-title-es" class="hidden">Un portapapeles diferente <br /> para Linux.</span>
                     </h1>
                     <p class="text-slate-500 text-xl md:text-2xl font-light max-w-2xl mx-auto leading-relaxed">
-                        Support for copying and pasting text, images, links, console commands, and emojis
-                        with a minimalist interface.
+                        <span id="hero-sub-en">Support for copying and pasting text, images, links, console commands,
+                            and emojis
+                            with a minimalist interface.</span>
+                        <span id="hero-sub-es" class="hidden">Soporte para copiar y pegar texto, imágenes, enlaces,
+                            comandos de consola y emojis con una interfaz minimalista.</span>
                     </p>
                 </div>
                 <!-- VERSION DISPLAY -->
                 <div class="mt-4 mb-2 flex justify-center items-center gap-2 text-slate-500 font-medium">
-                    <span>Version <span id="app-version">0.0.9</span>
+                    <span><span class="i18n-version">Version</span> <span id="app-version">0.1.0</span>
                 </div>
                 <div
                     class="flex flex-col sm:flex-row items-center justify-center gap-3 mt-4 w-full max-w-sm sm:max-w-none mx-auto">
-                    <button
+                    <!-- <button
                         class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
                         <span class="material-symbols-outlined text-[20px] transition-colors">rocket_launch</span>
                         <span>Launch Snap</span>
-                    </button>
-                    <button
-                        class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
-                        <span class="material-symbols-outlined text-[20px] transition-colors">inventory_2</span>
-                        <!--<span>Get it on Flathub</span>-->
-                        <span>Download Flatpak</span>
-
-                    </button>
-                    <button
+                        </button> -->
+                    <a href="https://github.com/gessendarien/petra-clipboard/releases/download/0.1.0/Petra-0.1.0-all.deb"
                         class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
                         <span class="material-symbols-outlined text-[20px] transition-colors">package_2</span>
-                        <span>Download .deb</span>
-                    </button>
-                    <button
+                        <span><span class="i18n-download">Download</span> .deb</span>
+                    </a>
+                    <a href="https://github.com/gessendarien/petra-clipboard/releases/download/0.1.0/Petra-0.1.0-x86_64.AppImage"
                         class="flex w-full sm:w-60 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group">
                         <span class="material-symbols-outlined text-[20px] transition-colors">install_desktop</span>
-                        <span>Download AppImage</span>
-                    </button>
+                        <span><span class="i18n-download">Download</span> AppImage</span>
+                    </a>
                 </div>
 
                 <!-- SURVEY SECTION -->
                 <div class="mt-12 max-w-2xl mx-auto">
                     <button onclick="toggleSurvey()"
                         class="text-slate-500 hover:text-slate-800 transition-colors text-sm font-medium flex items-center gap-1 mx-auto">
-                        Which one to choose?
+                        <span id="survey-toggle-label-en">Which one to choose?</span>
+                        <span id="survey-toggle-label-es" class="hidden">¿Cuál elegir?</span>
                         <span id="survey-arrow"
                             class="material-symbols-outlined text-xs transition-transform transform">expand_more</span>
                     </button>
 
                     <div id="survey-container" class="hidden mt-6 overflow-hidden text-center">
                         <div class="bg-white/50 backdrop-blur-sm border border-black/5 rounded-3xl p-8 space-y-6">
-                            <p class="text-sm text-slate-500 font-medium">Select your Linux distribution:</p>
-                            
+                            <p class="text-sm text-slate-500 font-medium">
+                                <span id="distro-label-en">Select your Linux distribution:</span>
+                                <span id="distro-label-es" class="hidden">Selecciona tu distribución de Linux:</span>
+                            </p>
+
                             <div class="relative max-w-xs mx-auto">
-                                <select onchange="selectDistro(this.value)" 
+                                <select onchange="selectDistro(this.value)" id="distro-select"
                                     class="w-full appearance-none bg-white border border-slate-400 rounded-full px-6 py-3 text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/5 transition-all cursor-pointer">
-                                    <option value="" disabled selected>Choose a distribution...</option>
+                                    <option value="" disabled selected class="i18n-placeholder">Choose a distribution...
+                                    </option>
                                     <option value="ubuntu">Ubuntu</option>
                                     <option value="mint">Linux Mint</option>
                                     <option value="zorin">Zorin OS</option>
@@ -131,15 +149,19 @@
                                     <option value="debian">Debian</option>
                                     <option value="manjaro">Manjaro</option>
                                     <option value="mx">MX Linux</option>
-                                    <option value="other">Other</option>
-                                    <option value="none">I don't know</option>
+                                    <option value="other" class="i18n-other">Other</option>
+                                    <option value="none" class="i18n-dontknow">I don't know</option>
                                 </select>
                             </div>
 
-                            <div id="recommendation-result" class="hidden mt-4 pt-6 border-t border-black/5 animate-in fade-in slide-in-from-top-2 duration-500">
+                            <div id="recommendation-result"
+                                class="hidden mt-4 pt-6 border-t border-black/5 animate-in fade-in slide-in-from-top-2 duration-500">
                                 <p class="text-sm text-slate-600 leading-relaxed font-light">
-                                    We recommend using <span id="rec-text" class="font-bold text-slate-900"></span> for
-                                    your system.
+                                    <span id="rec-prefix-en">We recommend using </span>
+                                    <span id="rec-prefix-es" class="hidden">Te recomendamos </span>
+                                    <span id="rec-text" class="font-bold text-slate-900"></span>
+                                    <span id="rec-suffix-en"> for your system.</span>
+                                    <span id="rec-suffix-es" class="hidden"> para tu sistema.</span>
                                 </p>
                             </div>
                         </div>
@@ -217,36 +239,67 @@
             <!-- Features Description -->
             <section class="w-full max-w-4xl mx-auto px-6 mt-8 mb-24 text-center space-y-8">
                 <p class="text-slate-600 text-lg md:text-xl leading-relaxed font-light">
-                    Petra is a powerful and versatile clipboard manager that allows copying and pasting a wide range of
-                    content, including text, images, links, console commands, and emojis. It features a robust search
-                    mechanism that lets you filter by copied item type or perform general searches, even by emoji.
+                    <span id="feat-p1-en">Petra is a powerful and versatile clipboard manager that allows copying and
+                        pasting a wide range of
+                        content, including text, images, links, console commands, and emojis. It features a robust
+                        search
+                        mechanism that lets you filter by copied item type or perform general searches, even by
+                        emoji.</span>
+                    <span id="feat-p1-es" class="hidden">Petra es un gestor de portapapeles potente y versátil que
+                        permite copiar y pegar una amplia variedad de contenido, incluyendo texto, imágenes, enlaces,
+                        comandos de consola y emojis. Cuenta con un mecanismo de búsqueda robusto que te permite filtrar
+                        por tipo de elemento copiado o realizar búsquedas generales, incluso por emoji.</span>
                 </p>
 
                 <p class="text-slate-600 text-lg md:text-xl leading-relaxed font-light">
-                    Built for speed and efficiency, Petra offers complete keyboard navigation using
-                    <kbd class="bg-black/5 rounded px-1 text-slate-700 text-sm">q</kbd>,
-                    <kbd class="bg-black/5 rounded px-1 text-slate-700 text-sm">w</kbd>,
-                    <kbd class="bg-black/5 rounded px-1 text-slate-700 text-sm">ctrl+f</kbd>,
-                    <kbd class="bg-black/5 rounded px-1 text-slate-700 text-sm">esc</kbd>,
-                    and arrow keys, alongside visual conveniences like image previews and the ability to open links
-                    directly in your browser.
+                    <span id="feat-p2-en">Built for speed and efficiency, Petra offers complete keyboard navigation
+                        using
+                        <kbd class="bg-black/5 rounded px-1 text-slate-700 text-sm">q</kbd>,
+                        <kbd class="bg-black/5 rounded px-1 text-slate-700 text-sm">w</kbd>,
+                        <kbd class="bg-black/5 rounded px-1 text-slate-700 text-sm">ctrl+f</kbd>,
+                        <kbd class="bg-black/5 rounded px-1 text-slate-700 text-sm">esc</kbd>,
+                        and arrow keys, alongside visual conveniences like image previews and the ability to open links
+                        directly in your browser.</span>
+                    <span id="feat-p2-es" class="hidden">Construida para la velocidad y la eficiencia, Petra ofrece
+                        navegación completa por teclado usando
+                        <kbd class="bg-black/5 rounded px-1 text-slate-700 text-sm">q</kbd>,
+                        <kbd class="bg-black/5 rounded px-1 text-slate-700 text-sm">w</kbd>,
+                        <kbd class="bg-black/5 rounded px-1 text-slate-700 text-sm">ctrl+f</kbd>,
+                        <kbd class="bg-black/5 rounded px-1 text-slate-700 text-sm">esc</kbd>,
+                        y las teclas de flecha, junto con comodidades visuales como vistas previas de imágenes y la
+                        posibilidad de abrir enlaces directamente en tu navegador.</span>
                 </p>
 
                 <p class="text-slate-600 text-lg md:text-xl leading-relaxed font-light">
-                    Customize your experience with a wide variety of themes and colors, choose to open the app on the
-                    left, right, or near your mouse position, and set your preferred keyboard shortcut.
+                    <span id="feat-p3-en">Customize your experience with a wide variety of themes and colors, choose to
+                        open the app on the
+                        left, right, or near your mouse position, and set your preferred keyboard shortcut.</span>
+                    <span id="feat-p3-es" class="hidden">Personaliza tu experiencia con una amplia variedad de temas y
+                        colores, elige abrir la app a la izquierda, derecha o cerca de la posición del mouse, y
+                        configura tu atajo de teclado preferido.</span>
                 </p>
 
                 <p class="text-slate-600 text-lg md:text-xl leading-relaxed font-light">
-                    With additional options to pin the window, start on system boot, and manually save, delete, or clear
-                    all items, Petra adapts entirely to your workflow.
+                    <span id="feat-p4-en">With additional options to pin the window, start on system boot, and manually
+                        save, delete, or clear
+                        all items, Petra adapts entirely to your workflow.</span>
+                    <span id="feat-p4-es" class="hidden">Con opciones adicionales para fijar la ventana, arrancar con el
+                        sistema y guardar, eliminar o limpiar todos los elementos manualmente, Petra se adapta
+                        completamente a tu flujo de trabajo.</span>
                 </p>
 
-                <div class="flex justify-center mt-12">
+                <div class="flex flex-col items-center gap-4 mt-12">
                     <a href="https://github.com/gessendarien/petra-clipboard" target="_blank"
                         class="flex w-full sm:w-56 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group px-6">
                         <span class="material-symbols-outlined text-[20px] transition-colors">code</span>
-                        <span>View Source Code</span>
+                        <span id="src-label-en">View Source Code</span>
+                        <span id="src-label-es" class="hidden">Ver Código Fuente</span>
+                    </a>
+                    <a href="https://paypal.me/gessendarien" target="_blank"
+                        class="flex w-full sm:w-56 items-center justify-center gap-3 h-12 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 hover:scale-[1.02] transition-all duration-300 shadow-xl active:scale-95 group px-6">
+                        <span class="material-symbols-outlined text-[20px] transition-colors">volunteer_activism</span>
+                        <span id="donate-label-en">Donate on PayPal</span>
+                        <span id="donate-label-es" class="hidden">Donar en PayPal</span>
                     </a>
                 </div>
             </section>
@@ -337,25 +390,25 @@
         function selectDistro(distro) {
             const result = document.getElementById('recommendation-result');
             const recText = document.getElementById('rec-text');
-            
+
             if (!distro) {
                 result.classList.add('hidden');
                 return;
             }
-            
+
             result.classList.remove('hidden');
-            
+
             let recommendation = "";
             switch (distro) {
                 case 'ubuntu':
                 case 'zorin':
-                    recommendation = "Snap, .deb, and AppImage";
+                    recommendation = /* "Snap, " + */ ".deb, and AppImage";
                     break;
                 case 'elementary':
                 case 'pop':
                 case 'mint':
                 case 'mx':
-                    recommendation = "Flatpak, .deb, and AppImage";
+                    recommendation = /* "Flatpak, " + */ ".deb, and AppImage";
                     break;
                 case 'debian':
                     recommendation = ".deb";
@@ -363,13 +416,65 @@
                 case 'fedora':
                 case 'manjaro':
                 case 'other':
-                    recommendation = "Flatpak and AppImage";
+                    recommendation = /* "Flatpak and " + */ "AppImage";
                     break;
                 case 'none':
                     recommendation = "AppImage";
                     break;
             }
             recText.textContent = recommendation;
+        }
+
+        // Language selector — EN default
+        let currentLang = 'en';
+
+        const i18n = {
+            en: {
+                version: 'Version',
+                download: 'Download',
+                placeholder: 'Choose a distribution...',
+                other: 'Other',
+                dontknow: "I don't know"
+            },
+            es: {
+                version: 'Versión',
+                download: 'Descargar',
+                placeholder: 'Elige una distribución...',
+                other: 'Otra',
+                dontknow: 'No sé'
+            }
+        };
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            const isES = lang === 'es';
+            const t = i18n[lang];
+
+            // Update button styles — excluded from the hide/show logic below
+            document.getElementById('lang-btn-en').className = isES
+                ? 'px-4 py-1.5 rounded-full text-sm font-semibold transition-all text-slate-600 hover:text-slate-900'
+                : 'px-4 py-1.5 rounded-full text-sm font-semibold transition-all bg-slate-900 text-white';
+            document.getElementById('lang-btn-es').className = isES
+                ? 'px-4 py-1.5 rounded-full text-sm font-semibold transition-all bg-slate-900 text-white'
+                : 'px-4 py-1.5 rounded-full text-sm font-semibold transition-all text-slate-600 hover:text-slate-900';
+
+            // Toggle id-based en/es pairs — skip the lang buttons themselves
+            document.querySelectorAll('[id$="-en"]').forEach(el => {
+                if (el.id !== 'lang-btn-en') el.classList.toggle('hidden', isES);
+            });
+            document.querySelectorAll('[id$="-es"]').forEach(el => {
+                if (el.id !== 'lang-btn-es') el.classList.toggle('hidden', !isES);
+            });
+
+            // Translate class-based strings
+            document.querySelectorAll('.i18n-version').forEach(el => el.textContent = t.version);
+            document.querySelectorAll('.i18n-download').forEach(el => el.textContent = t.download);
+            document.querySelectorAll('.i18n-other').forEach(el => el.textContent = t.other);
+            document.querySelectorAll('.i18n-dontknow').forEach(el => el.textContent = t.dontknow);
+
+            // Translate select placeholder
+            const sel = document.getElementById('distro-select');
+            if (sel && sel.options[0]) sel.options[0].textContent = t.placeholder;
         }
     </script>
 </body>

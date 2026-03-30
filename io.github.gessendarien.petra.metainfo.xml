@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright 2026 Gessén Darien -->
+<!-- Copyright 2026 Gessén Darién -->
 <component type="desktop-application">
   <id>io.github.gessendarien.petra</id>
   <name>Petra</name>
@@ -15,14 +15,21 @@
 
   <description>
     <p>
-      Petra is a modern clipboard manager with emoji support and a minimalist interface.
-      It allows you to manage your clipboard history, pin important items,
-      and quickly insert emojis.
+      Petra is a clipboard manager with a modern, easy-to-use graphical interface. It supports copying and pasting text, images, links, commands, and inserting emojis.
+      Pin items, search for them by name, or delete them by type with a single click.
+      View images copied from the web or your computer as thumbnails directly within the program.
+      Navigate with the mouse or use keyboard arrow keys with shortcuts.
+      You can also choose the theme that best fits your style.
+      A different kind of clipboard.
+
     </p>
     <p xml:lang="es">
-      Petra es un gestor de portapapeles moderno con soporte para emojis y una interfaz minimalista.
-      Permite gestionar el historial del portapapeles, fijar elementos importantes,
-      e insertar emojis rápidamente.
+      Petra es un gestor de portapapeles con interfaz gráfica moderna y fácil de usar. Soporta copiar y pegar textos, imágenes, enlaces, comandos e insertar emojis.
+      Fija elementos, búscalos por su nombre o elimínalos por su tipo con un solo clic.
+      Mira las imágenes copiadas desde la web o desde tu computadora en miniatura desde el propio programa.
+      Navega con el mouse o con las flechas del teclado con sus atajos.
+      Además, puedes elegir el tema que más se adapte a tu estilo.
+      Un portapapeles diferente.
     </p>
     <p>Features:</p>
     <ul>
@@ -37,6 +44,20 @@
       <li>Start on system boot</li>
       <li>Open on the left, right, or at mouse position</li>
       <li>Customizable keyboard shortcut</li>
+    </ul>
+    <p xml:lang="es">Características:</p>
+    <ul xml:lang="es">
+      <li>Copia y pega texto, imágenes, enlaces, comandos de consola y emojis</li>
+      <li>Filtra por tipo de elemento copiado</li>
+      <li>Búsqueda general, por tipo o emoji</li>
+      <li>Abre enlaces directamente en el navegador</li>
+      <li>Navegación completa por teclado (q, w, Ctrl+F, Esc y flechas)</li>
+      <li>Vista previa de imágenes copiadas</li>
+      <li>Fija la ventana y guarda elementos</li>
+      <li>Gran variedad de temas y colores</li>
+      <li>Arranque con el sistema</li>
+      <li>Abre a la izquierda, derecha o en la posición del mouse</li>
+      <li>Atajo de teclado personalizable</li>
     </ul>
   </description>
 
@@ -58,26 +79,46 @@
 
   <content_rating type="oars-1.1" />
 
-  <screenshots>
-    <screenshot type="default">
-      <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/0.0.1/screenshots/screenshot_1.png</image>
-      <caption>Clipboard history view</caption>
-    </screenshot>
-    <screenshot>
-      <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/0.0.1/screenshots/screenshot_2.png</image>
-      <caption>Emoji picker</caption>
-    </screenshot>
-    <screenshot>
-      <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/0.0.1/screenshots/screenshot_3.png</image>
-      <caption>Filtering and search</caption>
-    </screenshot>
-  </screenshots>
+<screenshots>
+  <screenshot type="default">
+    <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/main/screenshots/screenshot_1.png</image>
+    <caption>Clipboard history view</caption>
+    <caption xml:lang="es">Vista del historial</caption>
+  </screenshot>
+  <screenshot>
+    <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/main/screenshots/screenshot_2.png</image>
+    <caption>Emoji picker</caption>
+    <caption xml:lang="es">Selector de emojis</caption>
+  </screenshot>
+  <screenshot>
+    <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/main/screenshots/screenshot_3.png</image>
+    <caption>Filtering and search</caption>
+    <caption xml:lang="es">Filtrado y búsqueda</caption>
+  </screenshot>
+  <screenshot>
+    <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/main/screenshots/screenshot_4.png</image>
+    <caption>Settings</caption>
+    <caption xml:lang="es">Configuración</caption>
+  </screenshot>
+  <screenshot>
+    <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/main/screenshots/screenshot_5.png</image>
+    <caption>Search</caption>
+    <caption xml:lang="es">Búsqueda</caption>
+  </screenshot>
+  <screenshot>
+    <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/main/screenshots/screenshot_6.png</image>
+    <caption>Image preview</caption>
+    <caption xml:lang="es">Vista previa de imagen</caption>
+  </screenshot>
+</screenshots>
 
-  <releases>
-    <release version="0.0.9" date="2026-03-28">
-      <description>
-        <p>Initial release</p>
-      </description>
-    </release>
-  </releases>
+<releases>
+  <release version="0.1.0" date="2026-03-29">
+    <description>
+      <p>Bug fixes and general improvements.</p>
+      <p xml:lang="es">Corrección de errores y mejoras generales.</p>
+    </description>
+  </release>
+</releases>
+
 </component>

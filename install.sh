@@ -308,9 +308,19 @@ Maintainer: Gessén Darién <casscastudios@gmail.com>
 Depends: python3, python3-pyqt6, libxcb-cursor0, xdotool, wl-clipboard
 Section: utils
 Priority: optional
-Description: Modern clipboard manager with emoji support
- Petra is a clipboard manager indicating your history and emojis.
- Support for pinning and quick shortcuts.
+Description: A different clipboard manager for Linux
+ Petra is a modern clipboard manager with a clean graphical interface.
+ It supports text, images, links, console commands, and emojis.
+ .
+ Features:
+  - Pin items to keep them permanently
+  - Filter and search by content type
+  - Preview copied images as thumbnails
+  - Full keyboard navigation
+  - 20+ themes and color schemes
+  - Open links directly in the browser
+  - Customizable global keyboard shortcut
+  - Start on system boot
 EOF
 
     # ── Copy Application Files ──

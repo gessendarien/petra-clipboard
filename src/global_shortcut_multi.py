@@ -66,20 +66,20 @@ class GlobalShortcutManager:
         # 1. Flatpak: always use 'flatpak run <id>'
         if self.is_flatpak:
             flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra')
-            return f"flatpak run {flatpak_id}"
+            return f"flatpak run {flatpak_id} --toggle"
 
         # 2. AppImage: $APPIMAGE env var points to the real .AppImage file on disk
         appimage_path = os.environ.get('APPIMAGE')
         if appimage_path and Path(appimage_path).exists():
-            return appimage_path
+            return f"\"{appimage_path}\" --toggle"
 
         # 3. Installed .deb: /usr/bin/petra wrapper exists
         if Path('/usr/bin/petra').exists():
-            return '/usr/bin/petra'
+            return '/usr/bin/petra --toggle'
 
         # 4. Development: resolve real path of main.py (avoid any symlinks or /tmp mounts)
         main_script = Path(__file__).resolve().parent / "main.py"
-        return f"python3 {main_script}"
+        return f"python3 \"{main_script}\" --toggle"
 
     def _shortcut_to_binding(self, shortcut_str):
         """Convert 'Alt + space' → '<Alt>space' (gsettings format)."""

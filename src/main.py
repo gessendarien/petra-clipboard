@@ -19,14 +19,14 @@ SOCKET_PATH = os.path.join(
 )
 
 
-def send_show_command():
-    """Try to send a SHOW command to an already-running instance.
+def send_command(cmd='SHOW'):
+    """Try to send a command to an already-running instance.
     Returns True if the command was sent successfully."""
     try:
         client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         client.settimeout(2)
         client.connect(SOCKET_PATH)
-        client.sendall(b'SHOW')
+        client.sendall(cmd.encode('utf-8'))
         client.close()
         return True
     except (ConnectionRefusedError, FileNotFoundError, OSError):
@@ -53,6 +53,8 @@ def start_socket_server(window):
                 if data == 'SHOW':
                     # Use QTimer to safely interact with GUI from this thread
                     QTimer.singleShot(0, window.show_window)
+                elif data == 'TOGGLE':
+                    QTimer.singleShot(0, window._handle_shortcut_toggle)
             except socket.timeout:
                 continue
             except OSError:
@@ -64,7 +66,7 @@ def start_socket_server(window):
 
 
 def main():
-    print("Petra Clipboard v0.0.9")
+    print("Petra Clipboard v0.1.0")
     # Enable faulthandler so Python prints stack traces on crashes (SIGSEGV)
     try:
         faulthandler.enable()
@@ -75,11 +77,14 @@ def main():
     parser = argparse.ArgumentParser(description='Petra Clipboard Manager')
     parser.add_argument('--hidden', action='store_true', 
                         help='Start with hidden window (for autostart)')
+    parser.add_argument('--toggle', action='store_true', 
+                        help='Toggle window visibility (for shortcut)')
     args = parser.parse_args()
     
     # Single-instance check: try to connect to an existing instance
-    if send_show_command():
-        print("Petra is already running. Bringing existing window to front.")
+    cmd_to_send = 'TOGGLE' if args.toggle else 'SHOW'
+    if send_command(cmd_to_send):
+        print(f"Petra is already running. Sending {cmd_to_send} command.")
         sys.exit(0)
     
     app = QApplication(sys.argv)
