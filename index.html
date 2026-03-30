@@ -313,7 +313,7 @@
                         <span class="font-bold tracking-tight text-xl">Petra</span>
                     </div>
                     <span class="text-neutral-500 text-xs font-medium pl-1">© 2026 <a
-                            href="http://gessendarien.github.io" target="_blank">Gessén Darién</a> - Cassca
+                            href="http://gessendarien.github.io" target="_blank">Gessén Darien</a> - Cassca
                         Studios</span>
                 </div>
             </div>
@@ -426,18 +426,12 @@
             recText.textContent = recommendations[currentLang][distro] || 'AppImage';
         }
 
-        // CounterAPI
-        const WORKSPACE = 'petra-clipboard';
-
+        // GoatCounter — track button clicks
         function count(slug) {
-            fetch(`https://api.counterapi.dev/v1/${WORKSPACE}/petra-${slug}/up`, {
-                method: 'GET',
-                mode: 'no-cors'
-            }).catch(() => { }); // fail silently
+            if (window.goatcounter) {
+                goatcounter.count({ path: slug, event: true });
+            }
         }
-
-        // Count page view on load
-        window.addEventListener('load', () => count('page-views'));
 
         // Language selector — EN default
         let currentLang = 'en';
@@ -498,6 +492,9 @@
             }
         }
     </script>
+    <!-- GoatCounter -->
+    <script data-goatcounter="https://petra-clipboard.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+
 </body>
 
 </html>
