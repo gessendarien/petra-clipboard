@@ -38,13 +38,6 @@ You can install Petra or generate distributable packages by running the included
 ./install.sh
 ```
 
-This will launch an interactive menu with the following options:
-1. **Build & Install Locally** (Directly installs a development Flatpak)
-2. **Create Flatpak Bundle & Install** (Generates a `.flatpak` and installs it)
-3. **Create Flatpak Bundle Only** (Generates a `.flatpak` for distribution)
-4. **Create Debian Package** (Generates a `.deb` package)
-5. **Create AppImage** (Generates a fully standalone `.AppImage` portable executable)
-
 All generated bundles are saved in the `output/` directory.
 
 ## License
