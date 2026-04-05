@@ -1,0 +1,75 @@
+name: petra-clipboard
+base: core24
+version: '0.1.0'
+summary: A different clipboard manager for Linux
+description: |
+  Petra is a modern clipboard manager with a clean graphical interface.
+  It supports text, images, links, console commands, and emojis.
+
+  Features:
+  - Pin items to keep them permanently
+  - Filter and search by content type
+  - Preview copied images as thumbnails
+  - Full keyboard navigation
+  - 20+ themes and color schemes
+  - Open links directly in the browser
+  - Customizable global keyboard shortcut
+  - Start on system boot
+
+grade: stable
+confinement: strict
+
+license: GPL-3.0
+
+contact: https://github.com/gessendarien/petra-clipboard
+issues: https://github.com/gessendarien/petra-clipboard/issues
+website: https://gessendarien.github.io/petra-clipboard/
+source-code: https://github.com/gessendarien/petra-clipboard
+
+icon: icons/petra.png
+
+apps:
+  petra-clipboard:
+    command: bin/petra-launcher
+    extensions: [gnome]           # maneja Qt/Wayland/X11 automáticamente
+    environment:
+      PYTHONPATH: $SNAP/lib/python3/dist-packages
+      QT_QPA_PLATFORM_PLUGIN_PATH: $SNAP/usr/lib/x86_64-linux-gnu/qt6/plugins/platforms
+    plugs:
+      - home
+      - network
+      - x11
+      - wayland
+      - desktop
+      - desktop-legacy
+      - opengl
+      - unity7
+      - gsettings             # para registrar el shortcut global
+      - dconf
+      - process-control
+      - screen-inhibit-control
+
+parts:
+  petra:
+    plugin: python
+    source: .
+    python-packages:
+      - PyQt6
+    stage-packages:
+      - python3-pyqt6
+      - libxcb-cursor0
+      - xdotool
+      - wl-clipboard
+      - libqt6core6
+      - libqt6gui6
+      - libqt6widgets6
+    organize:
+      src/: usr/share/petra/src/
+      icons/: usr/share/petra/icons/
+      global-version.txt: usr/share/petra/global-version.txt
+
+  launcher:
+    plugin: dump
+    source: snap/local/
+    organize:
+      petra-launcher: bin/petra-launcher
