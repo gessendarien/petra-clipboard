@@ -243,9 +243,9 @@ class SettingsDialog(QDialog):
         self.github_btn = QPushButton()
         self.github_btn.setFixedSize(36, 36)
         self.github_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.github_btn.setToolTip("Tienes la última versión")
+        self.github_btn.setToolTip("Tienes la ultima versión disponible")
         self.github_btn.setStyleSheet("QPushButton { border: none; background: transparent; }")
-        self.github_btn.clicked.connect(self.open_update_dialog)
+        # self.github_btn.clicked.connect(self.open_update_dialog)
         
         # Update animation
         self._update_anim = None
@@ -388,7 +388,7 @@ class SettingsDialog(QDialog):
                 'shortcut': "⚠ Atajo:",
                 'shortcut_tooltip': "Algunos atajos pueden entrar en conflicto con otros programas y hacer que Petra no responda correctamente",
                 'tooltip_update': 'Nueva versión disponible',
-                'tooltip_no_update': 'Tienes la última versión'
+                'tooltip_no_update': 'Tienes la ultima versión disponible'
             },
             'en': {
                 'title': 'Settings',
@@ -499,11 +499,7 @@ class SettingsDialog(QDialog):
                 self.lang_label.setText(t.get('language', self.lang_label.text()))
                 
             if hasattr(self, 'github_btn'):
-                parent_win = self.parent()
-                if parent_win and getattr(parent_win, '_pending_update_anim', False):
-                    self.github_btn.setToolTip(t.get('tooltip_update', 'Nueva versión disponible'))
-                else:
-                    self.github_btn.setToolTip(t.get('tooltip_no_update', 'Tienes la última versión'))
+                self.github_btn.setToolTip(t.get('tooltip_no_update', 'Tienes la ultima versión disponible'))
                 
             # New: translate theme label
             if hasattr(self, 'theme_label'):

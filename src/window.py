@@ -66,7 +66,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self._update_available_version = None
         self._pending_update_anim = False
         self._update_checker = None
-        self._setup_update_checker()
+        # self._setup_update_checker()
 
     def _setup_update_checker(self):
         """Launch a background update check 3 seconds after startup."""
