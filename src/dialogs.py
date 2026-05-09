@@ -176,6 +176,12 @@ class SettingsDialog(QDialog):
         self.shortcut_combo.addItems(common_shortcuts)
         grid_layout.addWidget(self.shortcut_combo, 3, 1)
 
+        self.shortcut_error_label = QLabel("✖")
+        self.shortcut_error_label.setObjectName("shortcut_error_label")
+        self.shortcut_error_label.setStyleSheet("color: #ef4444; font-weight: bold;")
+        self.shortcut_error_label.hide()
+        grid_layout.addWidget(self.shortcut_error_label, 3, 2)
+
         # Align grid to the left
         grid_container = QWidget()
         gcl = QHBoxLayout(grid_container)
@@ -245,7 +251,7 @@ class SettingsDialog(QDialog):
         self.github_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.github_btn.setToolTip("Tienes la ultima versión disponible")
         self.github_btn.setStyleSheet("QPushButton { border: none; background: transparent; }")
-        # self.github_btn.clicked.connect(self.open_update_dialog)
+        self.github_btn.clicked.connect(self.open_update_dialog)
         
         # Update animation
         self._update_anim = None
@@ -387,6 +393,7 @@ class SettingsDialog(QDialog):
                 'autostart': "Iniciar con el sistema",
                 'shortcut': "⚠ Atajo:",
                 'shortcut_tooltip': "Algunos atajos pueden entrar en conflicto con otros programas y hacer que Petra no responda correctamente",
+                'shortcut_error': "Error al registrar el atajo. Es posible que otra aplicación ya lo esté usando.",
                 'tooltip_update': 'Nueva versión disponible',
                 'tooltip_no_update': 'Tienes la ultima versión disponible'
             },
@@ -409,6 +416,7 @@ class SettingsDialog(QDialog):
                 'autostart': "Start with system",
                 'shortcut': "⚠ Shortcut:",
                 'shortcut_tooltip': "Some shortcuts may conflict with other programs and cause Petra to become unresponsive",
+                'shortcut_error': "Error registering shortcut. Another application might be using it.",
                 'tooltip_update': 'New version available',
                 'tooltip_no_update': 'You have the latest version'
             }
@@ -472,7 +480,12 @@ class SettingsDialog(QDialog):
                     parent.apply_theme()
                 
                 if hasattr(parent, 'shortcut_manager'):
-                    parent.shortcut_manager.register_global_hotkey(parent.shortcut)
+                    success = parent.shortcut_manager.register_global_hotkey(parent.shortcut)
+                    if not success:
+                        self.shortcut_error_label.show()
+                        return
+                    else:
+                        self.shortcut_error_label.hide()
         except Exception as e:
             print(f"DEBUG: Error saving settings: {e}")
         self.accept()
@@ -494,6 +507,9 @@ class SettingsDialog(QDialog):
             if hasattr(self, 'shortcut_label'):
                 self.shortcut_label.setText(t.get('shortcut', self.shortcut_label.text()))
                 self.shortcut_label.setToolTip(t.get('shortcut_tooltip', ''))
+                
+            if hasattr(self, 'shortcut_error_label'):
+                self.shortcut_error_label.setToolTip(t.get('shortcut_error', ''))
                 
             if hasattr(self, 'lang_label'):
                 self.lang_label.setText(t.get('language', self.lang_label.text()))

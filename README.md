@@ -35,7 +35,7 @@ A different clipboard for Linux, my way.
 You can install Petra or generate distributable packages by running the included build script in the project folder:
 
 ```bash
-./install.sh
+./build.sh
 ```
 
 All generated bundles are saved in the `output/` directory.

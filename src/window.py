@@ -66,7 +66,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self._update_available_version = None
         self._pending_update_anim = False
         self._update_checker = None
-        # self._setup_update_checker()
+        self._setup_update_checker()
 
     def _setup_update_checker(self):
         """Launch a background update check 3 seconds after startup."""
@@ -761,20 +761,24 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     def _ensure_window_icon(self):
         """Re-establece el ícono de la ventana para que aparezca en la barra de tareas."""
         try:
-            from PyQt6.QtCore import QSize
+            from PyQt6.QtGui import QPixmap
             icon = QIcon()
             icon_base = Path(__file__).parent.parent / "icons"
             
-            # Add multiple sizes
-            for size in [16, 32, 48, 64, 128, 256]:
+            # Use QPixmap to embed actual pixel data (sharp on all panels)
+            for size in [16, 32, 48, 64, 128, 256, 512]:
                 png_path = icon_base / f"petra-{size}.png"
                 if png_path.exists():
-                    icon.addFile(str(png_path), QSize(size, size))
+                    pixmap = QPixmap(str(png_path))
+                    if not pixmap.isNull():
+                        icon.addPixmap(pixmap)
             
             # If no specific sizes, use general
             if icon.isNull():
                 if (icon_base / "petra.png").exists():
-                    icon.addFile(str(icon_base / "petra.png"))
+                    pixmap = QPixmap(str(icon_base / "petra.png"))
+                    if not pixmap.isNull():
+                        icon.addPixmap(pixmap)
                 elif (icon_base / "petra.svg").exists():
                     icon.addFile(str(icon_base / "petra.svg"))
             

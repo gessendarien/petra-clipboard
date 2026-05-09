@@ -59,6 +59,12 @@ class GlobalShortcutManager:
             print(f"Error running bash command: {e}")
             return None
 
+    @staticmethod
+    def _escape_path(path_str):
+        """Escape spaces in a path for use in shell commands.
+        Do NOT use double quotes — gsettings GVariant parser rejects them."""
+        return str(path_str).replace(" ", "\\ ")
+
     def _get_petra_command(self):
         """Return the command string the OS should run to toggle Petra.
         Must be a stable path that survives app restarts and reboots.
@@ -71,15 +77,42 @@ class GlobalShortcutManager:
         # 2. AppImage: $APPIMAGE env var points to the real .AppImage file on disk
         appimage_path = os.environ.get('APPIMAGE')
         if appimage_path and Path(appimage_path).exists():
-            return f"\"{appimage_path}\" --toggle"
+            return f"{self._escape_path(appimage_path)} --toggle"
 
         # 3. Installed .deb: /usr/bin/petra wrapper exists
         if Path('/usr/bin/petra').exists():
             return '/usr/bin/petra --toggle'
 
-        # 4. Development: resolve real path of main.py (avoid any symlinks or /tmp mounts)
-        main_script = Path(__file__).resolve().parent / "main.py"
-        return f"python3 \"{main_script}\" --toggle"
+        # 4. Local AppImage in output/ (development builds)
+        project_root = Path(__file__).resolve().parent.parent
+        output_dir = project_root / "output"
+        if output_dir.exists():
+            appimages = sorted(output_dir.glob("Petra-*-x86_64.AppImage"), reverse=True)
+            for ai in appimages:
+                if ai.exists() and os.access(str(ai), os.X_OK):
+                    print(f"Using local AppImage for shortcut: {ai}")
+                    return f"{self._escape_path(ai)} --toggle"
+
+        # 5. Development: resolve real path of main.py (avoid any symlinks or /tmp mounts)
+        import sys
+        python_exe = sys.executable
+        main_script = self._escape_path(Path(__file__).resolve().parent / "main.py")
+
+        # Verify that the Python interpreter can actually import PyQt6,
+        # otherwise the shortcut command will silently fail.
+        try:
+            verify = subprocess.run(
+                [python_exe, '-c', 'import PyQt6'],
+                capture_output=True, timeout=5
+            )
+            if verify.returncode != 0:
+                print(f"WARNING: {python_exe} cannot import PyQt6. "
+                      f"The shortcut command may fail. "
+                      f"Install PyQt6: sudo apt install python3-pyqt6")
+        except Exception:
+            pass
+
+        return f"{python_exe} {main_script} --toggle"
 
     def _shortcut_to_binding(self, shortcut_str):
         """Convert 'Alt + space' → '<Alt>space' (gsettings format)."""
@@ -272,17 +305,29 @@ class GlobalShortcutManager:
             custom_list.append(key_name)
             list_str = str(custom_list).replace('"', "'")
             self._host_bash(f"gsettings set {schema} custom-list \"{list_str}\"")
+        else:
+            # Force Cinnamon to reload: Cinnamon only re-reads custom keybinding
+            # commands when `custom-list` changes (the command string is captured
+            # in a closure at setup time).  Toggle the list to trigger the
+            # `on_customs_changed` handler which calls remove + setup.
+            tmp_list = [x for x in custom_list if x != key_name]
+            tmp_str = str(tmp_list).replace('"', "'")
+            self._host_bash(f"gsettings set {schema} custom-list \"{tmp_str}\"")
+            import time; time.sleep(0.3)
+            list_str = str(custom_list).replace('"', "'")
+            self._host_bash(f"gsettings set {schema} custom-list \"{list_str}\"")
 
         print(f"Cinnamon shortcut registered: {binding} -> {command}")
         # Verify the binding was written correctly
         verify = self._host_bash(f"gsettings get '{schema_path}' binding")
         if verify and verify.returncode == 0 and binding in verify.stdout:
             print(f"Cinnamon shortcut VERIFIED OK")
+            return True
         else:
             stdout = verify.stdout.strip() if verify else 'None'
             stderr = verify.stderr.strip() if verify and verify.stderr else ''
             print(f"WARNING: Cinnamon shortcut verification failed. stdout='{stdout}' stderr='{stderr}'")
-        return True
+            return False
 
     # ─────────────────────────────────────
     #  GNOME (also works for Budgie, Pantheon, etc.)
@@ -316,17 +361,26 @@ class GlobalShortcutManager:
             custom_list.append(path)
             list_str = str(custom_list).replace('"', "'")
             self._host_bash(f"gsettings set {schema} custom-keybindings \"{list_str}\"")
+        else:
+            # Force GNOME to reload keybindings by toggling the list
+            tmp_list = [x for x in custom_list if x != path]
+            tmp_str = str(tmp_list).replace('"', "'")
+            self._host_bash(f"gsettings set {schema} custom-keybindings \"{tmp_str}\"")
+            import time; time.sleep(0.3)
+            list_str = str(custom_list).replace('"', "'")
+            self._host_bash(f"gsettings set {schema} custom-keybindings \"{list_str}\"")
 
         print(f"GNOME shortcut registered: {binding} -> {command}")
         # Verify the binding was written correctly
         verify = self._host_bash(f"gsettings get '{schema_path}' binding")
         if verify and verify.returncode == 0 and binding in verify.stdout:
             print(f"GNOME shortcut VERIFIED OK")
+            return True
         else:
             stdout = verify.stdout.strip() if verify else 'None'
             stderr = verify.stderr.strip() if verify and verify.stderr else ''
             print(f"WARNING: GNOME shortcut verification failed. stdout='{stdout}' stderr='{stderr}'")
-        return True
+            return False
 
     # ─────────────────────────────────────
     #  KDE Plasma

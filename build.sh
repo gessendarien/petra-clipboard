@@ -253,6 +253,21 @@ export LD_LIBRARY_PATH="$HERE/usr/lib:$HERE/opt/python/lib:$LD_LIBRARY_PATH"
 export PATH="$HERE/usr/bin:$PATH"
 export QT_QPA_PLATFORM_PLUGIN_PATH="$HERE/opt/python/lib/python3.11/site-packages/PyQt6/Qt6/plugins/platforms"
 
+# Ensure host cursor settings are available so the bundled Qt uses the
+# correct cursor theme and size.  Only set defaults if not already present.
+if [ -z "$XCURSOR_SIZE" ]; then
+    _cs=$(gsettings get org.cinnamon.desktop.interface cursor-size 2>/dev/null \
+          || gsettings get org.gnome.desktop.interface cursor-size 2>/dev/null \
+          || echo 24)
+    export XCURSOR_SIZE="$_cs"
+fi
+if [ -z "$XCURSOR_THEME" ]; then
+    _ct=$(gsettings get org.cinnamon.desktop.interface cursor-theme 2>/dev/null \
+          || gsettings get org.gnome.desktop.interface cursor-theme 2>/dev/null)
+    _ct="${_ct//\'/}"
+    [ -n "$_ct" ] && export XCURSOR_THEME="$_ct"
+fi
+
 cd "$APP_DIR/src"
 exec "$PYTHON" main.py "$@"
 APPRUN_EOF
@@ -304,7 +319,7 @@ create_debian_package() {
 Package: ${APP_NAME,,}
 Version: ${APP_VERSION}
 Architecture: all
-Maintainer: Gessén Darién <casscastudios@gmail.com>
+Maintainer: Gessén Darién <casscaplay@gmail.com>
 Depends: python3, python3-pyqt6, libxcb-cursor0, xdotool, wl-clipboard
 Section: utils
 Priority: optional
@@ -377,10 +392,10 @@ print_header "Petra Clipboard Manager - Build System"
 echo "Select an option:"
 echo "1) Create Debian Package (.deb)"
 echo "2) Create AppImage"
-echo "3) Create Flatpak Bundle (.flatpak)"
-echo "4) Exit"
+# echo "3) Create Flatpak Bundle (.flatpak)"
+echo "3) Exit"
 echo ""
-read -p "Option [1-4]: " option
+read -p "Option [1-3]: " option
 
 case $option in
     1)
@@ -389,12 +404,12 @@ case $option in
     2)
         create_appimage
         ;;
+    # 3)
+    #     check_flatpak_dependencies
+    #     build_flatpak
+    #     create_flatpak_bundle
+    #     ;;
     3)
-        check_flatpak_dependencies
-        build_flatpak
-        create_flatpak_bundle
-        ;;
-    4)
         echo "Exiting."
         exit 0
         ;;

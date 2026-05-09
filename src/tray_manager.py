@@ -27,25 +27,43 @@ class TrayManagerMixin:
         self.tray_icon = QSystemTrayIcon(self)
         
         icons_root = Path(__file__).parent.parent / 'icons'
-        icon_path = icons_root / 'petra_systray.png'
         
-        if not icon_path.exists():
-            icon_path = icons_root / 'petra.png'
-        if not icon_path.exists():
-            icons_folder = getattr(self.themes_manager, 'get_icons_folder', lambda: 'dark')()
-            icon_path = icons_root / icons_folder / 'all.png'
-            
+        # IMPORTANTE PARA FLATPAK/WAYLAND:
+        # Crear QIcon desde QPixmap fuerza a Qt a enviar los píxeles (RGBA)
+        # por D-Bus (SNI). Si usamos QIcon(str(path)), Qt envía la ruta
+        # absoluta que es interna del sandbox de Flatpak ("/app/...") y el
+        # host no encuentra la imagen.
+        #
+        # Load multiple sizes for HiDPI panels — the panel will pick
+        # the closest size and avoid blurry scaling.
+        from PyQt6.QtCore import QSize
         icon = QIcon()
-        if icon_path.exists():
-            # IMPORTANTE PARA FLATPAK/WAYLAND:
-            # Crear QIcon desde QPixmap fuerza a Qt a enviar los píxeles (RGBA)
-            # por D-Bus (SNI). Si usamos QIcon(str(path)), Qt envía la ruta
-            # absoluta que es interna del sandbox de Flatpak ("/app/...") y el
-            # host no encuentra la imagen.
-            pixmap = QPixmap(str(icon_path))
-            icon = QIcon(pixmap)
-        else:
-            icon = self.style().standardIcon(Qt.Style.SP_ComputerIcon)
+        sizes_loaded = 0
+        for size in [128, 64, 48, 32, 24]:
+            candidate = icons_root / f'petra_systray_{size}.png'
+            if candidate.exists():
+                pixmap = QPixmap(str(candidate))
+                if not pixmap.isNull():
+                    icon.addPixmap(pixmap)
+                    sizes_loaded += 1
+
+        # Fallback: single systray image
+        if sizes_loaded == 0:
+            for fallback_name in ['petra_systray.png', 'petra.png']:
+                fallback = icons_root / fallback_name
+                if fallback.exists():
+                    pixmap = QPixmap(str(fallback))
+                    if not pixmap.isNull():
+                        icon = QIcon(pixmap)
+                        break
+        
+        if icon.isNull():
+            icons_folder = getattr(self.themes_manager, 'get_icons_folder', lambda: 'dark')()
+            fallback = icons_root / icons_folder / 'all.png'
+            if fallback.exists():
+                icon = QIcon(QPixmap(str(fallback)))
+            else:
+                icon = self.style().standardIcon(Qt.Style.SP_ComputerIcon)
                 
         self.tray_icon.setIcon(icon)
         

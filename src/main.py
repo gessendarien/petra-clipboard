@@ -98,22 +98,30 @@ def main():
     icon_base = Path(__file__).parent.parent / "icons"
     flatpak_base = Path("/app/share/icons/hicolor")
     
-    # Add multiple icon sizes for better compatibility
-    icon_sizes = [16, 32, 48, 64, 128, 256]
+    # Add multiple icon sizes for better compatibility.
+    # Use QPixmap to force Qt to embed actual pixel data in _NET_WM_ICON,
+    # which prevents blurry icons when the WM/panel can't resolve file paths
+    # (e.g. paths inside AppImage mounts or Flatpak sandboxes).
+    from PyQt6.QtGui import QPixmap
+    icon_sizes = [16, 32, 48, 64, 128, 256, 512]
     icon_loaded = False
     
     # First try loading from local development folder
     for size in icon_sizes:
         png_path = icon_base / f"petra-{size}.png"
         if png_path.exists():
-            icon.addFile(str(png_path), QSize(size, size))
-            icon_loaded = True
+            pixmap = QPixmap(str(png_path))
+            if not pixmap.isNull():
+                icon.addPixmap(pixmap)
+                icon_loaded = True
     
     # If no specific sizes found, use general PNG or SVG
     if not icon_loaded:
         if (icon_base / "petra.png").exists():
-            icon.addFile(str(icon_base / "petra.png"))
-            icon_loaded = True
+            pixmap = QPixmap(str(icon_base / "petra.png"))
+            if not pixmap.isNull():
+                icon.addPixmap(pixmap)
+                icon_loaded = True
         elif (icon_base / "petra.svg").exists():
             icon.addFile(str(icon_base / "petra.svg"))
             icon_loaded = True
@@ -126,7 +134,11 @@ def main():
         ]
         for fpath in flatpak_paths:
             if fpath.exists():
-                icon.addFile(str(fpath))
+                pixmap = QPixmap(str(fpath))
+                if not pixmap.isNull():
+                    icon.addPixmap(pixmap)
+                else:
+                    icon.addFile(str(fpath))
                 icon_loaded = True
                 break
     
