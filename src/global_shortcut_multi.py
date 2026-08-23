@@ -389,7 +389,8 @@ class GlobalShortcutManager:
     def _register_kde(self, shortcut_str):
         binding = self._shortcut_to_binding(shortcut_str)
         # KDE format: Alt+Space (no angle brackets, + separated)
-        kde_binding = shortcut_str.replace(' ', '')  # "Alt+space"
+        # Also, KDE expects Meta instead of Super
+        kde_binding = shortcut_str.replace(' ', '').replace('Super', 'Meta')
         command = self._get_petra_command()
 
         # Detect kwriteconfig version

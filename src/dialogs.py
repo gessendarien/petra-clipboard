@@ -1075,3 +1075,89 @@ class ImagePreviewDialog(QDialog):
             self.close()
         else:
             super().keyPressEvent(event)
+
+
+class FirstRunLoadingDialog(QDialog):
+    def __init__(self, parent=None, lang='es'):
+        super().__init__(parent)
+        self.setFixedSize(200, 200)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        container = QWidget()
+        container.setObjectName("loading_container")
+        container.setStyleSheet("""
+            QWidget#loading_container {
+                background-color: transparent;
+            }
+        """)
+        container_layout = QVBoxLayout(container)
+        container_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        from PyQt6.QtGui import QIcon, QPixmap
+        from PyQt6.QtCore import QSize, Qt
+        icon_path = Path(__file__).parent.parent / "icons" / "dark" / "code.png"
+        self._original_pixmap = QPixmap(str(icon_path))
+        if self._original_pixmap.isNull():
+            icon_path = Path(__file__).parent.parent / "icons" / "petra.png"
+            self._original_pixmap = QPixmap(str(icon_path))
+            
+        self._base_size = QSize(80, 80)
+        
+        self.icon_label = QLabel()
+        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.icon_label.setFixedSize(120, 120)
+        container_layout.addWidget(self.icon_label)
+        
+        layout.addWidget(container)
+        
+        self._hb_scale = 1.0
+        self._hb_phase = 0
+        self._hb_pause_count = 0
+        self._anim_timer = QTimer(self)
+        self._anim_timer.setInterval(25)
+        self._anim_timer.timeout.connect(self._tick_heartbeat)
+        self._anim_timer.start()
+        
+        self._apply_scale(1.0)
+
+    def _tick_heartbeat(self):
+        speed = 0.02
+        if self._hb_phase == 0:
+            self._hb_scale += speed
+            if self._hb_scale >= 1.2:
+                self._hb_scale = 1.2
+                self._hb_phase = 1
+        elif self._hb_phase == 1:
+            self._hb_scale -= speed
+            if self._hb_scale <= 0.85:
+                self._hb_scale = 0.85
+                self._hb_phase = 2
+        elif self._hb_phase == 2:
+            self._hb_scale += speed
+            if self._hb_scale >= 1.0:
+                self._hb_scale = 1.0
+                self._hb_phase = 3
+                self._hb_pause_count = 0
+        elif self._hb_phase == 3:
+            self._hb_pause_count += 1
+            if self._hb_pause_count >= 20:
+                self._hb_phase = 0
+        self._apply_scale(self._hb_scale)
+
+    def _apply_scale(self, scale):
+        if not self._original_pixmap.isNull():
+            from PyQt6.QtCore import QSize, Qt
+            new_w = max(1, int(self._base_size.width() * scale))
+            new_h = max(1, int(self._base_size.height() * scale))
+            scaled_size = QSize(new_w, new_h)
+            
+            scaled_pixmap = self._original_pixmap.scaled(
+                scaled_size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            self.icon_label.setPixmap(scaled_pixmap)

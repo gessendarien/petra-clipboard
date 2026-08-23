@@ -49,6 +49,8 @@ class ConfigManager:
             'open_position': 'center'
         }
 
+        self.is_first_run = False
+
         try:
             if self.config_file.exists():
                 with open(self.config_file, 'r') as f:
@@ -57,6 +59,7 @@ class ConfigManager:
                 # Validate the loaded configuration
                 self.config = self.validate_config(self.config, default)
             else:
+                self.is_first_run = True
                 self.config = default
                 with open(self.config_file, 'w') as f:
                     json.dump(self.config, f, indent=2, ensure_ascii=False)
@@ -106,6 +109,9 @@ class ConfigManager:
                     'timestamp': c['timestamp'].isoformat(),
                     'pinned': True
                 }
+                
+                if 'display_name' in c:
+                    item['display_name'] = c['display_name']
                 
                 # For images, save file to disk and hash
                 if c['type'] == 'image' and hasattr(self, 'clipboard_images'):

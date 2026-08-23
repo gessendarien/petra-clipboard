@@ -512,6 +512,7 @@ class ClipboardManager:
             
             if content in self.clipboard_images:
                 image = self.clipboard_images[content]
+                
                 clipboard.setImage(image)
                 
                 # Update last_clipboard with the image hash to prevent duplicates

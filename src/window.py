@@ -55,7 +55,9 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.load_pinned()
         self.initialize_clipboard_state()
         self.setup_clipboard_monitor()
-        self.shortcut_manager.setup_global_shortcut(self.shortcut)
+        
+        if not getattr(self, 'is_first_run', False):
+            self.shortcut_manager.setup_global_shortcut(self.shortcut)
         
         self.apply_theme()
         
@@ -122,6 +124,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.setFixedSize(515, 680)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         
         # Performance: debounce refresh_ui to batch updates
         self._refresh_timer = QTimer(self)
@@ -130,6 +133,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         
         central = QWidget()
         central.setObjectName("main_window")
+        central.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self.setCentralWidget(central)
         
         main_layout = QVBoxLayout(central)
@@ -300,8 +304,11 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         scroll.setObjectName("main_scroll_area")
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         
         self.content_widget = QWidget()
+        self.content_widget.setObjectName("main_content_widget")
+        self.content_widget.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self.content_layout = QVBoxLayout(self.content_widget)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
         self.content_layout.setSpacing(0)
@@ -613,7 +620,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         container_layout.setContentsMargins(15, 4, 15, 4)
         container_layout.setSpacing(0)
         
-        widget = ClipItem(clip['content'], clip['type'], clip['timestamp'], clip['pinned'], self)
+        widget = ClipItem(clip['content'], clip['type'], clip['timestamp'], clip['pinned'], self, clip.get('display_name'))
         # Apply persisted copied state (if any) so the widget reflects copied appearance after refresh
         try:
             # Ensure transient states are cleared when creating the widget
@@ -657,10 +664,20 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         # Connect signal for image preview
         if clip['type'] == 'image':
             widget.image_preview_requested.connect(self.show_image_preview)
+            widget.rename_requested.connect(self._on_clip_renamed)
         
         container_layout.addWidget(widget)
         self.content_layout.insertWidget(self.content_layout.count() - 1, container)
     
+    def _on_clip_renamed(self, content_id, new_name):
+        """Maneja el renombrado de un clip de imagen."""
+        for c in self.clips:
+            if c['content'] == content_id:
+                c['display_name'] = new_name
+                if c['pinned']:
+                    self.save_pinned()
+                break
+
     def delete_clip(self, clip):
         # If it is a pinned image, remove its hash from set
         if clip['type'] == 'image' and clip['pinned']:
@@ -792,6 +809,21 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
 
     def show_window(self):
         """Mostrar ventana centrada o en posición del mouse según configuración"""
+        if getattr(self, 'is_first_run', False):
+            self.is_first_run = False
+            from dialogs import FirstRunLoadingDialog
+            self._loading_dialog = FirstRunLoadingDialog(self, getattr(self, 'language', 'es'))
+            self._loading_dialog.show()
+            
+            def _do_setup():
+                self.shortcut_manager.setup_global_shortcut(self.shortcut)
+                self.save_config()
+                self._loading_dialog.close()
+                self.show_window()
+                
+            QTimer.singleShot(1500, _do_setup)
+            return
+
         # Restore icon before showing window
         self._ensure_window_icon()
         

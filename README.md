@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/Version-Beta%200.1.1-orange?style=for-the-badge) ![License](https://img.shields.io/badge/License-GPL%20v3-blue?style=for-the-badge) ![Platform](https://img.shields.io/badge/Platform-Linux-yellow?style=for-the-badge&logo=linux)
+![Version](https://img.shields.io/badge/Version-Beta%200.1.2-orange?style=for-the-badge) ![License](https://img.shields.io/badge/License-GPL%20v3-blue?style=for-the-badge) ![Platform](https://img.shields.io/badge/Platform-Linux-yellow?style=for-the-badge&logo=linux)
 
 # Petra
 
@@ -9,6 +9,7 @@ A different clipboard for Linux, my way.
 ## Features
 
 - Allows copying and pasting text, images, links, console commands, and emojis
+- Edit image names directly by clicking on them
 - Filter by copied item type
 - General search, by type or emoji
 - Open links directly in the browser

@@ -165,7 +165,8 @@ class EmojiCarousel(QWidget):
             painter.setFont(font)
             painter.setPen(QColor("#FFFFFF") if dist < 0.5 else QColor("#888888"))
 
-            text_rect = QRectF(-17, -16, 36, 36)
+            # Ajuste más sutil (-18 en lugar de -20 o -16)
+            text_rect = QRectF(-17, -18, 36, 36)
             painter.drawText(text_rect, Qt.AlignmentFlag.AlignCenter, display_emoji)
 
             painter.restore()

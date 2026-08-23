@@ -66,7 +66,7 @@ def start_socket_server(window):
 
 
 def main():
-    print("Petra Clipboard v0.1.1")
+    print("Petra Clipboard v0.1.2")
     # Enable faulthandler so Python prints stack traces on crashes (SIGSEGV)
     try:
         faulthandler.enable()

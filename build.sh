@@ -320,7 +320,7 @@ Package: ${APP_NAME,,}
 Version: ${APP_VERSION}
 Architecture: all
 Maintainer: Gessén Darién <casscaplay@gmail.com>
-Depends: python3, python3-pyqt6, libxcb-cursor0, xdotool, wl-clipboard
+Depends: python3, python3-pyqt6, libxcb-cursor0, xdotool, wl-clipboard, xclip
 Section: utils
 Priority: optional
 Description: A different clipboard manager for Linux

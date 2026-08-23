@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QLineEdit, QPushButton, QFrame, QVBoxLayout, 
-                             QHBoxLayout, QLabel, QWidget)
+                             QHBoxLayout, QLabel, QWidget, QSizePolicy)
 from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer, QRect, QEvent, pyqtSignal, QSize
 from PyQt6.QtGui import QPainter, QPen, QColor, QIcon, QPixmap, QPainterPath
 from datetime import datetime
@@ -113,13 +113,16 @@ class ClipItem(QFrame):
     pin_toggled = pyqtSignal()
     image_preview_requested = pyqtSignal(str)  # Signal to request image preview
     
-    def __init__(self, content, item_type, timestamp, pinned=False, main_window=None):
+    rename_requested = pyqtSignal(str, str)
+    
+    def __init__(self, content, item_type, timestamp, pinned=False, main_window=None, display_name=None):
         super().__init__()
         self.content = content
         self.item_type = item_type
         self.timestamp = timestamp
         self.pinned = pinned
         self.main_window = main_window
+        self.display_name = display_name
         self.setup_ui()
         
     def setup_ui(self):
@@ -135,9 +138,9 @@ class ClipItem(QFrame):
         self.setMinimumHeight(70)
         self.setMaximumHeight(70)
         self.setMaximumWidth(485)
-        # enable hover events to work reliably even when mouse is over child widgets
         self.setMouseTracking(True)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         
         layout = QHBoxLayout(self)
         layout.setContentsMargins(12, 12, 12, 12)
@@ -202,10 +205,21 @@ class ClipItem(QFrame):
         content_layout.setSpacing(2)
         content_layout.setContentsMargins(0, 0, 0, 0)
         
-        text_label = self.create_text_label()
+        self.text_label = self.create_text_label()
+        
+        # Add QLineEdit for renaming (hidden by default)
+        self.name_edit = QLineEdit()
+        self.name_edit.setObjectName("clip_name_edit")
+        self.name_edit.hide()
+        self.name_edit.editingFinished.connect(self._on_rename_finished)
+        self.name_edit.textChanged.connect(self._adjust_edit_width)
+        self.name_edit.setStyleSheet("background: transparent; border: 1px solid #BB86FC; color: white; border-radius: 4px; padding: 2px;")
+        self.name_edit.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        
         time_label = self.create_time_label()
         
-        content_layout.addWidget(text_label)
+        content_layout.addWidget(self.text_label)
+        content_layout.addWidget(self.name_edit)
         content_layout.addWidget(time_label)
         
         layout.addWidget(self.icon_label)
@@ -419,11 +433,12 @@ class ClipItem(QFrame):
         # For images, extract only filename (without internal timestamp)
         display_content = self.content
         if self.item_type == "image":
-            # Content format: filename.ext_YYYYMMDD_HHMMSS_ffffff
-            # Extract only filename part
-            parts = self.content.rsplit('_', 3)  # Split by last 3 underscores (timestamp)
-            if len(parts) >= 4:
-                display_content = parts[0]  # Only filename with extension
+            if getattr(self, 'display_name', None):
+                display_content = self.display_name
+            else:
+                parts = self.content.rsplit('_', 3)  # Split by last 3 underscores (timestamp)
+                if len(parts) >= 4:
+                    display_content = parts[0]  # Only filename with extension
             # Images should never render as link
             render_as_link = False
             
@@ -460,6 +475,9 @@ class ClipItem(QFrame):
         # Apply theme to QLabel if theme manager is available
         if self.main_window and hasattr(self.main_window, 'themes_manager'):
             self.main_window.themes_manager.apply_theme_to_widget(text_label)
+            
+        if self.item_type == "image":
+            text_label.setCursor(Qt.CursorShape.PointingHandCursor)
         
         return text_label
     
@@ -714,7 +732,8 @@ class ClipItem(QFrame):
                     self.actions_widget.hide()
             except Exception:
                 pass
-            self.clicked.emit(self.content)
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(0, lambda c=self.content: self.clicked.emit(c))
         super().mouseReleaseEvent(event)
 
     def enterEvent(self, event):
@@ -745,6 +764,11 @@ class ClipItem(QFrame):
 
     def eventFilter(self, obj, event):
         try:
+            if obj == getattr(self, 'text_label', None) and self.item_type == "image":
+                if event.type() == QEvent.Type.MouseButtonPress and event.button() == Qt.MouseButton.LeftButton:
+                    self._start_renaming()
+                    return True
+
             if obj == getattr(self, 'pin_action_btn', None):
                 if getattr(self, 'pinned', False):
                     if event.type() == QEvent.Type.Enter:
@@ -760,6 +784,71 @@ class ClipItem(QFrame):
         except Exception:
             pass
         return super().eventFilter(obj, event)
+
+    def _start_renaming(self):
+        """Muestra el campo de texto para renombrar."""
+        display_content = self.content
+        if getattr(self, 'display_name', None):
+            display_content = self.display_name
+        else:
+            parts = self.content.rsplit('_', 3)
+            if len(parts) >= 4:
+                display_content = parts[0]
+                
+        try:
+            focus_color = self.main_window.themes_manager.get_theme_colors().get('search_input_focus', '#BB86FC')
+        except Exception:
+            focus_color = '#BB86FC'
+            
+        self.name_edit.setStyleSheet(f"background: transparent; border: 1.5px solid {focus_color}; color: white; border-radius: 4px; padding: 2px;")
+        
+        # Separar nombre y extensión
+        if '.' in display_content:
+            self._current_extension = display_content.rsplit('.', 1)[1]
+            base_name = display_content.rsplit('.', 1)[0]
+        else:
+            self._current_extension = ""
+            base_name = display_content
+            
+        self.text_label.hide()
+        self.name_edit.setText(base_name)
+        self._adjust_edit_width()
+        self.name_edit.show()
+        self.name_edit.setFocus()
+        self.name_edit.selectAll()
+            
+    def _adjust_edit_width(self):
+        """Ajusta el ancho del campo de texto según su contenido."""
+        fm = self.name_edit.fontMetrics()
+        # Calculamos el ancho del texto y le sumamos un margen pequeño
+        width = fm.horizontalAdvance(self.name_edit.text()) + 15
+        # 340px es un máximo seguro para no empujar el botón de eliminar
+        self.name_edit.setFixedWidth(min(max(width, 30), 340))
+        
+    def _on_rename_finished(self):
+        """Guarda el nuevo nombre y restaura la etiqueta."""
+        if getattr(self, '_renaming', False):
+            return
+            
+        self._renaming = True
+        
+        new_name = self.name_edit.text().strip()
+        self.name_edit.hide()
+        
+        if new_name:
+            # Restaurar la extensión
+            if hasattr(self, '_current_extension') and self._current_extension:
+                new_name = f"{new_name}.{self._current_extension}"
+                
+            self.display_name = new_name
+            truncated_text = self.truncate_image_name(self.display_name, 40)
+            self.text_label.setText(truncated_text)
+            
+            # Emitir señal a la ventana principal para actualizar en memoria y persistir
+            self.rename_requested.emit(self.content, self.display_name)
+            
+        self.text_label.show()
+        self._renaming = False
     
     def mouseDoubleClickEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
