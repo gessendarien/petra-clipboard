@@ -730,7 +730,7 @@ class SettingsDialog(QDialog):
         ignored = None
         if parent_win and hasattr(parent_win, 'config'):
             ignored = parent_win.config.get('ignored_update')
-        dlg = UpdateDialog(parent_win, version, install_type, lang,
+        dlg = UpdateDialog(self, version, install_type, lang,
                            primary_color, current_version, theme_id, ignored)
         dlg.exec()
 
@@ -881,6 +881,8 @@ class UpdateDialog(QDialog):
     def _on_ignore_toggled(self, checked):
         """Save/clear ignored_update immediately when checkbox is toggled."""
         parent_win = self.parent()
+        if parent_win and not hasattr(parent_win, 'config'):
+            parent_win = parent_win.parent()
         if parent_win and hasattr(parent_win, 'config') and hasattr(parent_win, 'save_config'):
             if checked and self.version:
                 parent_win.config['ignored_update'] = self.version
@@ -913,9 +915,12 @@ class UpdateDialog(QDialog):
         parent_win = self.parent()
         if success:
             # Clear ignored_update since we just updated
-            if parent_win and hasattr(parent_win, 'config') and hasattr(parent_win, 'save_config'):
-                parent_win.config.pop('ignored_update', None)
-                parent_win.save_config()
+            main_win = parent_win
+            if main_win and not hasattr(main_win, 'config'):
+                main_win = main_win.parent()
+            if main_win and hasattr(main_win, 'config') and hasattr(main_win, 'save_config'):
+                main_win.config.pop('ignored_update', None)
+                main_win.save_config()
             self._restart_application()
         else:
             if message == "cancelled":
