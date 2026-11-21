@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QGridLay
                              QSpinBox, QCheckBox, QPushButton, QWidget, QComboBox, QSizePolicy, QAbstractSpinBox,
                              QProgressBar, QMessageBox)
 from PyQt6.QtCore import Qt, QSize, QTimer, QUrl, QObject, pyqtSlot
-from PyQt6.QtGui import QIcon, QDesktopServices
+from PyQt6.QtGui import QIcon, QDesktopServices, QMovie
 from pathlib import Path
 import os
 import sys
@@ -398,18 +398,20 @@ class SettingsDialog(QDialog):
         brl = QHBoxLayout(btn_row)
         brl.setContentsMargins(0, 0, 0, 0)
         
-        # GitHub icon button (left side)
+        # GitHub icon button (left side) — slightly larger animated Tux (52x52)
+        self._github_icon_size = QSize(52, 52)
+        self._github_movie = None
+        self._github_icon_folder = 'dark'
+        self._github_frame_cache = {}
+        self._update_anim_active = False
+
         self.github_btn = QPushButton()
-        self.github_btn.setFixedSize(36, 36)
+        self.github_btn.setFixedSize(54, 54)
         self.github_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.github_btn.setToolTip("Tienes la ultima versión disponible")
         self.github_btn.setStyleSheet("QPushButton { border: none; background: transparent; }")
         self.github_btn.clicked.connect(self.open_update_dialog)
-        
-        # Update animation
-        self._update_anim = None
-        self._github_btn_rotation = 0.0
-        brl.addWidget(self.github_btn)
+        brl.addWidget(self.github_btn, alignment=Qt.AlignmentFlag.AlignBottom)
         
         brl.addStretch()
         
@@ -425,9 +427,9 @@ class SettingsDialog(QDialog):
         self.quit_btn.setObjectName("settings_quit_button")
         self.quit_btn.clicked.connect(self.quit_app)
         
-        brl.addWidget(self.save_btn)
-        brl.addWidget(self.close_btn)
-        brl.addWidget(self.quit_btn)
+        brl.addWidget(self.save_btn, alignment=Qt.AlignmentFlag.AlignBottom)
+        brl.addWidget(self.close_btn, alignment=Qt.AlignmentFlag.AlignBottom)
+        brl.addWidget(self.quit_btn, alignment=Qt.AlignmentFlag.AlignBottom)
 
         layout.addWidget(btn_row)
 
@@ -443,21 +445,91 @@ class SettingsDialog(QDialog):
         self.apply_dark_theme()
 
     def update_github_icon(self):
-        """Update GitHub icon based on currently applied theme (from parent)"""
+        """Update GitHub icon (code.gif) based on currently applied theme (from parent)."""
         theme = 'dark'
         if self.parent() is not None:
             theme = getattr(self.parent(), 'theme', 'dark') or 'dark'
-        
+
         # Determine icon folder based on theme
         if 'light' in str(theme).lower():
             icon_folder = 'light'
         else:
             icon_folder = 'dark'
-        
-        icon_path = Path(__file__).parent.parent / "icons" / icon_folder / "code.png"
-        if icon_path.exists():
-            self.github_btn.setIcon(QIcon(str(icon_path)))
-            self.github_btn.setIconSize(QSize(30, 30))
+        self._github_icon_folder = icon_folder
+        self._github_frame_cache = {}
+
+        # Clean up any previous movie
+        if self._github_movie is not None:
+            self._github_movie.stop()
+            try:
+                self._github_movie.frameChanged.disconnect(self._on_github_movie_frame)
+            except Exception:
+                pass
+            self._github_movie.deleteLater()
+            self._github_movie = None
+
+        icons_dir = Path(__file__).parent.parent / "icons" / icon_folder
+        gif_path = icons_dir / "code.gif"
+        png_path = icons_dir / "code.png"
+
+        self.github_btn.setIconSize(self._github_icon_size)
+
+        if gif_path.exists():
+            movie = QMovie(str(gif_path), parent=self)
+            if movie.isValid():
+                # Keep native resolution so we can smooth-scale + boost stroke opacity cleanly
+                movie.setCacheMode(QMovie.CacheMode.CacheAll)
+                movie.frameChanged.connect(self._on_github_movie_frame)
+                self._github_movie = movie
+                movie.jumpToFrame(0)
+                self._on_github_movie_frame(0)
+                if self._update_anim_active:
+                    movie.start()
+                return
+
+        if png_path.exists():
+            self.github_btn.setIcon(QIcon(str(png_path)))
+
+    def _render_crisp_gif_frame(self, img):
+        """Downscale a 1-bit GIF frame smoothly and boost alpha so thin strokes
+        stay bright pure white (dark themes) or crisp black (light themes)."""
+        from PyQt6.QtGui import QImage, QPixmap
+
+        scaled = img.convertToFormat(QImage.Format.Format_ARGB32).scaled(
+            self._github_icon_size,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation,
+        )
+        # Boost semi-transparent anti-aliased strokes without jagged edges
+        target_rgb = 255 if self._github_icon_folder == 'dark' else 0
+        w, h = scaled.width(), scaled.height()
+        ptr = scaled.bits()
+        ptr.setsize(scaled.sizeInBytes())
+        buf = bytearray(ptr)
+        # ARGB32 on little-endian is BGRA in memory
+        for i in range(0, len(buf), 4):
+            a = buf[i + 3]
+            if a > 0:
+                boosted = int(min(255, a * 1.85))
+                buf[i] = target_rgb
+                buf[i + 1] = target_rgb
+                buf[i + 2] = target_rgb
+                buf[i + 3] = boosted
+        crisp = QImage(bytes(buf), w, h, scaled.bytesPerLine(), QImage.Format.Format_ARGB32).copy()
+        return QIcon(QPixmap.fromImage(crisp))
+
+    def _on_github_movie_frame(self, frame_number=0):
+        """Render current frame of code.gif onto github_btn (cached per frame)."""
+        if self._github_movie is None:
+            return
+        icon = self._github_frame_cache.get(frame_number)
+        if icon is None:
+            img = self._github_movie.currentImage()
+            if img.isNull():
+                return
+            icon = self._render_crisp_gif_frame(img)
+            self._github_frame_cache[frame_number] = icon
+        self.github_btn.setIcon(icon)
 
     def apply_dark_theme(self):
         """Force dark theme for settings dialog with borders on inputs."""
@@ -808,10 +880,8 @@ class SettingsDialog(QDialog):
     # ── Update animation ──────────────────────────────────────────────
 
     def start_update_animation(self):
-        """Start heartbeat (scale pulse) animation on github_btn."""
-        if not hasattr(self, '_original_github_icon'):
-            self._original_github_icon = self.github_btn.icon()
-            self._original_github_icon_size = self.github_btn.iconSize()
+        """Play the animated code.gif on github_btn when an update is available."""
+        self._update_anim_active = True
 
         # Set tooltip based on language
         parent_win = self.parent()
@@ -819,64 +889,21 @@ class SettingsDialog(QDialog):
         tip = "Nueva versión disponible" if lang == 'es' else "New version available"
         self.github_btn.setToolTip(tip)
 
-        # Heartbeat: expand(1.0→1.2) → contract(1.2→0.85) → restore(0.85→1.0), pause 1s, repeat
-        self._hb_scale = 1.0
-        self._hb_phase = 0   # 0=expand, 1=contract, 2=restore, 3=pause
-        self._hb_pause_count = 0
-
-        self._anim_timer = QTimer(self)
-        self._anim_timer.setInterval(25)  # 40fps
-        self._anim_timer.timeout.connect(self._tick_heartbeat)
-        self._anim_timer.start()
-
-    def _tick_heartbeat(self):
-        speed = 0.02
-        if self._hb_phase == 0:  # expand 1.0 → 1.2
-            self._hb_scale += speed
-            if self._hb_scale >= 1.2:
-                self._hb_scale = 1.2
-                self._hb_phase = 1
-        elif self._hb_phase == 1:  # contract 1.2 → 0.85
-            self._hb_scale -= speed
-            if self._hb_scale <= 0.85:
-                self._hb_scale = 0.85
-                self._hb_phase = 2
-        elif self._hb_phase == 2:  # restore 0.85 → 1.0
-            self._hb_scale += speed
-            if self._hb_scale >= 1.0:
-                self._hb_scale = 1.0
-                self._hb_phase = 3
-                self._hb_pause_count = 0
-        elif self._hb_phase == 3:  # pause ~1 second
-            self._hb_pause_count += 1
-            if self._hb_pause_count >= 40:
-                self._hb_phase = 0
-
-        self._apply_scale(self._hb_scale)
-
-    def _apply_scale(self, scale):
-        if hasattr(self, '_original_github_icon'):
-            base_size = self._original_github_icon_size
-            new_w = max(1, int(base_size.width() * scale))
-            new_h = max(1, int(base_size.height() * scale))
-            scaled_size = QSize(new_w, new_h)
-            pixmap = self._original_github_icon.pixmap(base_size)
-            scaled_pixmap = pixmap.scaled(
-                scaled_size,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            self.github_btn.setIcon(QIcon(scaled_pixmap))
-            self.github_btn.setIconSize(base_size)
+        if self._github_movie is not None and self._github_movie.isValid():
+            self._github_movie.start()
 
     def stop_update_animation(self):
-        """Stop animation and restore icon."""
-        if hasattr(self, '_anim_timer') and self._anim_timer is not None:
-            self._anim_timer.stop()
-            self._anim_timer = None
-        if hasattr(self, '_original_github_icon'):
-            self.github_btn.setIcon(self._original_github_icon)
-            self.github_btn.setIconSize(self._original_github_icon_size)
+        """Stop code.gif animation and return to its static first frame."""
+        self._update_anim_active = False
+        if self._github_movie is not None and self._github_movie.isValid():
+            self._github_movie.stop()
+            self._github_movie.jumpToFrame(0)
+            self._on_github_movie_frame(0)
+
+    def done(self, result):
+        if self._github_movie is not None:
+            self._github_movie.stop()
+        super().done(result)
 
     # ── Update dialog launcher ────────────────────────────────────────
 
