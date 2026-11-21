@@ -8,6 +8,7 @@ import re
 import hashlib
 
 from input_simulator import InputSimulator
+from image_store import ImageStore
 
 class ImageTaskSignals(QObject):
     processed = pyqtSignal(str, object, str, str, object, object)
@@ -72,7 +73,8 @@ class ClipboardManager:
     def __init__(self):
         self.clips = []
         self.last_clipboard = ""
-        self.clipboard_images = {}
+        self.image_store = ImageStore()
+        self._restoring_clipboard = False
         self.inserting_emoji = False
         self.last_emoji_inserted = None
         self.processing_keys = set()
@@ -140,6 +142,8 @@ class ClipboardManager:
             print(f"Error al inicializar portapapeles: {e}")
 
     def check_clipboard(self):
+        if getattr(self, '_restoring_clipboard', False):
+            return
         try:
             clipboard = QApplication.clipboard()
             mime_data = clipboard.mimeData()
@@ -170,6 +174,9 @@ class ClipboardManager:
                 if urls:
                     qurl = urls[0]
                     local_path = qurl.toLocalFile()
+                    if local_path and self.image_store.is_internal_path(local_path):
+                        # Ignore files exported by Petra itself to avoid duplicate re-captures
+                        return
                     if local_path and local_path.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp')):
                         # It is a local image - process it
                         try:
@@ -240,7 +247,10 @@ class ClipboardManager:
 
             current = unique_id
             clip_type = "image"  # Specifically image
-            self.clipboard_images[unique_id] = img
+            saved_path = self.image_store.save_session_image(unique_id, img, filename=image_name)
+            if saved_path is None:
+                print(f"✗ No se pudo guardar la imagen en caché temporal")
+                return
             self.last_clipboard = str(image_hash)
             
             # Save the image hash to persist it if pinned
@@ -294,11 +304,12 @@ class ClipboardManager:
                         existing_hash = self._image_hashes.get(clip['content'])
                         if existing_hash and existing_hash == current_hash:
                             # An image with the same visual content already exists
-                            # Clear the new image from cache since it won't be used
-                            if content in self.clipboard_images:
-                                del self.clipboard_images[content]
+                            # Clear the new image from disk cache since it won't be used
+                            self.image_store.remove(content)
                             if content in self._image_hashes:
                                 del self._image_hashes[content]
+                            if hasattr(self, '_thumbnail_cache'):
+                                self._thumbnail_cache.pop(f"thumb_{content}", None)
                             return
             
         clip = {
@@ -328,22 +339,22 @@ class ClipboardManager:
             limit = 10
             
         if len(image_keys) > limit:
-            for k in image_keys[limit:]:
-                if k in self.clipboard_images:
-                    del self.clipboard_images[k]
-                    
-        visible_keys = set(c['content'] for c in self.clips if c['type'] == 'image')
-        self.clipboard_images = {k: v for k, v in self.clipboard_images.items() if k in visible_keys}
-        
-        # Clean orphaned cache entries
+            overflow = set(image_keys[limit:])
+            self.clips = [c for c in self.clips if not (c['type'] == 'image' and not c['pinned'] and c['content'] in overflow)]
+            for k in overflow:
+                self.image_store.remove(k)
+
+        # Clean orphaned cache entries (memory thumbnails + disk session files)
         self._cleanup_image_caches()
         
         if old_clips != self.clips:
             self.refresh_ui()
 
     def _cleanup_image_caches(self):
-        """Remove orphaned entries from _thumbnail_cache, _image_hashes and _pinned_image_hashes."""
+        """Remove orphaned entries from disk store, _thumbnail_cache, _image_hashes and _pinned_image_hashes."""
         valid_image_keys = {c['content'] for c in self.clips if c['type'] == 'image'}
+        if hasattr(self, 'image_store'):
+            self.image_store.prune(valid_image_keys)
 
         # Clean _image_hashes
         if hasattr(self, '_image_hashes'):
@@ -510,17 +521,25 @@ class ClipboardManager:
             
             is_command = clip_type == 'command' or use_terminal_paste
             
-            if content in self.clipboard_images:
-                image = self.clipboard_images[content]
-                
-                clipboard.setImage(image)
-                
-                # Update last_clipboard with the image hash to prevent duplicates
-                # when the monitor detects this same image in the clipboard
-                if hasattr(self, '_image_hashes') and content in self._image_hashes:
-                    self.last_clipboard = self._image_hashes[content]
-                
-                print(f"✓ Imagen restaurada al portapapeles")
+            if clip_type == 'image' or self.image_store.has_image(content):
+                mime = self.image_store.build_mime_data(content)
+                if mime is not None:
+                    self._restoring_clipboard = True
+                    try:
+                        clipboard.setMimeData(mime)
+                    finally:
+                        QTimer.singleShot(150, lambda: setattr(self, '_restoring_clipboard', False))
+
+                    # Update last_clipboard with the image hash to prevent duplicates
+                    if hasattr(self, '_image_hashes') and content in self._image_hashes:
+                        self.last_clipboard = self._image_hashes[content]
+
+                    img_path = self.image_store.get_path(content)
+                    name_info = f" ({img_path.name})" if img_path else ""
+                    print(f"✓ Imagen restaurada al portapapeles{name_info}")
+                else:
+                    print("✗ No se pudo restaurar la imagen al portapapeles")
+                    return
             else:
                 clipboard.setText(content)
                 # Actualizar last_clipboard para texto también
@@ -708,17 +727,8 @@ class ClipboardManager:
         
         self.clips = new_clips
         
-        # Defer heavy image cleanup to avoid blocking the UI refresh
-        valid_images = {c['content'] for c in self.clips if c['type'] == 'image'}
-        keys_to_remove = [k for k in self.clipboard_images if k not in valid_images]
-        if keys_to_remove:
-            def _cleanup_images():
-                for k in keys_to_remove:
-                    self.clipboard_images.pop(k, None)
-                self._cleanup_image_caches()
-            QTimer.singleShot(100, _cleanup_images)
-        else:
-            self._cleanup_image_caches()
+        # Defer disk/cache cleanup slightly to avoid blocking the UI refresh
+        QTimer.singleShot(100, self._cleanup_image_caches)
         
         if hasattr(self, 'refresh_ui'):
             self.refresh_ui()

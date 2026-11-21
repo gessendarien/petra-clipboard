@@ -152,7 +152,13 @@ class ClipItem(QFrame):
         self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # FOR IMAGES: show thumbnail preview and make clickable
-        if self.item_type == "image" and self.main_window and self.content in self.main_window.clipboard_images:
+        has_img = (
+            self.item_type == "image"
+            and self.main_window
+            and hasattr(self.main_window, 'image_store')
+            and self.main_window.image_store.has_image(self.content)
+        )
+        if has_img:
             self.setup_image_thumbnail(self.icon_label)
             # Make thumbnail clickable to open preview
             self.icon_label.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -367,7 +373,8 @@ class ClipItem(QFrame):
                 rounded = self.main_window._thumbnail_cache[cache_key]
             else:
                 from PyQt6.QtCore import QRectF
-                original = QPixmap.fromImage(self.main_window.clipboard_images[self.content])
+                img = self.main_window.image_store.load_image(self.content)
+                original = QPixmap.fromImage(img) if img is not None else QPixmap()
                 if not original.isNull():
                     rounded = QPixmap(40, 40)
                     rounded.fill(Qt.GlobalColor.transparent)
@@ -836,15 +843,15 @@ class ClipItem(QFrame):
         self.name_edit.hide()
         
         if new_name:
-            # Restaurar la extensión
-            if hasattr(self, '_current_extension') and self._current_extension:
-                new_name = f"{new_name}.{self._current_extension}"
-                
+            from image_store import sanitize_filename
+            default_ext = f".{self._current_extension}" if getattr(self, '_current_extension', '') else '.png'
+            new_name = sanitize_filename(new_name, default_ext=default_ext)
+
             self.display_name = new_name
             truncated_text = self.truncate_image_name(self.display_name, 40)
             self.text_label.setText(truncated_text)
             
-            # Emitir señal a la ventana principal para actualizar en memoria y persistir
+            # Emitir señal a la ventana principal para actualizar en disco, memoria y persistir
             self.rename_requested.emit(self.content, self.display_name)
             
         self.text_label.show()

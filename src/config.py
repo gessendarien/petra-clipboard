@@ -113,16 +113,18 @@ class ConfigManager:
                 if 'display_name' in c:
                     item['display_name'] = c['display_name']
                 
-                # For images, save file to disk and hash
-                if c['type'] == 'image' and hasattr(self, 'clipboard_images'):
+                # For images, ensure file is in persistent pinned_images/ and record relative path
+                if c['type'] == 'image' and hasattr(self, 'image_store'):
                     image_id = c['content']
-                    if image_id in self.clipboard_images:
+                    if self.image_store.has_image(image_id):
                         try:
-                            img = self.clipboard_images[image_id]
-                            image_path = self.pinned_images_dir / f"{image_id}.png"
-                            img.save(str(image_path), "PNG")
-                            item['image_file'] = f"{image_id}.png"
-                            
+                            self.image_store.set_pinned(
+                                image_id, True, display_name=c.get('display_name')
+                            )
+                            rel_path = self.image_store.get_relative_pinned_path(image_id)
+                            if rel_path:
+                                item['image_file'] = rel_path
+
                             # Save image hash to avoid duplicates on restart
                             if hasattr(self, '_image_hashes') and image_id in self._image_hashes:
                                 item['image_hash'] = self._image_hashes[image_id]
@@ -141,9 +143,12 @@ class ConfigManager:
         """Remove images that are no longer pinned"""
         try:
             pinned_files = {item.get('image_file') for item in pinned_items if item.get('image_file')}
-            for img_file in self.pinned_images_dir.iterdir():
-                if img_file.name not in pinned_files:
-                    img_file.unlink()
+            if hasattr(self, 'image_store'):
+                self.image_store.cleanup_orphan_pinned(pinned_files)
+            else:
+                for img_file in self.pinned_images_dir.iterdir():
+                    if img_file.is_file() and img_file.name not in pinned_files:
+                        img_file.unlink()
         except Exception as e:
             print(f"Error cleaning orphan images: {e}")
 
@@ -154,8 +159,6 @@ class ConfigManager:
                     pinned = json.load(f)
                     if not hasattr(self, 'clips'):
                         self.clips = []
-                    if not hasattr(self, 'clipboard_images'):
-                        self.clipboard_images = {}
                     if not hasattr(self, '_image_hashes'):
                         self._image_hashes = {}
                     if not hasattr(self, '_pinned_image_hashes'):
@@ -164,7 +167,7 @@ class ConfigManager:
                     for item in pinned:
                         item['timestamp'] = datetime.fromisoformat(item['timestamp'])
                         
-                        # For images, load from disk
+                        # For images, register file on disk (no full-res QImage kept in RAM)
                         if item['type'] == 'image' and item.get('image_file'):
                             try:
                                 from PyQt6.QtGui import QImage
@@ -173,7 +176,8 @@ class ConfigManager:
                                 if image_path.exists():
                                     img = QImage(str(image_path))
                                     if not img.isNull():
-                                        self.clipboard_images[item['content']] = img
+                                        if hasattr(self, 'image_store'):
+                                            self.image_store.register_existing(item['content'], image_path)
                                         
                                         # Recalculate hash using same method as ImageTask
                                         # to guarantee consistency (MD5 of PNG scaled to 1200px, quality 50)

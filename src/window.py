@@ -507,6 +507,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             self.timer.stop()
         if hasattr(self, 'shortcut_manager'):
             self.shortcut_manager.cleanup_fifo()
+        if hasattr(self, 'image_store'):
+            self.image_store.clear_session()
         if getattr(self, '_copied_toast', None) is not None:
             self._copied_toast.close()
         QApplication.quit()
@@ -673,10 +675,15 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.content_layout.insertWidget(self.content_layout.count() - 1, container)
     
     def _on_clip_renamed(self, content_id, new_name):
-        """Maneja el renombrado de un clip de imagen."""
+        """Maneja el renombrado real en disco y en memoria de un clip de imagen."""
         for c in self.clips:
             if c['content'] == content_id:
-                c['display_name'] = new_name
+                final_name = new_name
+                if c['type'] == 'image' and hasattr(self, 'image_store'):
+                    renamed = self.image_store.rename(content_id, new_name)
+                    if renamed:
+                        final_name = renamed
+                c['display_name'] = final_name
                 if c['pinned']:
                     self.save_pinned()
                 break
@@ -691,10 +698,10 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         
         self.clips.remove(clip)
         
-        # Clean orphaned image caches
+        # Clean image file on disk and orphaned caches
         if clip['type'] == 'image':
-            if clip['content'] in self.clipboard_images:
-                del self.clipboard_images[clip['content']]
+            if hasattr(self, 'image_store'):
+                self.image_store.remove(clip['content'])
             self._cleanup_image_caches()
         
         if clip['pinned']:
@@ -704,16 +711,21 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
     def toggle_pin(self, clip):
         clip['pinned'] = not clip['pinned']
         
-        # If it is an image, update pinned hashes set
-        if clip['type'] == 'image' and hasattr(self, '_image_hashes'):
-            image_hash = self._image_hashes.get(clip['content'])
-            if image_hash:
-                if not hasattr(self, '_pinned_image_hashes'):
-                    self._pinned_image_hashes = set()
-                if clip['pinned']:
-                    self._pinned_image_hashes.add(image_hash)
-                else:
-                    self._pinned_image_hashes.discard(image_hash)
+        # If it is an image, move file between volatile cache and persistent storage
+        if clip['type'] == 'image':
+            if hasattr(self, 'image_store'):
+                self.image_store.set_pinned(
+                    clip['content'], clip['pinned'], display_name=clip.get('display_name')
+                )
+            if hasattr(self, '_image_hashes'):
+                image_hash = self._image_hashes.get(clip['content'])
+                if image_hash:
+                    if not hasattr(self, '_pinned_image_hashes'):
+                        self._pinned_image_hashes = set()
+                    if clip['pinned']:
+                        self._pinned_image_hashes.add(image_hash)
+                    else:
+                        self._pinned_image_hashes.discard(image_hash)
         
         QTimer.singleShot(0, self.save_pinned)
         # Clear selected content to avoid hover state being restored after refresh
@@ -722,23 +734,15 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.refresh_ui()
 
     def show_image_preview(self, content):
-        """Muestra el diálogo de vista previa de imagen.
-        
-        Args:
-            content: La clave del contenido de la imagen en clipboard_images
-        """
+        """Muestra el diálogo de vista previa de imagen cargándola bajo demanda."""
         try:
-            # Verify image exists in cache
-            if content not in self.clipboard_images:
+            if not hasattr(self, 'image_store'):
+                return
+            image = self.image_store.load_image(content)
+            if image is None or image.isNull():
                 return
             
-            # Import preview dialog
             from dialogs import ImagePreviewDialog
-            
-            # Get original image
-            image = self.clipboard_images[content]
-            
-            # Create and show dialog
             preview_dialog = ImagePreviewDialog(image, self)
             preview_dialog.exec()
             
