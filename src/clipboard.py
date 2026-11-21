@@ -597,7 +597,12 @@ class ClipboardManager:
                 if should_hide:
                     self.hide()
 
-                if getattr(self, 'window_pinned', False):
+                if not self.input_simulator.auto_paste_available:
+                    # Manual paste mode (e.g. GNOME/KDE Wayland or Flatpak):
+                    # content is already in the clipboard, user presses Ctrl+V.
+                    self._pending_paste_is_command = False
+                    self.show_copied_toast()
+                elif getattr(self, 'window_pinned', False):
                     # Save active window using the new multi-backend method
                     self.last_active_window = self.input_simulator.get_active_window()
                     
@@ -616,6 +621,21 @@ class ClipboardManager:
     def paste_and_close(self, content):
         self.copy_and_close(content)
 
+    def show_copied_toast(self):
+        """Show a brief themed toast confirming the item was copied to clipboard
+        (used when direct auto-paste is unavailable)."""
+        try:
+            from widgets import CopiedToast
+            if not hasattr(self, '_copied_toast') or self._copied_toast is None:
+                self._copied_toast = CopiedToast()
+            colors = {}
+            if hasattr(self, 'themes_manager'):
+                colors = self.themes_manager.get_theme_colors(getattr(self, 'theme', None))
+            lang = getattr(self, 'language', 'es')
+            self._copied_toast.show_message(language=lang, theme_colors=colors)
+        except Exception as e:
+            print(f"Error showing copied toast: {e}")
+
     def simulate_paste(self):
         """Simular pegado usando el simulador multi-backend.
         Usa Ctrl+Shift+V para comandos de terminal, Ctrl+V para el resto."""
@@ -629,7 +649,8 @@ class ClipboardManager:
     def reactivate_petra(self):
         """Reactivar la ventana de Petra después de pegar (multi-backend)"""
         # In Wayland, reactivation may not be necessary or work differently
-        if self.input_simulator.display_server == 'x11':
+        if (self.input_simulator.display_server == 'x11'
+                and self.input_simulator.detector.is_tool_available('xdotool')):
             try:
                 proc = subprocess.run(['xdotool', 'search', '--classname', 'petra'], 
                                     capture_output=True, text=True, timeout=0.5)

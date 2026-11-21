@@ -56,7 +56,7 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self.initialize_clipboard_state()
         self.setup_clipboard_monitor()
         
-        if not getattr(self, 'is_first_run', False):
+        if not getattr(self, 'is_first_run', False) and os.environ.get('PETRA_STANDALONE') != '1':
             self.shortcut_manager.setup_global_shortcut(self.shortcut)
         
         self.apply_theme()
@@ -82,9 +82,10 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         # Always store the available version and mark animation as pending
         self._update_available_version = version
         self._pending_update_anim = True
-        # Only suppress the tray notification if user chose "don't remind" or is snap
-        from updater import detect_install_type
-        if self.config.get('ignored_update') == version or detect_install_type() == 'snap':
+        # Suppress the tray notification if user chose "don't remind" or the
+        # install is store-managed (snap / flatpak)
+        from updater import is_store_managed
+        if self.config.get('ignored_update') == version or is_store_managed():
             return
         # System tray notification (language-aware)
         if hasattr(self, 'tray_icon'):
@@ -506,6 +507,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
             self.timer.stop()
         if hasattr(self, 'shortcut_manager'):
             self.shortcut_manager.cleanup_fifo()
+        if getattr(self, '_copied_toast', None) is not None:
+            self._copied_toast.close()
         QApplication.quit()
     
     def mousePressEvent(self, event):
@@ -828,12 +831,8 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         self._ensure_window_icon()
         
         try:
-            # Save current active window
-            if self.display_server == 'x11' and self.detector.is_tool_available('xdotool'):
-                proc = subprocess.run(['xdotool', 'getactivewindow'], 
-                                    capture_output=True, text=True, timeout=0.2)
-                if proc.returncode == 0 and proc.stdout.strip():
-                    self.last_active_window = proc.stdout.strip()
+            # Save current active window (X11 / Sway / Hyprland; None elsewhere)
+            self.last_active_window = self.input_simulator.get_active_window()
         except Exception:
             self.last_active_window = None
 

@@ -1,54 +1,185 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, 
                              QSpinBox, QCheckBox, QPushButton, QWidget, QComboBox, QSizePolicy, QAbstractSpinBox,
                              QProgressBar, QMessageBox)
-from PyQt6.QtCore import Qt, QSize, QTimer, QUrl
+from PyQt6.QtCore import Qt, QSize, QTimer, QUrl, QObject, pyqtSlot
 from PyQt6.QtGui import QIcon, QDesktopServices
 from pathlib import Path
 import os
 import sys
+import uuid
 
 # from widgets import ShortcutEdit
 from themes_manager import ThemesManager
 
 
+# Keep active D-Bus portal listeners alive until Response arrives
+_active_portal_requests = set()
+
+
 def get_autostart_path():
-    """Get path to .desktop file in autostart"""
+    """Get path to .desktop file in autostart (native installs)."""
     config_base = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / ".config"))
     return config_base / "autostart" / "petra.desktop"
 
 
-def is_autostart_enabled():
-    """Check if autostart is enabled"""
-    return get_autostart_path().exists()
-
-
 def is_running_in_flatpak():
-    """Detect if application is running inside Flatpak"""
-    # Check Flatpak environment variable
+    """Detect if application is running inside Flatpak."""
     if os.environ.get('FLATPAK_ID'):
         return True
-    # Check if Flatpak info file exists
     if Path('/.flatpak-info').exists():
         return True
-    # Check if running within a Flatpak directory
     if '/app/' in str(Path(__file__).resolve()):
         return True
     return False
 
 
-def enable_autostart():
-    """Create .desktop file for autostart"""
+def is_autostart_enabled(config=None):
+    """Check if autostart is enabled.
+
+    Inside Flatpak the host autostart directory is outside the sandbox and the
+    Background portal has no getter, so we track the last confirmed state in
+    config['autostart'].
+    """
+    if is_running_in_flatpak():
+        if isinstance(config, dict):
+            return bool(config.get('autostart', False))
+        return False
+    return get_autostart_path().exists()
+
+
+def _request_flatpak_background_autostart(enabled, on_complete=None):
+    """Enable or disable Flatpak autostart via org.freedesktop.portal.Background."""
+    try:
+        from PyQt6.QtCore import QMetaType
+        from PyQt6.QtDBus import QDBusArgument, QDBusConnection, QDBusMessage
+
+        bus = QDBusConnection.sessionBus()
+        if not bus.isConnected():
+            print("Autostart portal error: D-Bus session bus is not connected")
+            if on_complete:
+                on_complete(False, enabled)
+            return False
+
+        token = f"petra_bg_{uuid.uuid4().hex[:12]}"
+        sender = bus.baseService().lstrip(':').replace('.', '_')
+        expected_path = f"/org/freedesktop/portal/desktop/request/{sender}/{token}"
+
+        class _PortalListener(QObject):
+            def __init__(self, req_path):
+                super().__init__()
+                self._req_path = req_path
+                self._done = False
+                self._timeout = QTimer(self)
+                self._timeout.setSingleShot(True)
+                self._timeout.timeout.connect(self._on_timeout)
+                self._timeout.start(30000)
+
+            def _cleanup(self):
+                if self._done:
+                    return
+                self._done = True
+                self._timeout.stop()
+                bus.disconnect(
+                    "org.freedesktop.portal.Desktop",
+                    self._req_path,
+                    "org.freedesktop.portal.Request",
+                    "Response",
+                    self.on_response,
+                )
+                _active_portal_requests.discard(self)
+
+            def _on_timeout(self):
+                print("Autostart portal request timed out")
+                self._cleanup()
+                if on_complete:
+                    on_complete(False, enabled)
+
+            @pyqtSlot(QDBusMessage)
+            def on_response(self, msg):
+                self._cleanup()
+                args = msg.arguments()
+                response_code = int(args[0]) if args else 2
+                results = args[1] if len(args) > 1 and isinstance(args[1], dict) else {}
+                if response_code == 0:
+                    actual = bool(results.get('autostart', enabled))
+                    print(f"Flatpak Background portal OK: autostart={actual}")
+                    if on_complete:
+                        on_complete(True, actual)
+                else:
+                    print(f"Flatpak Background portal denied/failed (code={response_code})")
+                    if on_complete:
+                        on_complete(False, not enabled)
+
+        listener = _PortalListener(expected_path)
+        _active_portal_requests.add(listener)
+
+        # Subscribe before sending the method call to avoid race conditions
+        bus.connect(
+            "org.freedesktop.portal.Desktop",
+            expected_path,
+            "org.freedesktop.portal.Request",
+            "Response",
+            listener.on_response,
+        )
+
+        options = {
+            "handle_token": token,
+            "reason": "Start Petra Clipboard automatically at login",
+            "autostart": bool(enabled),
+            "dbus-activatable": False,
+        }
+        if enabled:
+            # PyQt6 serializes a plain list[str] inside a{sv} as 'av', which
+            # xdg-desktop-portal rejects; pack it explicitly as D-Bus 'as'.
+            cmdline = QDBusArgument()
+            cmdline.beginArray(QMetaType.Type.QString.value)
+            for part in ("petra", "--hidden"):
+                cmdline.add(part)
+            cmdline.endArray()
+            options["commandline"] = cmdline
+
+        msg = QDBusMessage.createMethodCall(
+            "org.freedesktop.portal.Desktop",
+            "/org/freedesktop/portal/desktop",
+            "org.freedesktop.portal.Background",
+            "RequestBackground",
+        )
+        msg.setArguments(["", options])
+        reply = bus.call(msg)
+
+        if reply.type() == QDBusMessage.MessageType.ErrorMessage:
+            print(f"Autostart portal call error: {reply.errorMessage()}")
+            listener._cleanup()
+            if on_complete:
+                on_complete(False, not enabled)
+            return False
+
+        # Clean up any legacy sandbox-local autostart file
+        legacy = get_autostart_path()
+        if legacy.exists():
+            try:
+                legacy.unlink()
+            except Exception:
+                pass
+        return True
+    except Exception as e:
+        print(f"Error calling Background portal: {e}")
+        if on_complete:
+            on_complete(False, not enabled)
+        return False
+
+
+def enable_autostart(on_complete=None):
+    """Enable autostart (Background portal on Flatpak, .desktop file natively)."""
+    if is_running_in_flatpak():
+        return _request_flatpak_background_autostart(True, on_complete=on_complete)
+
     config_base = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / ".config"))
     autostart_dir = config_base / "autostart"
     autostart_dir.mkdir(parents=True, exist_ok=True)
     
     # Determine execution command based on environment
-    if is_running_in_flatpak():
-        # In Flatpak, use 'flatpak run' with app ID
-        flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra')
-        exec_path = f"flatpak run {flatpak_id}"
-        icon_name = flatpak_id
-    elif os.environ.get("APPIMAGE"):
+    if os.environ.get("APPIMAGE"):
         # If running as AppImage
         appimage_path = os.environ.get("APPIMAGE")
         exec_path = f'"{appimage_path}"'
@@ -82,13 +213,22 @@ StartupWMClass=Petra
     
     # Make file executable
     os.chmod(desktop_file, 0o755)
+    if on_complete:
+        on_complete(True, True)
+    return True
 
 
-def disable_autostart():
-    """Remove .desktop file from autostart"""
+def disable_autostart(on_complete=None):
+    """Disable autostart (Background portal on Flatpak, remove .desktop natively)."""
+    if is_running_in_flatpak():
+        return _request_flatpak_background_autostart(False, on_complete=on_complete)
+
     desktop_file = get_autostart_path()
     if desktop_file.exists():
         desktop_file.unlink()
+    if on_complete:
+        on_complete(True, False)
+    return True
 
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
@@ -191,6 +331,19 @@ class SettingsDialog(QDialog):
         
         layout.addWidget(grid_container)
 
+        # Flatpak: the sandbox cannot register the shortcut on the host,
+        # so show the command the user must bind in the desktop settings.
+        self.flatpak_shortcut_hint = None
+        if is_running_in_flatpak():
+            flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra')
+            self._flatpak_toggle_cmd = f"flatpak run {flatpak_id} --toggle"
+            self.flatpak_shortcut_hint = QLabel()
+            self.flatpak_shortcut_hint.setObjectName("settings_label")
+            self.flatpak_shortcut_hint.setWordWrap(True)
+            self.flatpak_shortcut_hint.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextSelectableByMouse)
+            self.flatpak_shortcut_hint.setStyleSheet("font-size: 11px; background: transparent;")
+            layout.addWidget(self.flatpak_shortcut_hint)
         # 5 & 6. Max History and Max Images (Grid aligned)
         limits_container = QWidget()
         limits_layout = QGridLayout(limits_container)
@@ -356,7 +509,8 @@ class SettingsDialog(QDialog):
                     self.open_pos_combo.setCurrentIndex(pos_idx)
                 
                 # Check if autostart is enabled
-                self.autostart_cb.setChecked(is_autostart_enabled())
+                self._initial_autostart = is_autostart_enabled(getattr(parent, 'config', None))
+                self.autostart_cb.setChecked(self._initial_autostart)
                 
                 sc = getattr(parent, 'shortcut', 'Alt + space')
                 if sc:
@@ -394,6 +548,7 @@ class SettingsDialog(QDialog):
                 'shortcut': "⚠ Atajo:",
                 'shortcut_tooltip': "Algunos atajos pueden entrar en conflicto con otros programas y hacer que Petra no responda correctamente",
                 'shortcut_error': "Error al registrar el atajo. Es posible que otra aplicación ya lo esté usando.",
+                'flatpak_shortcut_hint': "En Flatpak, asigna el atajo desde la configuración de teclado de tu escritorio con este comando:\n{cmd}",
                 'tooltip_update': 'Nueva versión disponible',
                 'tooltip_no_update': 'Tienes la ultima versión disponible'
             },
@@ -417,6 +572,7 @@ class SettingsDialog(QDialog):
                 'shortcut': "⚠ Shortcut:",
                 'shortcut_tooltip': "Some shortcuts may conflict with other programs and cause Petra to become unresponsive",
                 'shortcut_error': "Error registering shortcut. Another application might be using it.",
+                'flatpak_shortcut_hint': "On Flatpak, set the shortcut in your desktop keyboard settings using this command:\n{cmd}",
                 'tooltip_update': 'New version available',
                 'tooltip_no_update': 'You have the latest version'
             }
@@ -459,10 +615,22 @@ class SettingsDialog(QDialog):
                 parent.open_position = self.open_pos_combo.currentData()
                 
                 # Handle autostart
-                if self.autostart_cb.isChecked():
-                    enable_autostart()
+                desired_autostart = bool(self.autostart_cb.isChecked())
+                if is_running_in_flatpak():
+                    if desired_autostart != getattr(self, '_initial_autostart', False):
+                        def _on_autostart_result(ok, actual_state):
+                            if ok:
+                                parent.config['autostart'] = bool(actual_state)
+                                parent.save_config()
+                        if desired_autostart:
+                            enable_autostart(on_complete=_on_autostart_result)
+                        else:
+                            disable_autostart(on_complete=_on_autostart_result)
                 else:
-                    disable_autostart()
+                    if desired_autostart:
+                        enable_autostart()
+                    else:
+                        disable_autostart()
                         
                 parent.shortcut = self.shortcut_combo.currentText()
 
@@ -510,6 +678,10 @@ class SettingsDialog(QDialog):
                 
             if hasattr(self, 'shortcut_error_label'):
                 self.shortcut_error_label.setToolTip(t.get('shortcut_error', ''))
+
+            if getattr(self, 'flatpak_shortcut_hint', None) is not None:
+                self.flatpak_shortcut_hint.setText(
+                    t.get('flatpak_shortcut_hint', '{cmd}').format(cmd=self._flatpak_toggle_cmd))
                 
             if hasattr(self, 'lang_label'):
                 self.lang_label.setText(t.get('language', self.lang_label.text()))
@@ -745,6 +917,7 @@ class UpdateDialog(QDialog):
             'up_to_date': 'Tienes la última versión {version}',
             'snap_available': 'Nueva versión {version} disponible en la tienda de aplicaciones',
             'snap_up_to_date': 'Tienes la última versión {version}',
+            'flatpak_managed': 'Las actualizaciones se instalan automáticamente desde tu tienda de software (Flathub) o con «flatpak update».',
             'no_remind': 'No volver a recordar',
             'credits': 'Créditos',
             'update': 'Actualizar',
@@ -757,6 +930,7 @@ class UpdateDialog(QDialog):
             'up_to_date': 'You have the latest version {version}',
             'snap_available': 'New version {version} available in the app store',
             'snap_up_to_date': 'You have the latest version {version}',
+            'flatpak_managed': 'Updates are installed automatically from your software store (Flathub) or with "flatpak update".',
             'no_remind': 'Don\'t remind me again',
             'credits': 'Credits',
             'update': 'Update',
@@ -789,7 +963,7 @@ class UpdateDialog(QDialog):
         layout.setSpacing(12)
 
         # ── Title label ──
-        if version:
+        if version and install_type != 'flatpak':
             title = QLabel(self.t['update_available'].format(version=version))
         else:
             title = QLabel(self.t['up_to_date'].format(version=current_version))
@@ -799,8 +973,16 @@ class UpdateDialog(QDialog):
         title.setWordWrap(True)
         layout.addWidget(title)
 
+        store_managed = install_type in ('snap', 'flatpak')
+
         # ── Body (depends on install_type) ──
-        if install_type == 'snap':
+        if install_type == 'flatpak':
+            body = QLabel(self.t['flatpak_managed'])
+            body.setObjectName("settings_label")
+            body.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            body.setWordWrap(True)
+            layout.addWidget(body)
+        elif install_type == 'snap':
             if version:
                 body = QLabel(self.t['snap_available'].format(version=version))
             else:
@@ -810,7 +992,7 @@ class UpdateDialog(QDialog):
             body.setWordWrap(True)
             layout.addWidget(body)
 
-        if version and install_type != 'snap':
+        if version and not store_managed:
             self.ignore_cb = QCheckBox(self.t['no_remind'])
             self.ignore_cb.setObjectName("settings_checkbox")
             if self._is_ignored:
@@ -828,7 +1010,7 @@ class UpdateDialog(QDialog):
         credits_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         credits_btn.clicked.connect(self._open_credits)
         
-        if install_type == 'snap':
+        if store_managed:
             btn_row.addStretch()
             btn_row.addWidget(credits_btn)
             btn_row.addStretch()
@@ -1102,8 +1284,7 @@ class FirstRunLoadingDialog(QDialog):
         container_layout = QVBoxLayout(container)
         container_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
-        from PyQt6.QtGui import QIcon, QPixmap
-        from PyQt6.QtCore import QSize, Qt
+        from PyQt6.QtGui import QPixmap
         icon_path = Path(__file__).parent.parent / "icons" / "dark" / "code.png"
         self._original_pixmap = QPixmap(str(icon_path))
         if self._original_pixmap.isNull():

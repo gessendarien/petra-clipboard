@@ -32,32 +32,30 @@
       Un portapapeles diferente.
     </p>
     <p>Features:</p>
+    <p xml:lang="es">Características:</p>
     <ul>
       <li>Copy and paste text, images, links, console commands, and emojis</li>
+      <li xml:lang="es">Copia y pega texto, imágenes, enlaces, comandos de consola y emojis</li>
       <li>Filter by copied item type</li>
+      <li xml:lang="es">Filtra por tipo de elemento copiado</li>
       <li>General search, by type or emoji</li>
+      <li xml:lang="es">Búsqueda general, por tipo o emoji</li>
       <li>Open links directly in the browser</li>
+      <li xml:lang="es">Abre enlaces directamente en el navegador</li>
       <li>Full keyboard navigation (q, w, Ctrl+F, Esc, and arrow keys)</li>
+      <li xml:lang="es">Navegación completa por teclado (q, w, Ctrl+F, Esc y flechas)</li>
       <li>Preview copied images</li>
+      <li xml:lang="es">Vista previa de imágenes copiadas</li>
       <li>Pin window and save items</li>
+      <li xml:lang="es">Fija la ventana y guarda elementos</li>
       <li>Wide variety of themes and colors</li>
+      <li xml:lang="es">Gran variedad de temas y colores</li>
       <li>Start on system boot</li>
+      <li xml:lang="es">Arranque con el sistema</li>
       <li>Open on the left, right, or at mouse position</li>
+      <li xml:lang="es">Abre a la izquierda, derecha o en la posición del mouse</li>
       <li>Customizable keyboard shortcut</li>
-    </ul>
-    <p xml:lang="es">Características:</p>
-    <ul xml:lang="es">
-      <li>Copia y pega texto, imágenes, enlaces, comandos de consola y emojis</li>
-      <li>Filtra por tipo de elemento copiado</li>
-      <li>Búsqueda general, por tipo o emoji</li>
-      <li>Abre enlaces directamente en el navegador</li>
-      <li>Navegación completa por teclado (q, w, Ctrl+F, Esc y flechas)</li>
-      <li>Vista previa de imágenes copiadas</li>
-      <li>Fija la ventana y guarda elementos</li>
-      <li>Gran variedad de temas y colores</li>
-      <li>Arranque con el sistema</li>
-      <li>Abre a la izquierda, derecha o en la posición del mouse</li>
-      <li>Atajo de teclado personalizable</li>
+      <li xml:lang="es">Atajo de teclado personalizable</li>
     </ul>
   </description>
 

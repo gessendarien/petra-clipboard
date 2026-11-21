@@ -56,6 +56,12 @@ def detect_install_type() -> str:
     return "deb"
 
 
+def is_store_managed(install_type: str | None = None) -> bool:
+    """Snap and Flatpak updates are handled by the store / package manager,
+    never by Petra itself (Flathub policy)."""
+    return (install_type or detect_install_type()) in ("snap", "flatpak")
+
+
 def _github_release_data() -> dict | None:
     """Fetch the latest release JSON from GitHub. Returns *None* on error."""
     try:
@@ -175,6 +181,11 @@ class UpdateChecker(QThread):
 
     def run(self):
         install_type = detect_install_type()
+        if install_type == "flatpak":
+            # No network permission in the sandbox and updates come from
+            # Flathub / the software store: do not contact GitHub.
+            self.no_update.emit()
+            return
 
         latest = fetch_latest_version()
         if latest and is_newer(latest, APP_VERSION):
@@ -209,21 +220,12 @@ class UpdateDownloader(QThread):
 
     # -- flatpak -----------------------------------------------------------
     def _update_flatpak(self):
-        self.progress.emit(10)
-        try:
-            result = subprocess.run(
-                ["flatpak", "update", "-y", "io.github.gessendarien.petra"],
-                capture_output=True,
-                text=True,
-                timeout=300,
-            )
-            self.progress.emit(100)
-            if result.returncode == 0:
-                self.finished.emit(True, "Actualización completada")
-            else:
-                self.finished.emit(False, result.stderr or "Error al actualizar flatpak")
-        except subprocess.TimeoutExpired:
-            self.finished.emit(False, "Tiempo de espera agotado")
+        # Flathub policy: sandboxed apps must not update themselves.
+        self.finished.emit(
+            False,
+            "Las actualizaciones de Flatpak se gestionan desde tu tienda de "
+            "software o con 'flatpak update'.",
+        )
 
     # -- appimage ----------------------------------------------------------
     def _update_appimage(self):

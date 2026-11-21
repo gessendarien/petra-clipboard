@@ -8,12 +8,19 @@ class GlobalShortcutManager:
     """Manages global keyboard shortcuts by registering them with the desktop environment.
 
     Supports: Cinnamon, GNOME, KDE Plasma, XFCE, MATE.
-    Works from: native install (.deb/AppImage), Flatpak (via flatpak-spawn --host).
+    Works from: native install (.deb/AppImage). Inside Flatpak nothing is
+    written to the host; the user binds `manual_command` in the desktop settings.
     When the shortcut is pressed, the OS runs the Petra command, and Petra's
     single-instance mechanism (Unix socket in main.py) shows the existing window.
     """
 
     KEYBINDING_NAME = "Petra Clipboard"
+
+    @property
+    def manual_command(self):
+        """Command the user must bind manually when running inside Flatpak."""
+        flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra')
+        return f"flatpak run {flatpak_id} --toggle"
 
     def __init__(self, on_toggle=None, on_show=None, on_hide=None):
         self.is_flatpak = Path('/.flatpak-info').exists()
@@ -29,11 +36,10 @@ class GlobalShortcutManager:
     # ─────────────────────────────────────
 
     def _host_run(self, cmd, **kwargs):
-        """Run a command on the HOST system.
-        Inside Flatpak, wraps with flatpak-spawn --host.
-        Outside Flatpak, runs directly."""
+        """Run a desktop-settings command (native installs only).
+        Never escapes the Flatpak sandbox."""
         if self.is_flatpak:
-            cmd = ['flatpak-spawn', '--host', '--directory=/'] + cmd
+            return None
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=5, **kwargs)
             if result.returncode != 0 and result.stderr:
@@ -44,12 +50,11 @@ class GlobalShortcutManager:
             return None
 
     def _host_bash(self, bash_cmd):
-        """Run a bash command string on the HOST.
-        Using 'bash -c' ensures the host's environment (including DBUS_SESSION_BUS_ADDRESS)
-        is available, which is critical for gsettings/dconf to work from Flatpak."""
-        cmd = ['bash', '-c', bash_cmd]
+        """Run a bash command string (native installs only).
+        Never escapes the Flatpak sandbox."""
         if self.is_flatpak:
-            cmd = ['flatpak-spawn', '--host', '--directory=/'] + cmd
+            return None
+        cmd = ['bash', '-c', bash_cmd]
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
             if result.returncode != 0 and result.stderr:
@@ -71,8 +76,7 @@ class GlobalShortcutManager:
         """
         # 1. Flatpak: always use 'flatpak run <id>'
         if self.is_flatpak:
-            flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra')
-            return f"flatpak run {flatpak_id} --toggle"
+            return self.manual_command
 
         # 2. AppImage: $APPIMAGE env var points to the real .AppImage file on disk
         appimage_path = os.environ.get('APPIMAGE')
@@ -180,6 +184,14 @@ class GlobalShortcutManager:
 
     def setup_global_shortcut(self, shortcut_str='Alt + space'):
         """Register the global shortcut with the desktop environment."""
+        if self.is_flatpak:
+            # The Flatpak sandbox cannot (and must not) modify host settings
+            # (gsettings/dconf/kwriteconfig). The user binds the shortcut in
+            # the desktop settings to the command below.
+            print("Running inside Flatpak: global shortcut must be set in the desktop "
+                  f"settings with the command: {self.manual_command}")
+            return True
+
         desktop_type = self._detect_desktop_type()
         print(f"Registering global shortcut '{shortcut_str}' for desktop: {desktop_type}")
 

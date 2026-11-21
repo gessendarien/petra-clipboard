@@ -12,11 +12,20 @@ from PyQt6.QtCore import QSize, QTimer
 from window import PetraClipboard
 
 
-# Socket path for single-instance communication
-SOCKET_PATH = os.path.join(
-    os.environ.get('XDG_RUNTIME_DIR', '/tmp'),
-    'petra-clipboard.sock'
-)
+# Socket path for single-instance communication.
+# Inside Flatpak, $XDG_RUNTIME_DIR/app/$FLATPAK_ID is the directory shared
+# between all instances of the app (needed for `flatpak run ... --toggle`).
+def _socket_dir():
+    runtime_dir = os.environ.get('XDG_RUNTIME_DIR', '/tmp')
+    flatpak_id = os.environ.get('FLATPAK_ID')
+    if flatpak_id:
+        app_dir = os.path.join(runtime_dir, 'app', flatpak_id)
+        if os.path.isdir(app_dir):
+            return app_dir
+    return runtime_dir
+
+
+SOCKET_PATH = os.path.join(_socket_dir(), 'petra-clipboard.sock')
 
 
 def send_command(cmd='SHOW'):
@@ -79,13 +88,23 @@ def main():
                         help='Start with hidden window (for autostart)')
     parser.add_argument('--toggle', action='store_true', 
                         help='Toggle window visibility (for shortcut)')
+    parser.add_argument('--manual-paste', action='store_true',
+                        help='Force manual-paste mode (shows copied toast instead of auto-paste)')
+    parser.add_argument('--standalone', action='store_true',
+                        help='Run without single-instance socket or shortcut registration (for testing)')
     args = parser.parse_args()
+
+    if args.manual_paste:
+        os.environ['PETRA_MANUAL_PASTE'] = '1'
+    if args.standalone:
+        os.environ['PETRA_STANDALONE'] = '1'
     
     # Single-instance check: try to connect to an existing instance
-    cmd_to_send = 'TOGGLE' if args.toggle else 'SHOW'
-    if send_command(cmd_to_send):
-        print(f"Petra is already running. Sending {cmd_to_send} command.")
-        sys.exit(0)
+    if not args.standalone:
+        cmd_to_send = 'TOGGLE' if args.toggle else 'SHOW'
+        if send_command(cmd_to_send):
+            print(f"Petra is already running. Sending {cmd_to_send} command.")
+            sys.exit(0)
     
     app = QApplication(sys.argv)
     # Important: Do not close application when window is closed (it is minimized)
@@ -159,10 +178,12 @@ def main():
     window = PetraClipboard()
     
     # Start socket server for single-instance communication
-    sock_server = start_socket_server(window)
+    sock_server = None if args.standalone else start_socket_server(window)
     
     # Clean up socket on exit
     def cleanup():
+        if sock_server is None:
+            return
         try:
             sock_server.close()
         except Exception:

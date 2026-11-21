@@ -389,12 +389,19 @@ class EmojiPickerMixin:
         self.recent_emojis = self.recent_emojis[:16]
         self.save_config()
         
-        try:
-            self.input_simulator.simulate_alt_tab()
-            QTimer.singleShot(150, self.simulate_paste)
+        if not self.input_simulator.auto_paste_available:
+            if not getattr(self, 'window_pinned', False):
+                self.hide()
+            if hasattr(self, 'show_copied_toast'):
+                self.show_copied_toast()
             QTimer.singleShot(500, self.clear_emoji_flags)
-        except Exception as e:
-            print(f"Error al cambiar foco: {e}")
+        else:
+            try:
+                self.input_simulator.simulate_alt_tab()
+                QTimer.singleShot(150, self.simulate_paste)
+                QTimer.singleShot(500, self.clear_emoji_flags)
+            except Exception as e:
+                print(f"Error al cambiar foco: {e}")
 
     def clear_emoji_flags(self):
         self.inserting_emoji = False

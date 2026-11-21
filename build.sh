@@ -46,9 +46,9 @@ check_flatpak_dependencies() {
     MISSING_DEPS=()
     MISSING_KDE=()
 
-    # Check system tools
-    if ! command -v flatpak-builder &> /dev/null; then
-        MISSING_DEPS+=("flatpak-builder")
+    # Check system tools (or org.flatpak.Builder Flatpak)
+    if ! command -v flatpak-builder &> /dev/null && ! flatpak info org.flatpak.Builder &> /dev/null; then
+        MISSING_KDE+=("org.flatpak.Builder")
     fi
 
     if command -v dpkg &> /dev/null; then
@@ -58,14 +58,14 @@ check_flatpak_dependencies() {
     fi
 
     # Check KDE Runtimes and BaseApp
-    if ! flatpak info org.kde.Platform//6.9 &> /dev/null; then
-        MISSING_KDE+=("org.kde.Platform//6.9")
+    if ! flatpak info org.kde.Platform//6.11 &> /dev/null; then
+        MISSING_KDE+=("org.kde.Platform//6.11")
     fi
-    if ! flatpak info org.kde.Sdk//6.9 &> /dev/null; then
-        MISSING_KDE+=("org.kde.Sdk//6.9")
+    if ! flatpak info org.kde.Sdk//6.11 &> /dev/null; then
+        MISSING_KDE+=("org.kde.Sdk//6.11")
     fi
-    if ! flatpak info com.riverbankcomputing.PyQt.BaseApp//6.9 &> /dev/null; then
-        MISSING_KDE+=("com.riverbankcomputing.PyQt.BaseApp//6.9")
+    if ! flatpak info com.riverbankcomputing.PyQt.BaseApp//6.11 &> /dev/null; then
+        MISSING_KDE+=("com.riverbankcomputing.PyQt.BaseApp//6.11")
     fi
 
     if [ ${#MISSING_DEPS[@]} -eq 0 ] && [ ${#MISSING_KDE[@]} -eq 0 ]; then
@@ -108,7 +108,11 @@ build_flatpak() {
     
     # Build
     echo "Building application..."
-    flatpak-builder --user --repo="$REPO_DIR" --force-clean "$BUILD_DIR" "$APP_ID.yml"
+    if command -v flatpak-builder &> /dev/null; then
+        flatpak-builder --user --repo="$REPO_DIR" --force-clean "$BUILD_DIR" "$APP_ID.yml"
+    else
+        flatpak run org.flatpak.Builder --user --repo="$REPO_DIR" --force-clean "$BUILD_DIR" "$APP_ID.yml"
+    fi
     echo -e "${GREEN}Build complete and repository created at $REPO_DIR${NC}"
 }
 create_flatpak_bundle() {

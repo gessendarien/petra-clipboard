@@ -896,3 +896,111 @@ class ClipItem(QFrame):
         for child in self.findChildren(ClipItem):
             child.reset_states()
         super().closeEvent(event)
+
+
+class CopiedToast(QWidget):
+    """Lightweight floating banner shown when auto-paste is unavailable.
+
+    Uses the active theme's background and text colors, never steals focus,
+    and fades out smoothly before hiding itself automatically.
+    """
+
+    MESSAGES = {
+        'es': "Elemento copiado al portapapeles",
+        'en': "Item copied to clipboard",
+    }
+
+    def __init__(self):
+        super().__init__(None)
+        from PyQt6.QtWidgets import QGraphicsOpacityEffect
+
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
+            | Qt.WindowType.WindowDoesNotAcceptFocus
+        )
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(6, 6, 6, 6)
+
+        self._container = QFrame()
+        self._container.setObjectName("copied_toast_frame")
+        inner = QHBoxLayout(self._container)
+        inner.setContentsMargins(16, 10, 16, 10)
+        inner.setSpacing(0)
+
+        self._text_label = QLabel()
+        self._text_label.setObjectName("copied_toast_text")
+
+        inner.addWidget(self._text_label)
+        outer.addWidget(self._container)
+
+        self._opacity_effect = QGraphicsOpacityEffect(self._container)
+        self._opacity_effect.setOpacity(1.0)
+        self._container.setGraphicsEffect(self._opacity_effect)
+
+        self._fade_anim = QPropertyAnimation(self._opacity_effect, b"opacity", self)
+        self._fade_anim.setDuration(450)
+        self._fade_anim.setStartValue(1.0)
+        self._fade_anim.setEndValue(0.0)
+        self._fade_anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
+        self._fade_anim.finished.connect(self.hide)
+
+        self._hold_timer = QTimer(self)
+        self._hold_timer.setSingleShot(True)
+        self._hold_timer.timeout.connect(self._start_fade_out)
+
+    def show_message(self, language='es', theme_colors=None, hold_ms=1200):
+        """Display the themed toast near the bottom-center of the screen."""
+        from PyQt6.QtWidgets import QApplication
+
+        colors = theme_colors or {}
+        bg = colors.get('settings_window') or colors.get('background') or '#1F2025'
+        fg = colors.get('text_primary') or colors.get('card_text') or '#FFFFFF'
+        accent = colors.get('primary') or fg
+        border = colors.get('input_border') or accent
+
+        self._container.setStyleSheet(f"""
+            QFrame#copied_toast_frame {{
+                background-color: {bg};
+                border: 1px solid {border};
+                border-radius: 12px;
+            }}
+        """)
+        self._text_label.setStyleSheet(
+            f"color: {fg}; font-size: 13px; font-weight: 500; background: transparent;"
+        )
+
+        msg = self.MESSAGES.get(language, self.MESSAGES['en'])
+        self._text_label.setText(msg)
+        self.adjustSize()
+
+        # Position near bottom-center of the primary screen
+        try:
+            screen = QApplication.primaryScreen()
+            if screen is not None:
+                geo = screen.availableGeometry()
+                x = geo.x() + (geo.width() - self.width()) // 2
+                y = geo.y() + geo.height() - self.height() - 64
+                self.move(x, y)
+        except Exception:
+            pass
+
+        # Reset any running animation/timer
+        self._hold_timer.stop()
+        self._fade_anim.stop()
+        self._opacity_effect.setOpacity(1.0)
+
+        self.show()
+        self.raise_()
+        self._hold_timer.start(hold_ms)
+
+    def _start_fade_out(self):
+        self._fade_anim.stop()
+        self._fade_anim.setStartValue(1.0)
+        self._fade_anim.setEndValue(0.0)
+        self._fade_anim.start()
