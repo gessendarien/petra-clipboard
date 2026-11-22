@@ -39,6 +39,8 @@ APP_VERSION: str = _read_version()
 GITHUB_API_URL = (
     "https://api.github.com/repos/gessendarien/petra-clipboard/releases/latest"
 )
+FLATHUB_API_BASE = "https://flathub.org/api/v2/appstream/"
+DEFAULT_FLATPAK_ID = "io.github.gessendarien.petra-clipboard"
 
 
 # ---------------------------------------------------------------------------
@@ -81,6 +83,35 @@ def fetch_latest_version() -> str | None:
     if data and "tag_name" in data:
         tag = data["tag_name"]
         return tag.lstrip("v")
+    return None
+
+
+def fetch_latest_flathub_version(app_id: str | None = None) -> str | None:
+    """Return the latest stable release version published on Flathub, or *None*."""
+    flatpak_id = app_id or os.environ.get("FLATPAK_ID") or DEFAULT_FLATPAK_ID
+    url = f"{FLATHUB_API_BASE}{flatpak_id}"
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"Accept": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode())
+    except Exception:
+        return None
+
+    releases = data.get("releases") if isinstance(data, dict) else None
+    if not isinstance(releases, list):
+        return None
+
+    for rel in releases:
+        if not isinstance(rel, dict):
+            continue
+        if rel.get("type") == "development":
+            continue
+        ver = rel.get("version")
+        if ver:
+            return str(ver).lstrip("v")
     return None
 
 
@@ -182,9 +213,12 @@ class UpdateChecker(QThread):
     def run(self):
         install_type = detect_install_type()
         if install_type == "flatpak":
-            # No network permission in the sandbox and updates come from
-            # Flathub / the software store: do not contact GitHub.
-            self.no_update.emit()
+            # In Flatpak, check Flathub exclusively (never GitHub Releases).
+            latest = fetch_latest_flathub_version()
+            if latest and is_newer(latest, APP_VERSION):
+                self.update_available.emit(latest)
+            else:
+                self.no_update.emit()
             return
 
         latest = fetch_latest_version()

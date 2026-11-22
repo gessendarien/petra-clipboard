@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, 
-                             QSpinBox, QCheckBox, QPushButton, QWidget, QComboBox, QSizePolicy, QAbstractSpinBox,
-                             QProgressBar, QMessageBox)
+                             QSpinBox, QCheckBox, QPushButton, QWidget, QComboBox, QSizePolicy,
+                             QProgressBar, QMessageBox, QStackedWidget)
 from PyQt6.QtCore import Qt, QSize, QTimer, QUrl, QObject, QRectF, pyqtSlot
 from PyQt6.QtGui import QIcon, QDesktopServices, QPixmap, QPainter
 from pathlib import Path
@@ -361,8 +361,6 @@ class SettingsDialog(QDialog):
         self.max_clips_sb = QSpinBox()
         self.max_clips_sb.setRange(10, 100)
         self.max_clips_sb.setFixedWidth(50)
-        self.max_clips_sb.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
-        self.max_clips_sb.setStyleSheet("padding: 2px;")
         limits_layout.addWidget(self.max_clips_sb, 0, 1)
 
         # Max Images in Cache (Bottom)
@@ -373,8 +371,6 @@ class SettingsDialog(QDialog):
         self.max_images_sb = QSpinBox()
         self.max_images_sb.setRange(1, 100)
         self.max_images_sb.setFixedWidth(50)
-        self.max_images_sb.setButtonSymbols(QAbstractSpinBox.ButtonSymbols.NoButtons)
-        self.max_images_sb.setStyleSheet("padding: 2px;") 
         limits_layout.addWidget(self.max_images_sb, 1, 1)
 
         layout.addWidget(limits_container)
@@ -531,6 +527,14 @@ class SettingsDialog(QDialog):
                 border: 1px solid #FFFFFF;
                 border-radius: 4px;
                 padding: 4px;
+            }
+            QSpinBox {
+                padding: 2px 6px;
+            }
+            QSpinBox::up-button, QSpinBox::down-button {
+                width: 0px;
+                height: 0px;
+                border: none;
             }
             QPushButton {
                 background-color: #1E1E1E;
@@ -971,12 +975,12 @@ class UpdateDialog(QDialog):
 
     TRANSLATIONS = {
         'es': {
-            'window_title': 'Actualización {version}',
+            'window_title': 'Actualización',
             'update_available': 'Nueva versión disponible {version}',
             'up_to_date': 'Tienes la última versión {version}',
             'snap_available': 'Nueva versión {version} disponible en la tienda de aplicaciones',
             'snap_up_to_date': 'Tienes la última versión {version}',
-            'flatpak_managed': 'Las actualizaciones se instalan automáticamente desde tu tienda de software (Flathub) o con «flatpak update».',
+            'flatpak_update_hint': 'Para instalarla, ve a tu gestor de software y actualiza la aplicación.',
             'no_remind': 'No volver a recordar',
             'credits': 'Créditos',
             'update': 'Actualizar',
@@ -984,12 +988,12 @@ class UpdateDialog(QDialog):
             'error_title': 'Error',
         },
         'en': {
-            'window_title': 'Update {version}',
+            'window_title': 'Update',
             'update_available': 'New version available {version}',
             'up_to_date': 'You have the latest version {version}',
             'snap_available': 'New version {version} available in the app store',
             'snap_up_to_date': 'You have the latest version {version}',
-            'flatpak_managed': 'Updates are installed automatically from your software store (Flathub) or with "flatpak update".',
+            'flatpak_update_hint': 'To install it, open your software manager and update the application.',
             'no_remind': 'Don\'t remind me again',
             'credits': 'Credits',
             'update': 'Update',
@@ -1013,7 +1017,7 @@ class UpdateDialog(QDialog):
 
         self.setFixedWidth(380)
         self.setModal(True)
-        self.setWindowTitle(self.t['window_title'].format(version=current_version))
+        self.setWindowTitle(self.t['window_title'])
         self.setObjectName("SettingsDialog")
         self._apply_theme_style(parent, theme_id)
 
@@ -1022,7 +1026,7 @@ class UpdateDialog(QDialog):
         layout.setSpacing(12)
 
         # ── Title label ──
-        if version and install_type != 'flatpak':
+        if version:
             title = QLabel(self.t['update_available'].format(version=version))
         else:
             title = QLabel(self.t['up_to_date'].format(version=current_version))
@@ -1036,11 +1040,12 @@ class UpdateDialog(QDialog):
 
         # ── Body (depends on install_type) ──
         if install_type == 'flatpak':
-            body = QLabel(self.t['flatpak_managed'])
-            body.setObjectName("settings_label")
-            body.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            body.setWordWrap(True)
-            layout.addWidget(body)
+            if version:
+                body = QLabel(self.t['flatpak_update_hint'])
+                body.setObjectName("settings_label")
+                body.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                body.setWordWrap(True)
+                layout.addWidget(body)
         elif install_type == 'snap':
             if version:
                 body = QLabel(self.t['snap_available'].format(version=version))
@@ -1076,7 +1081,19 @@ class UpdateDialog(QDialog):
             layout.addLayout(btn_row)
         else:
             btn_row.addWidget(credits_btn)
-            btn_row.addStretch()
+            btn_row.addSpacing(12)
+
+            self._update_stack = QStackedWidget()
+            self._update_stack.setStyleSheet("background: transparent;")
+            self._update_stack.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+            )
+
+            update_page = QWidget()
+            update_page.setStyleSheet("background: transparent;")
+            update_page_layout = QHBoxLayout(update_page)
+            update_page_layout.setContentsMargins(0, 0, 0, 0)
+            update_page_layout.addStretch()
 
             self.update_btn = QPushButton(self.t['update'])
             self.update_btn.setObjectName("settings_save_button")
@@ -1084,24 +1101,37 @@ class UpdateDialog(QDialog):
             self.update_btn.clicked.connect(self._start_update)
             if not version:
                 self.update_btn.setEnabled(False)
-            btn_row.addWidget(self.update_btn)
-            layout.addLayout(btn_row)
+            update_page_layout.addWidget(self.update_btn)
 
-            # Progress bar (hidden initially)
+            progress_page = QWidget()
+            progress_page.setStyleSheet("background: transparent;")
+            progress_page_layout = QHBoxLayout(progress_page)
+            progress_page_layout.setContentsMargins(0, 0, 0, 0)
+
             self.progress_bar = QProgressBar()
             self.progress_bar.setRange(0, 100)
-            self.progress_bar.setVisible(False)
-            layout.addWidget(self.progress_bar)
+            self.progress_bar.setFixedHeight(self.update_btn.sizeHint().height())
+            progress_page_layout.addWidget(self.progress_bar)
+
+            self._update_stack.addWidget(update_page)
+            self._update_stack.addWidget(progress_page)
+            self._update_stack.setCurrentIndex(0)
+            btn_row.addWidget(self._update_stack, 1)
+
+            layout.addLayout(btn_row)
 
         self.adjustSize()
 
     def _apply_theme_style(self, parent, theme_id):
         """Apply theme from themes_manager (like SettingsDialog), with input styling."""
         pc = self._primary_color
+        text_color = "#FFFFFF"
         # Use themes_manager to set base colors (background, text)
         if parent and hasattr(parent, 'themes_manager') and theme_id:
             try:
                 parent.themes_manager.apply_theme_to_widget(self, theme_id)
+                colors = parent.themes_manager.get_theme_colors(theme_id)
+                text_color = colors.get('settings_text', colors.get('text_primary', '#FFFFFF'))
             except Exception:
                 pass
         # Override specific widget styles for progress bar
@@ -1110,11 +1140,11 @@ class UpdateDialog(QDialog):
                 border: 1px solid #555;
                 border-radius: 4px;
                 text-align: center;
-                color: palette(text);
+                color: {text_color};
                 background: rgba(128, 128, 128, 30);
             }}
             QProgressBar::chunk {{
-                background-color: {pc};
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #337950, stop:1 #266241);
                 border-radius: 3px;
             }}
         """)
@@ -1142,9 +1172,12 @@ class UpdateDialog(QDialog):
         if parent_win:
             parent_win.setEnabled(False)
 
-        if hasattr(self, 'update_btn'):
-            self.update_btn.setVisible(False)
-        self.progress_bar.setVisible(True)
+        if hasattr(self, '_update_stack'):
+            self._update_stack.setCurrentIndex(1)
+        else:
+            if hasattr(self, 'update_btn'):
+                self.update_btn.setVisible(False)
+            self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
 
         self._downloader = UpdateDownloader(self.version, self.install_type, self)
@@ -1167,16 +1200,22 @@ class UpdateDialog(QDialog):
             if message == "cancelled":
                 if parent_win:
                     parent_win.setEnabled(True)
-                self.progress_bar.setVisible(False)
-                if hasattr(self, 'update_btn'):
-                    self.update_btn.setVisible(True)
+                if hasattr(self, '_update_stack'):
+                    self._update_stack.setCurrentIndex(0)
+                else:
+                    self.progress_bar.setVisible(False)
+                    if hasattr(self, 'update_btn'):
+                        self.update_btn.setVisible(True)
             else:
                 QMessageBox.warning(self, self.t['error_title'], message)
                 if parent_win:
                     parent_win.setEnabled(True)
-                self.progress_bar.setVisible(False)
-                if hasattr(self, 'update_btn'):
-                    self.update_btn.setVisible(True)
+                if hasattr(self, '_update_stack'):
+                    self._update_stack.setCurrentIndex(0)
+                else:
+                    self.progress_bar.setVisible(False)
+                    if hasattr(self, 'update_btn'):
+                        self.update_btn.setVisible(True)
 
     def _restart_application(self):
         """Restart the application after a successful update."""

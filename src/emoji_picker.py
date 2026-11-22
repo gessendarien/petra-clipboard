@@ -257,10 +257,10 @@ class EmojiPickerMixin:
         recent_grid.setSpacing(8)
         recent_grid.setContentsMargins(0, 0, 0, 0)
         
-        recent_emojis = getattr(self, 'recent_emojis', [])[:16]
         self.recent_emoji_buttons = []
         self.selected_recent_emoji_index = -1
         self._emoji_keyboard_nav_active = False
+        self._emoji_font_name = emoji_font_name
         
         for i in range(16):
             row = i // 8
@@ -270,22 +270,12 @@ class EmojiPickerMixin:
             btn.setObjectName("emoji_button")
             btn.setFixedSize(50, 50)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
-            
-            if i < len(recent_emojis):
-                emoji = recent_emojis[i]
-                display_emoji = ensure_emoji_presentation(emoji)
-                btn.setText(display_emoji)
-                btn.clicked.connect(lambda checked, e=emoji: self.insert_emoji(e))
-                btn.installEventFilter(self)
-                if emoji_font_name:
-                    btn.setFont(QFont(emoji_font_name, 24))
-            else:
-                btn.setEnabled(False)
-                btn.setStyleSheet("QPushButton { background-color: #2a2a2a; border: 1px dashed #444; }")
+            btn.installEventFilter(self)
             
             self.recent_emoji_buttons.append(btn)
             recent_grid.addWidget(btn, row, col)
         
+        self._refresh_recent_emoji_buttons()
         emoji_layout.addWidget(recent_widget)
         
         # Visual separator
@@ -365,7 +355,7 @@ class EmojiPickerMixin:
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             if emoji_font_name:
                 btn.setFont(QFont(emoji_font_name, 24))
-            btn.clicked.connect(lambda checked, e=emoji: self.insert_emoji(e))
+            btn.clicked.connect(lambda checked=False, e=emoji: self.insert_emoji(e))
             grid_layout.addWidget(btn, row, col)
             col += 1
             if col > 7:
@@ -388,6 +378,7 @@ class EmojiPickerMixin:
         self.recent_emojis.insert(0, emoji)
         self.recent_emojis = self.recent_emojis[:16]
         self.save_config()
+        self._refresh_recent_emoji_buttons()
         
         if not self.input_simulator.auto_paste_available:
             if not getattr(self, 'window_pinned', False):
@@ -402,6 +393,42 @@ class EmojiPickerMixin:
                 QTimer.singleShot(500, self.clear_emoji_flags)
             except Exception as e:
                 print(f"Error al cambiar foco: {e}")
+
+    def _refresh_recent_emoji_buttons(self):
+        """Update the 16 recent-emoji buttons in place without resetting scroll/category."""
+        buttons = getattr(self, 'recent_emoji_buttons', None)
+        if not buttons:
+            return
+
+        recent_emojis = getattr(self, 'recent_emojis', [])[:16]
+        emoji_font_name = getattr(self, '_emoji_font_name', None) or get_emoji_font()
+
+        for i, btn in enumerate(buttons):
+            try:
+                try:
+                    btn.clicked.disconnect()
+                except TypeError:
+                    pass
+
+                if i < len(recent_emojis):
+                    emoji = recent_emojis[i]
+                    btn.setEnabled(True)
+                    btn.setText(ensure_emoji_presentation(emoji))
+                    btn.setStyleSheet("")
+                    if emoji_font_name:
+                        btn.setFont(QFont(emoji_font_name, 24))
+                    btn.clicked.connect(lambda checked=False, e=emoji: self.insert_emoji(e))
+                else:
+                    btn.setText("")
+                    btn.setEnabled(False)
+                    btn.setStyleSheet("QPushButton { background-color: #2a2a2a; border: 1px dashed #444; }")
+            except RuntimeError:
+                # Buttons were deleted after leaving the emoji tab
+                self.recent_emoji_buttons = []
+                return
+
+        if getattr(self, '_emoji_keyboard_nav_active', False) and self.selected_recent_emoji_index >= 0:
+            self._select_recent_emoji(self.selected_recent_emoji_index)
 
     def clear_emoji_flags(self):
         self.inserting_emoji = False

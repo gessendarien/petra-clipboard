@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import (QLineEdit, QPushButton, QFrame, QVBoxLayout, 
                              QHBoxLayout, QLabel, QWidget, QSizePolicy)
-from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer, QRect, QEvent, pyqtSignal, QSize
+from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QTimer, QRect, QEvent, pyqtSignal, QSize, QLocale
 from PyQt6.QtGui import QPainter, QPen, QColor, QIcon, QPixmap, QPainterPath
 from datetime import datetime
 import re
@@ -621,11 +621,31 @@ class ClipItem(QFrame):
     def format_timestamp(self):
         now = datetime.now()
         diff = now - self.timestamp
-        
+
         if diff.days == 0 and self.timestamp.date() == now.date():
             return self.timestamp.strftime("%-I:%M %p")
-        else:
-            return self.timestamp.strftime("%d/%m/%Y")
+
+        # Determine month-first vs day-first from the system regional locale
+        sys_fmt = QLocale.system().dateFormat(QLocale.FormatType.ShortFormat).lower()
+        m_pos = sys_fmt.find('m')
+        d_pos = sys_fmt.find('d')
+        month_first = (m_pos != -1 and d_pos != -1 and m_pos < d_pos)
+
+        # Abbreviate the month dynamically using the app's selected language
+        app_lang = getattr(self.main_window, 'language', None) if self.main_window else None
+        lang_locale = QLocale(app_lang) if app_lang else QLocale.system()
+        month_abbr = lang_locale.monthName(
+            self.timestamp.month, QLocale.FormatType.ShortFormat
+        ).rstrip('.')
+        if month_abbr:
+            month_abbr = month_abbr[0].upper() + month_abbr[1:]
+
+        day = self.timestamp.day
+        same_year = (self.timestamp.year == now.year)
+
+        if month_first:
+            return f"{month_abbr} {day}" if same_year else f"{month_abbr} {day}, {self.timestamp.year}"
+        return f"{day} {month_abbr}" if same_year else f"{day} {month_abbr} {self.timestamp.year}"
     
     def _update_background(self):
         """Update background overlay widget based on hover/pressed/copied state and theme colors."""
