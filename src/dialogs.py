@@ -332,10 +332,11 @@ class SettingsDialog(QDialog):
         
         layout.addWidget(grid_container)
 
-        # Flatpak: the sandbox cannot register the shortcut on the host,
-        # so show the command the user must bind in the desktop settings.
+        # Flatpak: only show manual shortcut hint on compositors that lack
+        # both the GlobalShortcuts portal and X11 key grabbing.
         self.flatpak_shortcut_hint = None
-        if is_running_in_flatpak():
+        sm = getattr(self.parent(), 'shortcut_manager', None) if self.parent() else None
+        if is_running_in_flatpak() and bool(getattr(sm, 'requires_manual_setup', False)):
             flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra-clipboard')
             self._flatpak_toggle_cmd = f"flatpak run {flatpak_id} --toggle"
             self.flatpak_shortcut_hint = QLabel()

@@ -553,8 +553,13 @@ class PetraClipboard(QMainWindow, ClipboardManager, FilterManager, ConfigManager
         unpinned = [c for c in self.clips if not c['pinned']]
         
         def matches(clip):
-            if search_text and search_text not in clip['content'].lower():
-                return False
+            if search_text:
+                if clip.get('type') == 'image' and clip.get('display_name'):
+                    searchable = clip['display_name'].lower()
+                else:
+                    searchable = clip['content'].lower()
+                if search_text not in searchable:
+                    return False
             
             if self.current_filter == "all":
                 return True
