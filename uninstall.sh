@@ -1,6 +1,6 @@
 #!/bin/bash
 
-APP_ID="io.github.gessendarien.petra"
+APP_ID="io.github.gessendarien.petra-clipboard"
 DEB_NAME="petra"
 SNAP_NAME="petra"
 

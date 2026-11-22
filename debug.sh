@@ -22,7 +22,7 @@ case $opt in
     # Kill processes more aggressively (-9 SIGKILL)
     # Search for various process names used in dev, snap, flatpak and appimage
     if command -v flatpak &> /dev/null; then
-        flatpak kill io.github.gessendarien.petra 2>/dev/null
+        flatpak kill io.github.gessendarien.petra-clipboard 2>/dev/null
     fi
     pkill -9 -f -i "/snap/petra" 2>/dev/null
     pkill -9 -f -i "Petra.*AppImage" 2>/dev/null
@@ -30,7 +30,7 @@ case $opt in
     pkill -9 -x -i "petra" 2>/dev/null
     pkill -9 -f -i "petra.*main.py" 2>/dev/null
     pkill -9 -f -i "python3.*src/main.py" 2>/dev/null
-    pkill -9 -f -i "io.github.gessendarien.petra" 2>/dev/null
+    pkill -9 -f -i "io.github.gessendarien.petra-clipboard" 2>/dev/null
     
     # Extra check for any python process with main.py in the current directory subtree
     pkill -9 -f "python3.*main.py" 2>/dev/null

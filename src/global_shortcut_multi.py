@@ -19,7 +19,7 @@ class GlobalShortcutManager:
     @property
     def manual_command(self):
         """Command the user must bind manually when running inside Flatpak."""
-        flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra')
+        flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra-clipboard')
         return f"flatpak run {flatpak_id} --toggle"
 
     def __init__(self, on_toggle=None, on_show=None, on_hide=None):

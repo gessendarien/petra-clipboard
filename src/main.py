@@ -75,7 +75,7 @@ def start_socket_server(window):
 
 
 def main():
-    print("Petra Clipboard v0.1.2")
+    print("Petra Clipboard v0.1.3")
     # Enable faulthandler so Python prints stack traces on crashes (SIGSEGV)
     try:
         faulthandler.enable()
@@ -148,8 +148,8 @@ def main():
     # If not found locally, search in Flatpak paths
     if not icon_loaded:
         flatpak_paths = [
-            flatpak_base / "scalable/apps/io.github.gessendarien.petra.svg",
-            flatpak_base / "512x512/apps/io.github.gessendarien.petra.png",
+            flatpak_base / "scalable/apps/io.github.gessendarien.petra-clipboard.svg",
+            flatpak_base / "512x512/apps/io.github.gessendarien.petra-clipboard.png",
         ]
         for fpath in flatpak_paths:
             if fpath.exists():
@@ -169,7 +169,7 @@ def main():
     # This is critical for the desktop system to show the correct icon
     app.setApplicationName("Petra")
     app.setApplicationDisplayName("Petra")
-    app.setDesktopFileName("io.github.gessendarien.petra")
+    app.setDesktopFileName("io.github.gessendarien.petra-clipboard")
     
     # Handle Ctrl+C correctly
     import signal

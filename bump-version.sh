@@ -31,7 +31,7 @@ sed -i -E "s|releases/download/[0-9]+\.[0-9]+\.[0-9]+/Petra-[0-9]+\.[0-9]+\.[0-9
 echo "Updated download links in index.html"
 
 # Update Flatpak MetaInfo (for Flathub/Software Centers)
-sed -i -E "s/<release version=\".*\" date=\".*\">/<release version=\"$NEW_VERSION\" date=\"$(date +%Y-%m-%d)\">/" io.github.gessendarien.petra.metainfo.xml
-echo "Updated io.github.gessendarien.petra.metainfo.xml"
+sed -i -E "s/<release version=\".*\" date=\".*\">/<release version=\"$NEW_VERSION\" date=\"$(date +%Y-%m-%d)\">/" io.github.gessendarien.petra-clipboard.metainfo.xml
+echo "Updated io.github.gessendarien.petra-clipboard.metainfo.xml"
 
 echo "Version bump complete."

@@ -138,6 +138,7 @@ class ClipItem(QFrame):
         self.setMinimumHeight(70)
         self.setMaximumHeight(70)
         self.setMaximumWidth(485)
+        self.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Fixed)
         self.setMouseTracking(True)
         self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
         self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
@@ -229,8 +230,7 @@ class ClipItem(QFrame):
         content_layout.addWidget(time_label)
         
         layout.addWidget(self.icon_label)
-        layout.addLayout(content_layout)
-        layout.addStretch()
+        layout.addLayout(content_layout, 1)
 
         # background overlay for hover/copy visuals (starts hidden)
         self._bg = QWidget(self)
@@ -485,6 +485,9 @@ class ClipItem(QFrame):
             
         if self.item_type == "image":
             text_label.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        text_label.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
+        text_label.setMaximumWidth(text_label.sizeHint().width())
         
         return text_label
     
@@ -829,8 +832,8 @@ class ClipItem(QFrame):
         fm = self.name_edit.fontMetrics()
         # Calculamos el ancho del texto y le sumamos un margen pequeño
         width = fm.horizontalAdvance(self.name_edit.text()) + 15
-        # 340px es un máximo seguro para no empujar el botón de eliminar
-        self.name_edit.setFixedWidth(min(max(width, 30), 340))
+        # 300px es un máximo seguro para no empujar los botones cuando hay scrollbar
+        self.name_edit.setFixedWidth(min(max(width, 30), 300))
         
     def _on_rename_finished(self):
         """Guarda el nuevo nombre y restaura la etiqueta."""
@@ -850,6 +853,7 @@ class ClipItem(QFrame):
             self.display_name = new_name
             truncated_text = self.truncate_image_name(self.display_name, 40)
             self.text_label.setText(truncated_text)
+            self.text_label.setMaximumWidth(self.text_label.sizeHint().width())
             
             # Emitir señal a la ventana principal para actualizar en disco, memoria y persistir
             self.rename_requested.emit(self.content, self.display_name)

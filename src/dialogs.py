@@ -1,9 +1,10 @@
 from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout, 
                              QSpinBox, QCheckBox, QPushButton, QWidget, QComboBox, QSizePolicy, QAbstractSpinBox,
                              QProgressBar, QMessageBox)
-from PyQt6.QtCore import Qt, QSize, QTimer, QUrl, QObject, pyqtSlot
-from PyQt6.QtGui import QIcon, QDesktopServices, QMovie
+from PyQt6.QtCore import Qt, QSize, QTimer, QUrl, QObject, QRectF, pyqtSlot
+from PyQt6.QtGui import QIcon, QDesktopServices, QPixmap, QPainter
 from pathlib import Path
+import math
 import os
 import sys
 import uuid
@@ -335,7 +336,7 @@ class SettingsDialog(QDialog):
         # so show the command the user must bind in the desktop settings.
         self.flatpak_shortcut_hint = None
         if is_running_in_flatpak():
-            flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra')
+            flatpak_id = os.environ.get('FLATPAK_ID', 'io.github.gessendarien.petra-clipboard')
             self._flatpak_toggle_cmd = f"flatpak run {flatpak_id} --toggle"
             self.flatpak_shortcut_hint = QLabel()
             self.flatpak_shortcut_hint.setObjectName("settings_label")
@@ -398,18 +399,23 @@ class SettingsDialog(QDialog):
         brl = QHBoxLayout(btn_row)
         brl.setContentsMargins(0, 0, 0, 0)
         
-        # GitHub icon button (left side) — slightly larger animated Tux (52x52)
-        self._github_icon_size = QSize(52, 52)
-        self._github_movie = None
+        # GitHub icon button (left side) — Tux penguin (code.png / code-new.png)
+        self._github_canvas_size = 56
+        self._github_draw_size = 42
         self._github_icon_folder = 'dark'
-        self._github_frame_cache = {}
+        self._github_base_pixmap = None
+        self._github_dpr = 2.0
         self._update_anim_active = False
+        self._wiggle_timer = None
+        self._wiggle_elapsed_ms = 0
+        self._wiggle_in_pause = False
 
         self.github_btn = QPushButton()
-        self.github_btn.setFixedSize(54, 54)
+        self.github_btn.setFixedSize(self._github_canvas_size, self._github_canvas_size)
+        self.github_btn.setIconSize(QSize(self._github_canvas_size, self._github_canvas_size))
         self.github_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.github_btn.setToolTip("Tienes la ultima versión disponible")
-        self.github_btn.setStyleSheet("QPushButton { border: none; background: transparent; }")
+        self.github_btn.setStyleSheet("QPushButton { border: none; background: transparent; padding: 0px; }")
         self.github_btn.clicked.connect(self.open_update_dialog)
         brl.addWidget(self.github_btn, alignment=Qt.AlignmentFlag.AlignBottom)
         
@@ -445,7 +451,7 @@ class SettingsDialog(QDialog):
         self.apply_dark_theme()
 
     def update_github_icon(self):
-        """Update GitHub icon (code.gif) based on currently applied theme (from parent)."""
+        """Update GitHub icon (code.png / code-new.png) based on theme and update state."""
         theme = 'dark'
         if self.parent() is not None:
             theme = getattr(self.parent(), 'theme', 'dark') or 'dark'
@@ -456,80 +462,65 @@ class SettingsDialog(QDialog):
         else:
             icon_folder = 'dark'
         self._github_icon_folder = icon_folder
-        self._github_frame_cache = {}
-
-        # Clean up any previous movie
-        if self._github_movie is not None:
-            self._github_movie.stop()
-            try:
-                self._github_movie.frameChanged.disconnect(self._on_github_movie_frame)
-            except Exception:
-                pass
-            self._github_movie.deleteLater()
-            self._github_movie = None
 
         icons_dir = Path(__file__).parent.parent / "icons" / icon_folder
-        gif_path = icons_dir / "code.gif"
-        png_path = icons_dir / "code.png"
+        if self._update_anim_active:
+            icon_path = icons_dir / "code-new.png"
+            if not icon_path.exists():
+                icon_path = icons_dir / "code.png"
+        else:
+            icon_path = icons_dir / "code.png"
 
-        self.github_btn.setIconSize(self._github_icon_size)
-
-        if gif_path.exists():
-            movie = QMovie(str(gif_path), parent=self)
-            if movie.isValid():
-                # Keep native resolution so we can smooth-scale + boost stroke opacity cleanly
-                movie.setCacheMode(QMovie.CacheMode.CacheAll)
-                movie.frameChanged.connect(self._on_github_movie_frame)
-                self._github_movie = movie
-                movie.jumpToFrame(0)
-                self._on_github_movie_frame(0)
-                if self._update_anim_active:
-                    movie.start()
+        self._github_dpr = max(2.0, float(self.devicePixelRatioF()))
+        if icon_path.exists():
+            src = QPixmap(str(icon_path))
+            if not src.isNull():
+                target_px = int(round(self._github_draw_size * self._github_dpr))
+                self._github_base_pixmap = src.scaled(
+                    target_px,
+                    target_px,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                self._render_github_icon(0.0, 0.0)
                 return
 
-        if png_path.exists():
-            self.github_btn.setIcon(QIcon(str(png_path)))
+        self._github_base_pixmap = None
 
-    def _render_crisp_gif_frame(self, img):
-        """Downscale a 1-bit GIF frame smoothly and boost alpha so thin strokes
-        stay bright pure white (dark themes) or crisp black (light themes)."""
-        from PyQt6.QtGui import QImage, QPixmap
-
-        scaled = img.convertToFormat(QImage.Format.Format_ARGB32).scaled(
-            self._github_icon_size,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation,
-        )
-        # Boost semi-transparent anti-aliased strokes without jagged edges
-        target_rgb = 255 if self._github_icon_folder == 'dark' else 0
-        w, h = scaled.width(), scaled.height()
-        ptr = scaled.bits()
-        ptr.setsize(scaled.sizeInBytes())
-        buf = bytearray(ptr)
-        # ARGB32 on little-endian is BGRA in memory
-        for i in range(0, len(buf), 4):
-            a = buf[i + 3]
-            if a > 0:
-                boosted = int(min(255, a * 1.85))
-                buf[i] = target_rgb
-                buf[i + 1] = target_rgb
-                buf[i + 2] = target_rgb
-                buf[i + 3] = boosted
-        crisp = QImage(bytes(buf), w, h, scaled.bytesPerLine(), QImage.Format.Format_ARGB32).copy()
-        return QIcon(QPixmap.fromImage(crisp))
-
-    def _on_github_movie_frame(self, frame_number=0):
-        """Render current frame of code.gif onto github_btn (cached per frame)."""
-        if self._github_movie is None:
+    def _render_github_icon(self, angle=0.0, dx=0.0):
+        """Render the penguin icon centered on the button canvas with optional tilt and horizontal sway."""
+        if self._github_base_pixmap is None or self._github_base_pixmap.isNull():
             return
-        icon = self._github_frame_cache.get(frame_number)
-        if icon is None:
-            img = self._github_movie.currentImage()
-            if img.isNull():
-                return
-            icon = self._render_crisp_gif_frame(img)
-            self._github_frame_cache[frame_number] = icon
-        self.github_btn.setIcon(icon)
+
+        canvas = self._github_canvas_size
+        draw_size = self._github_draw_size
+        dpr = self._github_dpr
+        px_size = int(round(canvas * dpr))
+
+        pm = QPixmap(px_size, px_size)
+        pm.fill(Qt.GlobalColor.transparent)
+        pm.setDevicePixelRatio(dpr)
+
+        painter = QPainter(pm)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
+
+        if angle != 0.0 or dx != 0.0:
+            pivot_x = canvas / 2.0
+            pivot_y = canvas * 0.65
+            painter.translate(pivot_x + dx, pivot_y)
+            painter.rotate(angle)
+            painter.translate(-pivot_x, -pivot_y)
+
+        offset = (canvas - draw_size) / 2.0
+        painter.drawPixmap(
+            QRectF(offset, offset, draw_size, draw_size),
+            self._github_base_pixmap,
+            QRectF(self._github_base_pixmap.rect()),
+        )
+        painter.end()
+
+        self.github_btn.setIcon(QIcon(pm))
 
     def apply_dark_theme(self):
         """Force dark theme for settings dialog with borders on inputs."""
@@ -759,7 +750,10 @@ class SettingsDialog(QDialog):
                 self.lang_label.setText(t.get('language', self.lang_label.text()))
                 
             if hasattr(self, 'github_btn'):
-                self.github_btn.setToolTip(t.get('tooltip_no_update', 'Tienes la ultima versión disponible'))
+                if getattr(self, '_update_anim_active', False):
+                    self.github_btn.setToolTip(t.get('tooltip_update', 'Nueva versión disponible'))
+                else:
+                    self.github_btn.setToolTip(t.get('tooltip_no_update', 'Tienes la ultima versión disponible'))
                 
             # New: translate theme label
             if hasattr(self, 'theme_label'):
@@ -879,30 +873,67 @@ class SettingsDialog(QDialog):
 
     # ── Update animation ──────────────────────────────────────────────
 
+    _WIGGLE_INTERVAL_MS = 20
+    _WIGGLE_DURATION_MS = 900
+    _WIGGLE_PAUSE_MS = 1300
+    _WIGGLE_CYCLES = 3.0
+    _WIGGLE_MAX_ANGLE = 13.0
+    _WIGGLE_MAX_DX = 2.5
+
     def start_update_animation(self):
-        """Play the animated code.gif on github_btn when an update is available."""
+        """Switch to code-new.png and play a side-to-side wiggle + pause animation."""
         self._update_anim_active = True
 
         # Set tooltip based on language
-        parent_win = self.parent()
-        lang = getattr(parent_win, 'language', 'es') if parent_win else 'es'
+        lang = self.lang_combo.currentData() if hasattr(self, 'lang_combo') else None
+        if not lang:
+            parent_win = self.parent()
+            lang = getattr(parent_win, 'language', 'es') if parent_win else 'es'
         tip = "Nueva versión disponible" if lang == 'es' else "New version available"
         self.github_btn.setToolTip(tip)
 
-        if self._github_movie is not None and self._github_movie.isValid():
-            self._github_movie.start()
+        # Load code-new.png for the active theme
+        self.update_github_icon()
+
+        # Start wiggle timer (side-to-side shake, pause, repeat)
+        self._wiggle_elapsed_ms = 0
+        self._wiggle_in_pause = False
+        if self._wiggle_timer is None:
+            self._wiggle_timer = QTimer(self)
+            self._wiggle_timer.setInterval(self._WIGGLE_INTERVAL_MS)
+            self._wiggle_timer.timeout.connect(self._tick_wiggle_animation)
+        self._wiggle_timer.start()
+
+    def _tick_wiggle_animation(self):
+        """Advance the side-to-side wiggle + pause cycle."""
+        cycle_ms = self._WIGGLE_DURATION_MS + self._WIGGLE_PAUSE_MS
+        self._wiggle_elapsed_ms = (self._wiggle_elapsed_ms + self._WIGGLE_INTERVAL_MS) % cycle_ms
+
+        if self._wiggle_elapsed_ms < self._WIGGLE_DURATION_MS:
+            self._wiggle_in_pause = False
+            progress = self._wiggle_elapsed_ms / float(self._WIGGLE_DURATION_MS)
+            envelope = math.sin(math.pi * progress) ** 0.75
+            wave = math.sin(2.0 * math.pi * self._WIGGLE_CYCLES * progress)
+            angle = self._WIGGLE_MAX_ANGLE * wave * envelope
+            dx = self._WIGGLE_MAX_DX * wave * envelope
+            self._render_github_icon(angle, dx)
+        elif not self._wiggle_in_pause:
+            self._wiggle_in_pause = True
+            self._render_github_icon(0.0, 0.0)
 
     def stop_update_animation(self):
-        """Stop code.gif animation and return to its static first frame."""
+        """Stop wiggle animation and restore the static code.png icon."""
         self._update_anim_active = False
-        if self._github_movie is not None and self._github_movie.isValid():
-            self._github_movie.stop()
-            self._github_movie.jumpToFrame(0)
-            self._on_github_movie_frame(0)
+        if self._wiggle_timer is not None:
+            self._wiggle_timer.stop()
+        self.update_github_icon()
+        lang = self.lang_combo.currentData() if hasattr(self, 'lang_combo') else 'es'
+        t = self.translations.get(lang, self.translations.get('es', {}))
+        self.github_btn.setToolTip(t.get('tooltip_no_update', 'Tienes la ultima versión disponible'))
 
     def done(self, result):
-        if self._github_movie is not None:
-            self._github_movie.stop()
+        if self._wiggle_timer is not None:
+            self._wiggle_timer.stop()
         super().done(result)
 
     # ── Update dialog launcher ────────────────────────────────────────
