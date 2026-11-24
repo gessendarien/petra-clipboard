@@ -110,6 +110,12 @@
   </screenshots>
 
   <releases>
+    <release version="0.1.4" date="2026-11-23">
+      <description>
+        <p>New app icon, Flatpak GlobalShortcuts portal and HiDPI X11 cursor fix, Flathub update checker, and emoji picker and UI improvements.</p>
+        <p xml:lang="es">Nuevo icono de aplicación, soporte para el portal GlobalShortcuts y corrección de cursor HiDPI en Flatpak X11, comprobación de actualizaciones en Flathub y mejoras en el selector de emojis e interfaz.</p>
+      </description>
+    </release>
     <release version="0.1.3" date="2026-11-21">
       <description>
         <p>Flatpak sandbox support, disk-backed image cache, and updated settings icons.</p>

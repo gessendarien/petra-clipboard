@@ -74,8 +74,57 @@ def start_socket_server(window):
     return server
 
 
+def _fix_flatpak_x11_hidpi_cursor():
+    """Scale unscaled XCURSOR_SIZE inside Flatpak X11 HiDPI sessions."""
+    try:
+        if not (os.environ.get('FLATPAK_ID') or Path('/.flatpak-info').exists()):
+            return
+        if os.environ.get('WAYLAND_DISPLAY') or not os.environ.get('DISPLAY'):
+            return
+        raw_size = os.environ.get('XCURSOR_SIZE')
+        if not raw_size:
+            return
+        base_size = int(raw_size)
+        if base_size <= 0 or base_size > 32:
+            return
+
+        import ctypes
+        libx11 = ctypes.CDLL('libX11.so.6')
+        libx11.XOpenDisplay.argtypes = [ctypes.c_char_p]
+        libx11.XOpenDisplay.restype = ctypes.c_void_p
+        libx11.XResourceManagerString.argtypes = [ctypes.c_void_p]
+        libx11.XResourceManagerString.restype = ctypes.c_char_p
+        libx11.XCloseDisplay.argtypes = [ctypes.c_void_p]
+
+        dpy = libx11.XOpenDisplay(None)
+        if not dpy:
+            return
+        try:
+            res = libx11.XResourceManagerString(dpy)
+            text = res.decode('utf-8', errors='ignore') if res else ''
+        finally:
+            libx11.XCloseDisplay(dpy)
+
+        xft_dpi = None
+        for line in text.splitlines():
+            if ':' not in line:
+                continue
+            key, val = line.split(':', 1)
+            key = key.strip()
+            if key == 'Xcursor.size':
+                return
+            if key == 'Xft.dpi':
+                xft_dpi = float(val.strip())
+
+        if xft_dpi and xft_dpi > 96.0:
+            scaled = int(round(base_size * (xft_dpi / 96.0)))
+            os.environ['XCURSOR_SIZE'] = str(max(base_size, scaled))
+    except Exception:
+        pass
+
+
 def main():
-    print("Petra Clipboard v0.1.3")
+    print("Petra Clipboard v0.1.4")
     # Enable faulthandler so Python prints stack traces on crashes (SIGSEGV)
     try:
         faulthandler.enable()
@@ -106,6 +155,7 @@ def main():
             print(f"Petra is already running. Sending {cmd_to_send} command.")
             sys.exit(0)
     
+    _fix_flatpak_x11_hidpi_cursor()
     app = QApplication(sys.argv)
     # Important: Do not close application when window is closed (it is minimized)
     app.setQuitOnLastWindowClosed(False)
