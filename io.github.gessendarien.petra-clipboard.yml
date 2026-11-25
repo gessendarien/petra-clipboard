@@ -19,8 +19,6 @@ build-options:
     - BASEAPP_REMOVE_WEBENGINE=1
 finish-args:
   - --share=ipc
-  # Network access is used solely for checking updates via Flathub API, not for downloads
-  - --share=network
   - --socket=fallback-x11
   - --socket=wayland
   - --device=dri
@@ -62,5 +60,5 @@ modules:
     sources:
       - type: git
         url: https://github.com/gessendarien/petra-clipboard.git
-        tag: '0.1.3'
-        commit: 395f27112ab2ed38325e76ca301b5586f0acb280
+        tag: '0.1.4'
+        commit: ae49287922e03358accab7dfb0808e58420d87b8

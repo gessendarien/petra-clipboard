@@ -396,10 +396,10 @@ print_header "Petra Clipboard Manager - Build System"
 echo "Select an option:"
 echo "1) Create Debian Package (.deb)"
 echo "2) Create AppImage"
-# echo "3) Create Flatpak Bundle (.flatpak)"
-echo "3) Exit"
+echo "3) Create Flatpak Bundle (.flatpak)"
+echo "4) Exit"
 echo ""
-read -p "Option [1-3]: " option
+read -p "Option [1-4]: " option
 
 case $option in
     1)
@@ -408,12 +408,12 @@ case $option in
     2)
         create_appimage
         ;;
-    # 3)
-    #     check_flatpak_dependencies
-    #     build_flatpak
-    #     create_flatpak_bundle
-    #     ;;
     3)
+        check_flatpak_dependencies
+        build_flatpak
+        create_flatpak_bundle
+        ;;
+    4)
         echo "Exiting."
         exit 0
         ;;

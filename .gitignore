@@ -22,3 +22,7 @@ output/
 
 # Config local
 *.log
+test_pkg/
+test_xbindkeysrc
+petra_log.txt
+
