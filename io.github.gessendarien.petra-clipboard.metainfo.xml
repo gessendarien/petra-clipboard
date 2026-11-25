@@ -84,23 +84,23 @@
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/0.1.3/screenshots/screenshot_2.png</image>
+      <caption>Filter by type and smart deletion</caption>
+      <caption xml:lang="es">Filtro por tipo y borrado inteligente</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/0.1.3/screenshots/screenshot_3.png</image>
       <caption>Emoji picker</caption>
       <caption xml:lang="es">Selector de emojis</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/0.1.3/screenshots/screenshot_3.png</image>
-      <caption>Filtering and search</caption>
-      <caption xml:lang="es">Filtrado y búsqueda</caption>
-    </screenshot>
-    <screenshot>
       <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/0.1.3/screenshots/screenshot_4.png</image>
-      <caption>Settings</caption>
-      <caption xml:lang="es">Configuración</caption>
+      <caption>Settings and customization</caption>
+      <caption xml:lang="es">Configuración y personalización</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/0.1.3/screenshots/screenshot_5.png</image>
-      <caption>Search</caption>
-      <caption xml:lang="es">Búsqueda</caption>
+      <caption>Item search</caption>
+      <caption xml:lang="es">Búsqueda de elementos</caption>
     </screenshot>
     <screenshot>
       <image>https://raw.githubusercontent.com/gessendarien/petra-clipboard/0.1.3/screenshots/screenshot_6.png</image>
